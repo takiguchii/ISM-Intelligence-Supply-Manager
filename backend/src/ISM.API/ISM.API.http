@@ -1,0 +1,8 @@
+@HostAddress = http://localhost:8080
+
+GET {{HostAddress}}/api/system/status
+Accept: application/json
+
+###
+
+GET {{HostAddress}}/swagger/index.html

@@ -1,0 +1,12 @@
+.git
+.gitignore
+.agents
+.codex
+.env
+.env.*
+frontend/node_modules
+frontend/.nuxt
+frontend/.output
+backend/**/bin
+backend/**/obj
+coverage
