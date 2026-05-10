@@ -1,0 +1,102 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+
+:root {
+  color-scheme: dark;
+  --ism-bg: #050816;
+  --ism-panel: rgba(16, 24, 43, 0.76);
+  --ism-aqua: #54f3d0;
+  --ism-ember: #ff8c42;
+  --ism-text: #e8edf8;
+  --ism-mist: #9eb0d1;
+}
+
+html,
+body,
+#__nuxt {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top left, rgba(84, 243, 208, 0.12), transparent 24rem),
+    radial-gradient(circle at bottom right, rgba(255, 140, 66, 0.14), transparent 22rem),
+    linear-gradient(135deg, #030512 0%, #071022 48%, #0b1426 100%);
+  color: var(--ism-text);
+  font-family: "Space Grotesk", sans-serif;
+}
+
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(84, 243, 208, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(84, 243, 208, 0.04) 1px, transparent 1px);
+  background-size: 4rem 4rem;
+  mask-image: radial-gradient(circle at center, black 55%, transparent 92%);
+}
+
+.hero-glow {
+  position: absolute;
+  width: 28rem;
+  height: 28rem;
+  border-radius: 9999px;
+  filter: blur(70px);
+  opacity: 0.28;
+}
+
+.hero-glow-left {
+  top: 8%;
+  left: -7rem;
+  background: rgba(84, 243, 208, 0.36);
+  animation: float-left 8s ease-in-out infinite;
+}
+
+.hero-glow-right {
+  right: -8rem;
+  bottom: 10%;
+  background: rgba(255, 140, 66, 0.28);
+  animation: float-right 10s ease-in-out infinite;
+}
+
+.pulse-orb {
+  width: 3.75rem;
+  height: 3.75rem;
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9), rgba(84, 243, 208, 0.7) 35%, rgba(84, 243, 208, 0.08) 70%);
+  box-shadow:
+    0 0 30px rgba(84, 243, 208, 0.4),
+    inset 0 0 18px rgba(255, 255, 255, 0.3);
+  animation: pulse 3s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(0.95);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+
+@keyframes float-left {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(2rem, 1rem, 0);
+  }
+}
+
+@keyframes float-right {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(-2rem, -1rem, 0);
+  }
+}
