@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
 
-namespace ISM.Infrastructure.Persistence.Migrations
+namespace ISM.Infrastructure.Migrations
 {
     /// <inheritdoc />
     public partial class InitialFoundation : Migration

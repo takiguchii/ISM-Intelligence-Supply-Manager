@@ -1,6 +1,6 @@
-using ISM.Domain.Modules.System.Entities;
+using ISM.Domain.Entities;
 
-namespace ISM.Domain.Modules.System.Interfaces;
+namespace ISM.Domain.Interfaces;
 
 public interface IPlatformModuleRepository
 {

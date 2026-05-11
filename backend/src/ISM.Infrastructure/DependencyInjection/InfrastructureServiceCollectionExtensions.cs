@@ -1,6 +1,6 @@
-using ISM.CrossCutting.Configuration;
-using ISM.Domain.Modules.System.Interfaces;
-using ISM.Infrastructure.Persistence.Context;
+using ISM.Infrastructure.Database;
+using ISM.Domain.Interfaces;
+using ISM.Infrastructure.Database;
 using ISM.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

@@ -1,4 +1,4 @@
-using ISM.API.Middleware;
+using ISM.API.Middlewares;
 
 namespace ISM.API.Extensions;
 

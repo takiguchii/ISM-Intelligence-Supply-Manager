@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace ISM.API.Middleware;
+namespace ISM.API.Middlewares;
 
 public sealed class GlobalExceptionMiddleware
 {

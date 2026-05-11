@@ -1,7 +1,7 @@
 using FluentAssertions;
-using ISM.Application.Modules.System.Services;
-using ISM.Domain.Modules.System.Entities;
-using ISM.Domain.Modules.System.Interfaces;
+using ISM.Application.Services;
+using ISM.Domain.Entities;
+using ISM.Domain.Interfaces;
 
 namespace ISM.UnitTests;
 

@@ -1,8 +1,8 @@
-using ISM.Domain.Modules.System.Entities;
+using ISM.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace ISM.Infrastructure.Persistence.Configurations;
+namespace ISM.Infrastructure.Database.Configurations;
 
 public sealed class PlatformModuleConfiguration : IEntityTypeConfiguration<PlatformModule>
 {

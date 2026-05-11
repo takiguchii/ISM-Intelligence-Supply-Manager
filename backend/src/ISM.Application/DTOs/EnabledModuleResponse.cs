@@ -1,4 +1,4 @@
-namespace ISM.Application.Modules.System.DTOs;
+namespace ISM.Application.DTOs;
 
 public sealed record EnabledModuleResponse(
     int Id,

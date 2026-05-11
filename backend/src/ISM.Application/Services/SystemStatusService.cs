@@ -1,8 +1,8 @@
-using ISM.Application.Abstractions;
-using ISM.Application.Modules.System.DTOs;
-using ISM.Domain.Modules.System.Interfaces;
+using ISM.Application.Services;
+using ISM.Application.DTOs;
+using ISM.Domain.Interfaces;
 
-namespace ISM.Application.Modules.System.Services;
+namespace ISM.Application.Services;
 
 public sealed class SystemStatusService : ISystemStatusService
 {

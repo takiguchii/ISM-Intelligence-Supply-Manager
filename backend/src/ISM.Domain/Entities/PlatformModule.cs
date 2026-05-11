@@ -1,6 +1,6 @@
-using ISM.Domain.Common;
+using ISM.Domain.Entities;
 
-namespace ISM.Domain.Modules.System.Entities;
+namespace ISM.Domain.Entities;
 
 public sealed class PlatformModule : BaseEntity
 {

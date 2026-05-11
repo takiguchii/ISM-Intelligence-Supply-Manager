@@ -1,7 +1,7 @@
-using ISM.Domain.Modules.System.Entities;
+using ISM.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace ISM.Infrastructure.Persistence.Context;
+namespace ISM.Infrastructure.Database;
 
 public sealed class IsmDbContext : DbContext
 {

@@ -1,6 +1,6 @@
-using ISM.Application.Modules.System.DTOs;
+using ISM.Application.DTOs;
 
-namespace ISM.Application.Abstractions;
+namespace ISM.Application.Services;
 
 public interface ISystemStatusService
 {

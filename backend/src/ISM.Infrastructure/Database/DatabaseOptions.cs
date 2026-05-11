@@ -1,4 +1,4 @@
-namespace ISM.CrossCutting.Configuration;
+namespace ISM.Infrastructure.Database;
 
 public sealed class DatabaseOptions
 {
