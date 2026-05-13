@@ -1,8 +1,8 @@
-using ISM.Infrastructure.Database;
+using ISM.Infrastructure.Data.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace ISM.Infrastructure.Database;
+namespace ISM.Infrastructure.Data.Context;
 
 public sealed class IsmDbContextFactory : IDesignTimeDbContextFactory<IsmDbContext>
 {

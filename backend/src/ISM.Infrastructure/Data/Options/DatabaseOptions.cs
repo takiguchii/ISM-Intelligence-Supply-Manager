@@ -1,4 +1,4 @@
-namespace ISM.Infrastructure.Database;
+namespace ISM.Infrastructure.Data.Options;
 
 public sealed class DatabaseOptions
 {
