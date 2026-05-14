@@ -1,4 +1,6 @@
-using ISM.API.Middleware;
+using ISM.API.Middlewares;
+using ISM.Infrastructure.Data.Context;
+using Microsoft.EntityFrameworkCore;
 
 namespace ISM.API.Extensions;
 
@@ -18,5 +20,21 @@ public static class WebApplicationExtensions
         app.MapControllers();
 
         return app;
+    }
+
+    public static async Task ApplyMigrationsAsync(this WebApplication app)
+    {
+        using var scope = app.Services.CreateScope();
+        var services = scope.ServiceProvider;
+        try
+        {
+            var context = services.GetRequiredService<IsmDbContext>();
+            await context.Database.MigrateAsync();
+        }
+        catch (Exception ex)
+        {
+            var logger = services.GetRequiredService<ILogger<Program>>();
+            logger.LogError(ex, "Ocorreu um erro durante a inicialização do banco de dados.");
+        }
     }
 }

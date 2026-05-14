@@ -1,4 +1,4 @@
-namespace ISM.Domain.Common;
+namespace ISM.Domain.Entities;
 
 public abstract class BaseEntity
 {
