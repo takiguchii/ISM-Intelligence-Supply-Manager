@@ -27,3 +27,7 @@ backend/**/obj/
 backend/TestResults/
 /tmp/
 GEMINI.md
+
+# Gemini CLI
+.gemini/
+*.skill
