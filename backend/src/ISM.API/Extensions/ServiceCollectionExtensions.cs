@@ -22,6 +22,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(databaseOptions);
         services.AddInfrastructure(databaseOptions);
         services.AddScoped<ISystemStatusService, SystemStatusService>();
+        services.AddScoped<IFornecedorService, FornecedorService>();
 
         return services;
     }
