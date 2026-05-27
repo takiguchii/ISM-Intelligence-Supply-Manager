@@ -33,7 +33,7 @@ public static class InfrastructureServiceCollectionExtensions
                 });
         });
 
-        services.AddScoped<IPlatformModuleRepository, PlatformModuleRepository>();
+        services.AddScoped<IFornecedorRepository, FornecedorRepository>();
 
         return services;
     }
