@@ -26,8 +26,6 @@ backend/**/bin/
 backend/**/obj/
 backend/TestResults/
 /tmp/
-GEMINI.md
-
-# Gemini CLI
+# Local development tools
 .gemini/
 *.skill
