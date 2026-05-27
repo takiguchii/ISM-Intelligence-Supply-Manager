@@ -2,6 +2,9 @@
 
 Este arquivo contém as diretrizes, padrões e fluxos de trabalho fundamentais para o projeto ISM. Estas instruções devem ser seguidas rigorosamente por todos os desenvolvedores.
 
+## 📦 Versionamento e Commits (Regra de Ouro)
+- **PROIBIDO VERSIONAR FERRAMENTAS LOCAIS**: Sob nenhuma circunstância a pasta `.gemini/` ou qualquer arquivo de configuração, contexto ou skill de agentes de IA deve ser comitado. O uso do comando `git add -f` é expressamente proibido para esses caminhos. O ambiente do agente é estritamente local.
+
 ## 📚 Documentação de Referência
 
 Sempre consulte os guias detalhados antes de grandes alterações:
@@ -17,7 +20,7 @@ Sempre consulte os guias detalhados antes de grandes alterações:
 - **Regras Arquiteturais Rígidas (Evitar Desvios):**
     - **APENAS UM ESCOPO:** Remover arquivos não utilizados (ex: endpoints e serviços não relacionados ao escopo de trabalho atual).
     - **Separação de Interfaces:**
-      - Interfaces da camada de Aplicação (`IService`) **DEVEM** ficar na pasta `ISM.Application/Interfaces/` (nunca misturadas com as implementações na pasta `Services`).
+      - Interfaces da camada de Aplicação (`IService`) **DEVEM** ficar na pasta `ISM.Application/Interfaces/`.
       - Interfaces de Domínio (`IRepository`) **DEVEM** ficar na pasta `ISM.Domain/Interfaces/`.
 - **Camadas:**
     - `ISM.API`: Controllers, Middlewares, Program.cs e configurações de host.
@@ -34,7 +37,7 @@ Sempre consulte os guias detalhados antes de grandes alterações:
 ## 🛠 Padrões de Código e Métricas
 
 ### Nomenclatura (Backend)
-- Interfaces: Prefixo `I` (ex: `IPlatformModuleRepository`, `IFornecedorService`).
+- Interfaces: Prefixo `I` (ex: `IFornecedorService`).
 - Assincronismo: Métodos devem terminar em `Async` e retornar `Task` ou `ValueTask`.
 - Injeção de Dependência: Utilize métodos de extensão `IServiceCollection.Add[Nome]Services`.
 
@@ -61,8 +64,6 @@ Sempre consulte os guias detalhados antes de grandes alterações:
     9. **Controller:** Criar em `ISM.API/Controllers` chamando a Interface do Serviço.
 - **Validação:** Sempre executar `dotnet build` no backend e `npm run lint` no frontend (quando disponível) após alterações.
 - **Refatoração:** Ao mover arquivos entre camadas, atualizar os namespaces e garantir que a `ISM.API` continua referenciando corretamente as novas localizações via DI.
-
-## 📦 Versionamento e Commits
 
 - **Idioma:** A descrição do commit deve ser sempre em **Português**.
 - **Frequência:** Realizar commits ao finalizar blocos lógicos.
