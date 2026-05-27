@@ -1,3 +1,4 @@
+using ISM.Application.Interfaces;
 using ISM.Application.Services;
 using ISM.Infrastructure.Data.Context;
 using ISM.Infrastructure.Data.Options;
@@ -21,7 +22,6 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton(databaseOptions);
         services.AddInfrastructure(databaseOptions);
-        services.AddScoped<ISystemStatusService, SystemStatusService>();
         services.AddScoped<IFornecedorService, FornecedorService>();
 
         return services;

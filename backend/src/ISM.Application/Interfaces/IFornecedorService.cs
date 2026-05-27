@@ -1,6 +1,6 @@
 using ISM.Application.DTOs;
 
-namespace ISM.Application.Services;
+namespace ISM.Application.Interfaces;
 
 public interface IFornecedorService
 {
