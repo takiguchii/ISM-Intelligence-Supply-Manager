@@ -1,5 +1,6 @@
 using ISM.CrossCutting.Configuration;
 using ISM.Domain.Modules.System.Interfaces;
+using ISM.Domain.Modules.Stock.Interfaces;
 using ISM.Infrastructure.Persistence.Context;
 using ISM.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -34,6 +35,7 @@ public static class InfrastructureServiceCollectionExtensions
         });
 
         services.AddScoped<IPlatformModuleRepository, PlatformModuleRepository>();
+        services.AddScoped<IProductRepository, ProductRepository>();
 
         return services;
     }

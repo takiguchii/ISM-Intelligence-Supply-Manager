@@ -1,5 +1,6 @@
 using ISM.Application.Abstractions;
 using ISM.Application.Modules.System.Services;
+using ISM.Application.Modules.Stock.Services;
 using ISM.CrossCutting.Configuration;
 using ISM.Infrastructure.DependencyInjection;
 
@@ -22,6 +23,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(databaseOptions);
         services.AddInfrastructure(databaseOptions);
         services.AddScoped<ISystemStatusService, SystemStatusService>();
+        services.AddScoped<IProductService, ProductService>();
 
         return services;
     }
