@@ -1,6 +1,7 @@
+using ISM.Application.Abstractions;
 using ISM.Application.Interfaces;
+using ISM.Application.Modules.Stock.Services;
 using ISM.Application.Services;
-using ISM.Infrastructure.Data.Context;
 using ISM.Infrastructure.Data.Options;
 using ISM.Infrastructure.DependencyInjection;
 
@@ -23,6 +24,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(databaseOptions);
         services.AddInfrastructure(databaseOptions);
         services.AddScoped<IFornecedorService, FornecedorService>();
+        services.AddScoped<IProductService, ProductService>();
 
         return services;
     }

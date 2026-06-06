@@ -1,6 +1,7 @@
 using ISM.Infrastructure.Data.Context;
 using ISM.Infrastructure.Data.Options;
 using ISM.Domain.Interfaces;
+using ISM.Domain.Modules.Stock.Interfaces;
 using ISM.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,6 +35,7 @@ public static class InfrastructureServiceCollectionExtensions
         });
 
         services.AddScoped<IFornecedorRepository, FornecedorRepository>();
+        services.AddScoped<IProductRepository, ProductRepository>();
 
         return services;
     }
