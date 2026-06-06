@@ -1,7 +1,6 @@
-using ISM.Application.Abstractions;
-using ISM.Application.Modules.System.Services;
+using ISM.Application.Services;
 using ISM.Application.Modules.Stock.Services;
-using ISM.CrossCutting.Configuration;
+using ISM.Infrastructure.Data.Options;
 using ISM.Infrastructure.DependencyInjection;
 
 namespace ISM.API.Extensions;

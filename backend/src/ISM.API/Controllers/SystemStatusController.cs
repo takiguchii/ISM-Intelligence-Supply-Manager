@@ -1,5 +1,5 @@
-using ISM.Application.Abstractions;
-using ISM.Application.Modules.System.DTOs;
+using ISM.Application.Services;
+using ISM.Application.DTOs;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ISM.API.Controllers;

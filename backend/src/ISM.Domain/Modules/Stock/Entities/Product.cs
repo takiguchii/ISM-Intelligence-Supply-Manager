@@ -1,4 +1,4 @@
-using ISM.Domain.Common;
+using ISM.Domain.Entities;
 
 namespace ISM.Domain.Modules.Stock.Entities;
 

@@ -1,9 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
-using ISM.Application.Modules.System.DTOs;
-using ISM.CrossCutting.Configuration;
-using ISM.Infrastructure.Persistence.Context;
+using ISM.Application.DTOs;
+using ISM.Infrastructure.Data.Context;
+using ISM.Infrastructure.Data.Options;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;

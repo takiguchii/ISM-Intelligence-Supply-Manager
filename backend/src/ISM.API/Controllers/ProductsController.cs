@@ -1,4 +1,4 @@
-using ISM.Application.Abstractions;
+using ISM.Application.Services;
 using ISM.Application.Modules.Stock.DTOs;
 using Microsoft.AspNetCore.Mvc;
 

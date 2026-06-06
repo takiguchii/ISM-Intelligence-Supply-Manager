@@ -1,6 +1,6 @@
 using ISM.Domain.Modules.Stock.Entities;
 using ISM.Domain.Modules.Stock.Interfaces;
-using ISM.Infrastructure.Persistence.Context;
+using ISM.Infrastructure.Data.Context;
 using Microsoft.EntityFrameworkCore;
 
 namespace ISM.Infrastructure.Repositories;

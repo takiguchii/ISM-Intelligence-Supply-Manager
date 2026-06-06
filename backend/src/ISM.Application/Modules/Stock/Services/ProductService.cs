@@ -1,4 +1,4 @@
-using ISM.Application.Abstractions;
+using ISM.Application.Services;
 using ISM.Application.Modules.Stock.DTOs;
 using ISM.Domain.Modules.Stock.Entities;
 using ISM.Domain.Modules.Stock.Interfaces;
