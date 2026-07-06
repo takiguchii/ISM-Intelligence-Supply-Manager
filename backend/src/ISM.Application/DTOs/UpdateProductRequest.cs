@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace ISM.Application.Modules.Stock.DTOs;
+namespace ISM.Application.DTOs;
 
 public sealed record UpdateProductRequest(
     [property: Required]

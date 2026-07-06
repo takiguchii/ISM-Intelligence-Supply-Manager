@@ -1,4 +1,4 @@
-using ISM.Application.Modules.Stock.DTOs;
+using ISM.Application.DTOs;
 
 namespace ISM.Application.Abstractions;
 

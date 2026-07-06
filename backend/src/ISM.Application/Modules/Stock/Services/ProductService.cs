@@ -1,5 +1,5 @@
 using ISM.Application.Abstractions;
-using ISM.Application.Modules.Stock.DTOs;
+using ISM.Application.DTOs;
 using ISM.Domain.Modules.Stock.Entities;
 using ISM.Domain.Modules.Stock.Interfaces;
 

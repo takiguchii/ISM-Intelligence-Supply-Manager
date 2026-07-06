@@ -1,4 +1,4 @@
-namespace ISM.Application.Modules.Stock.DTOs;
+namespace ISM.Application.DTOs;
 
 public sealed record ProductResponse(
     int Id,
