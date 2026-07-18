@@ -1,6 +1,6 @@
 using ISM.Application.DTOs;
 
-namespace ISM.Application.Abstractions;
+namespace ISM.Application.Interfaces;
 
 public interface IDishService
 {
