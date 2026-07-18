@@ -16,7 +16,7 @@ public sealed record UpdateDishRequest(
     decimal Price,
     [property: Range(0, double.MaxValue)]
     decimal Cost,
-    bool IsAtive,
+    bool IsActive,
     bool Highlight,
     [property: MaxLength(255)]
     string? UrlImage,

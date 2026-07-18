@@ -8,7 +8,7 @@ public sealed record DishResponse(
     string Description,
     decimal Price,
     decimal Cost,
-    bool IsAtive,
+    bool IsActive,
     bool Highlight,
     string? UrlImage,
     int DisplayOrder,

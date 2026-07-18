@@ -178,7 +178,7 @@ public sealed class IsmDbContext : DbContext
                 .HasColumnType("decimal(10,2)")
                 .IsRequired();
 
-            builder.Property(dish => dish.IsAtive)
+            builder.Property(dish => dish.IsActive)
                 .IsRequired();
 
             builder.Property(dish => dish.Highlight)

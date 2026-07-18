@@ -160,7 +160,7 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.Property<bool>("Highlight")
                         .HasColumnType("tinyint(1)");
 
-                    b.Property<bool>("IsAtive")
+                    b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<string>("Name")

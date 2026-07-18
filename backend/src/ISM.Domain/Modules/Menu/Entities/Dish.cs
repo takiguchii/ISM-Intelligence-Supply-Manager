@@ -14,7 +14,7 @@ public sealed class Dish : BaseEntity
     public string Description { get; set; } = string.Empty;
     public decimal Price { get; set; } 
     public decimal Cost { get; set; }
-    public bool IsAtive { get; set; } = true;
+    public bool IsActive { get; set; } = true;
     public bool Highlight { get; set; } = false;
     public string? UrlImage { get; set; }
     public int DisplayOrder { get; set; }

@@ -68,7 +68,7 @@ public sealed class DishRepository : IDishRepository
         existing.Description = dish.Description;
         existing.Price = dish.Price;
         existing.Cost = dish.Cost;
-        existing.IsAtive = dish.IsAtive;
+        existing.IsActive = dish.IsActive;
         existing.Highlight = dish.Highlight;
         existing.UrlImage = dish.UrlImage;
         existing.DisplayOrder = dish.DisplayOrder;
