@@ -88,8 +88,6 @@ public sealed class IsmDbContext : DbContext
 
             builder.HasIndex(product => product.Name);
         });
-    }
-}
 
         modelBuilder.Entity<Restaurant>(builder =>
         {

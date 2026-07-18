@@ -26,10 +26,6 @@ public static class ServiceCollectionExtensions
         services.AddInfrastructure(databaseOptions);
         services.AddScoped<IFornecedorService, FornecedorService>();
         services.AddScoped<IProductService, ProductService>();
-
-        return services;
-    }
-}
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IDishService, DishService>();
         services.AddScoped<IRestaurantService, RestaurantService>();

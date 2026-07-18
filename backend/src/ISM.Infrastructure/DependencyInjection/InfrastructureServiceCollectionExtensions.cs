@@ -1,10 +1,7 @@
 using ISM.Infrastructure.Data.Context;
 using ISM.Infrastructure.Data.Options;
 using ISM.Domain.Interfaces;
-<<<<<<< HEAD
-=======
 using ISM.Domain.Modules.Menu.Interfaces;
->>>>>>> 6b6b638 (doc: adiciona o CRUD de cárdápio)
 using ISM.Domain.Modules.Stock.Interfaces;
 using ISM.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -40,12 +37,6 @@ public static class InfrastructureServiceCollectionExtensions
 
         services.AddScoped<IFornecedorRepository, FornecedorRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
-<<<<<<< HEAD
-
-        return services;
-    }
-}
-=======
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IDishRepository, DishRepository>();
         services.AddScoped<IRestaurantRepository, RestaurantRepository>();
@@ -53,4 +44,3 @@ public static class InfrastructureServiceCollectionExtensions
         return services;
     }
 }
->>>>>>> 6b6b638 (doc: adiciona o CRUD de cárdápio)
