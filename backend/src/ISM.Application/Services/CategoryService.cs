@@ -3,7 +3,7 @@ using ISM.Application.DTOs;
 using ISM.Domain.Modules.Menu.Entities;
 using ISM.Domain.Modules.Menu.Interfaces;
 
-namespace ISM.Application.Modules.Menu.Services;
+namespace ISM.Application.Services;
 
 public sealed class CategoryService : ICategoryService
 {

@@ -1,7 +1,4 @@
-using ISM.Application.Abstractions;
 using ISM.Application.Interfaces;
-using ISM.Application.Modules.Menu.Services;
-using ISM.Application.Modules.Stock.Services;
 using ISM.Application.Services;
 using ISM.Infrastructure.Data.Options;
 using ISM.Infrastructure.DependencyInjection;
