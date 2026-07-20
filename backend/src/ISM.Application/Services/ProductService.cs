@@ -1,9 +1,9 @@
-using ISM.Application.Abstractions;
+using ISM.Application.Interfaces;
 using ISM.Application.DTOs;
 using ISM.Domain.Modules.Stock.Entities;
 using ISM.Domain.Modules.Stock.Interfaces;
 
-namespace ISM.Application.Modules.Stock.Services;
+namespace ISM.Application.Services;
 
 public sealed class ProductService : IProductService
 {

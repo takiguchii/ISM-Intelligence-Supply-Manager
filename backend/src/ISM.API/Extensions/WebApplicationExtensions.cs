@@ -30,6 +30,7 @@ public static class WebApplicationExtensions
         {
             var context = services.GetRequiredService<IsmDbContext>();
             await context.Database.MigrateAsync();
+            await DbSeeder.SeedAsync(context);
         }
         catch (Exception ex)
         {

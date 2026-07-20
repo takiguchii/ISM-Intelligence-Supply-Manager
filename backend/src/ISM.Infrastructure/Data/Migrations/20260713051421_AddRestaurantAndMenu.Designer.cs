@@ -4,6 +4,7 @@ using ISM.Infrastructure.Data.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ISM.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(IsmDbContext))]
-    partial class IsmDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260713051421_AddRestaurantAndMenu")]
+    partial class AddRestaurantAndMenu
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -244,76 +247,12 @@ namespace ISM.Infrastructure.Data.Migrations
 
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("datetime(6)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Name");
 
                     b.ToTable("products", (string)null);
-                });
-
-            modelBuilder.Entity("ISM.Domain.Entities.PlatformModule", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("varchar(256)");
-
-                    b.Property<bool>("IsEnabled")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("varchar(120)");
-
-                    b.Property<string>("Slug")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("varchar(120)");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAtUtc")
-                        .HasColumnType("datetime(6)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Slug")
-                        .IsUnique();
-
-                    b.ToTable("platform_modules", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CreatedAtUtc = new DateTime(2026, 5, 10, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Core architecture, Docker and collaborative foundation.",
-                            IsEnabled = true,
-                            Name = "Foundation",
-                            Slug = "foundation",
-                            SortOrder = 1
-                        },
-                        new
-                        {
-                            Id = 2,
-                            CreatedAtUtc = new DateTime(2026, 5, 10, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Future analytics and intelligence capabilities.",
-                            IsEnabled = true,
-                            Name = "Analytics",
-                            Slug = "analytics",
-                            SortOrder = 2
-                        });
                 });
 
             modelBuilder.Entity("ISM.Domain.Modules.Menu.Entities.Category", b =>
