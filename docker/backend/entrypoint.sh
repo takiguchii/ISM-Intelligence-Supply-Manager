@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "Waiting for MySQL to accept TCP connections..."
-until (echo > /dev/tcp/mysql/3306) >/dev/null 2>&1; do
+until nc -z -w 2 mysql 3306 >/dev/null 2>&1; do
   sleep 2
 done
 
