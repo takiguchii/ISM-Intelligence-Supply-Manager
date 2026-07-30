@@ -1,4 +1,4 @@
-using ISM.Application.Abstractions;
+using ISM.Application.Interfaces;
 using ISM.Application.DTOs;
 using Microsoft.AspNetCore.Mvc;
 

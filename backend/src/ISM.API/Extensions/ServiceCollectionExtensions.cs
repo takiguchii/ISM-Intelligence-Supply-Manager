@@ -1,6 +1,4 @@
-using ISM.Application.Abstractions;
 using ISM.Application.Interfaces;
-using ISM.Application.Modules.Stock.Services;
 using ISM.Application.Services;
 using ISM.Infrastructure.Data.Options;
 using ISM.Infrastructure.DependencyInjection;
@@ -25,6 +23,9 @@ public static class ServiceCollectionExtensions
         services.AddInfrastructure(databaseOptions);
         services.AddScoped<IFornecedorService, FornecedorService>();
         services.AddScoped<IProductService, ProductService>();
+        services.AddScoped<ICategoryService, CategoryService>();
+        services.AddScoped<IDishService, DishService>();
+        services.AddScoped<IRestaurantService, RestaurantService>();
 
         return services;
     }
