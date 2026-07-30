@@ -29,7 +29,7 @@ const handleLogin = async () => {
     });
     loginSuccess.value = true;
     setTimeout(() => {
-      router.push("/");
+      router.push("/home");
     }, 1200);
   } catch (e) {
   }
