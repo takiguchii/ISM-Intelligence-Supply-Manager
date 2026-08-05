@@ -9,6 +9,23 @@ public static class DbSeeder
 {
     public static async Task SeedAsync(IsmDbContext context)
     {
+        // Seed default User (admin / admin123)
+        if (!await context.Users.AnyAsync())
+        {
+            var adminUser = new User
+            {
+                Username = "admin",
+                Email = "admin@ism.com",
+                Role = "Admin",
+                CreatedAtUtc = DateTime.UtcNow
+            };
+            var passwordHasher = new Microsoft.AspNetCore.Identity.PasswordHasher<User>();
+            adminUser.PasswordHash = passwordHasher.HashPassword(adminUser, "admin123");
+
+            await context.Users.AddAsync(adminUser);
+            await context.SaveChangesAsync();
+        }
+
         // Se já houver restaurantes ou fornecedores cadastrados, não faz a seed
         if (await context.Restaurants.AnyAsync() || await context.Fornecedores.AnyAsync())
         {

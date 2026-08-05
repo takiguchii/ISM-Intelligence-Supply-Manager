@@ -40,6 +40,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IDishRepository, DishRepository>();
         services.AddScoped<IRestaurantRepository, RestaurantRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
 
         return services;
     }
