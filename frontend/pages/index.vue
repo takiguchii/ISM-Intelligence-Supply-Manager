@@ -53,6 +53,12 @@ const quickNotes = [
           </div>
 
           <div class="flex flex-wrap gap-4">
+            <NuxtLink
+              to="/login"
+              class="inline-flex items-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-200 active:scale-95 shadow-md"
+            >
+              Acessar Login
+            </NuxtLink>
             <el-button type="primary" size="large" round @click="refresh()">
               Atualizar status
             </el-button>
