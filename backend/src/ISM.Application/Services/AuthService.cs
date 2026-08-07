@@ -5,6 +5,7 @@ using System.Text;
 using ISM.Application.DTOs;
 using ISM.Application.Interfaces;
 using ISM.Application.Options;
+using ISM.Application.Security;
 using ISM.Domain.Entities;
 using ISM.Domain.Interfaces;
 using Microsoft.Extensions.Options;
@@ -17,15 +18,21 @@ public sealed class AuthService : IAuthService
     private readonly IUserRepository _userRepository;
     private readonly IRestaurantRepository _restaurantRepository;
     private readonly JwtOptions _jwtOptions;
+    private readonly ICurrentUser _currentUser;
+    private readonly IPlanEnforcer _planEnforcer;
 
     public AuthService(
         IUserRepository userRepository,
         IRestaurantRepository restaurantRepository,
-        IOptions<JwtOptions> jwtOptions)
+        IOptions<JwtOptions> jwtOptions,
+        ICurrentUser currentUser,
+        IPlanEnforcer planEnforcer)
     {
         _userRepository = userRepository;
         _restaurantRepository = restaurantRepository;
         _jwtOptions = jwtOptions.Value;
+        _currentUser = currentUser;
+        _planEnforcer = planEnforcer;
     }
 
     public async Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
@@ -36,6 +43,10 @@ public sealed class AuthService : IAuthService
 
         if (!user.IsActive)
             throw new UnauthorizedAccessException("Usuário inativo.");
+
+        var (planoAtivo, mensagemPlano) = await _planEnforcer.ValidateRestaurantAccessAsync(user.RestaurantId, cancellationToken);
+        if (!planoAtivo)
+            throw new UnauthorizedAccessException(mensagemPlano ?? "Acesso bloqueado.");
 
         return GenerateAuthResponse(user);
     }
@@ -52,13 +63,49 @@ public sealed class AuthService : IAuthService
                 throw new InvalidOperationException($"Restaurante com ID {request.RestaurantId.Value} não existe.");
         }
 
+        var requestedRole = IsmRoles.Normalize(request.Role);
+
+        // 🔒 PONTO 4: Manager logado NÃO PODE criar Admin nem SuperAdmin
+        if (!_currentUser.IsSuperAdmin)
+        {
+            if (string.Equals(requestedRole, IsmRoles.Admin, StringComparison.OrdinalIgnoreCase) &&
+                !_currentUser.RestaurantId.HasValue)
+            {
+                throw new UnauthorizedAccessException("Você não tem permissão para criar usuários Super Admin.");
+            }
+
+            if (!_currentUser.IsManagerOrAbove)
+            {
+                throw new UnauthorizedAccessException("Apenas gerentes e administradores podem criar usuários.");
+            }
+
+            // 🔒 Manager só pode criar usuário PROPRIO RESTAURANTE
+            if (_currentUser.RestaurantId.HasValue)
+            {
+                if (!request.RestaurantId.HasValue || request.RestaurantId.Value != _currentUser.RestaurantId.Value)
+                    throw new UnauthorizedAccessException("Você só pode criar usuários no seu próprio restaurante.");
+
+                // Manager NÃO pode criar Admin do sistema (só employees/Manager do mesmo restaurante)
+                if (string.Equals(requestedRole, IsmRoles.Admin, StringComparison.OrdinalIgnoreCase)
+                    && _currentUser.RestaurantId.HasValue)
+                {
+                    // Dentro do restaurante o Admin ainda é permitido, mas NÃO SuperAdmin (restaurantId null)
+                    // então OK, pois request.RestaurantId já está setado pro proprio restaurante
+                }
+            }
+
+            // Limite de plano (PONTO 5): só se for criar user em restaurante
+            if (request.RestaurantId.HasValue)
+                await _planEnforcer.AssertCanAddUserAsync(request.RestaurantId.Value, cancellationToken);
+        }
+
         var now = DateTime.UtcNow;
         var user = new User
         {
             Name = request.Name,
             Email = request.Email,
             PasswordHash = HashPassword(request.Password),
-            Role = string.IsNullOrWhiteSpace(request.Role) ? "Admin" : request.Role,
+            Role = requestedRole,
             IsActive = true,
             RestaurantId = request.RestaurantId,
             CreatedAtUtc = now
