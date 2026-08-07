@@ -1,10 +1,15 @@
 using System.Text;
+using System.Security.Claims;
+using ISM.API.Security;
 using ISM.Application.Interfaces;
 using ISM.Application.Options;
+using ISM.Application.Security;
 using ISM.Application.Services;
 using ISM.Infrastructure.Data.Options;
 using ISM.Infrastructure.DependencyInjection;
+using ISM.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -14,6 +19,8 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddApiServices(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddHttpContextAccessor();
+
         services.AddControllers();
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options =>
@@ -22,7 +29,7 @@ public static class ServiceCollectionExtensions
             {
                 Title = "ISM - Intelligence Supply Manager API",
                 Version = "v1",
-                Description = "API para gestão inteligente de suprimentos"
+                Description = "API SaaS de gestão inteligente de suprimentos para restaurantes"
             });
 
             options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -79,6 +86,16 @@ public static class ServiceCollectionExtensions
                 };
             });
 
+        services.AddAuthorizationBuilder()
+            .AddPolicy(IsmPolicies.SuperAdminOnly, policy =>
+                policy.RequireRole(IsmRoles.Admin)
+                      .RequireAssertion(ctx =>
+                          string.IsNullOrEmpty(ctx.User.FindFirstValue("restaurantId"))))
+            .AddPolicy(IsmPolicies.RestaurantManagerOrAbove, policy =>
+                policy.RequireRole(IsmRoles.Admin, IsmRoles.Manager))
+            .AddPolicy(IsmPolicies.RestaurantAnyUser, policy =>
+                policy.RequireRole(IsmRoles.Admin, IsmRoles.Manager, IsmRoles.Chef, IsmRoles.Waiter));
+
         services.AddCors(options =>
         {
             options.AddPolicy("AllowFrontend", policy =>
@@ -90,6 +107,8 @@ public static class ServiceCollectionExtensions
             });
         });
 
+        services.AddScoped<ICurrentUser, CurrentUserApi>();
+        services.AddScoped<IPlanEnforcer, PlanEnforcer>();
         services.AddInfrastructure(databaseOptions);
         services.AddScoped<IFornecedorService, FornecedorService>();
         services.AddScoped<IProductService, ProductService>();
