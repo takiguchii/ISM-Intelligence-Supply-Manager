@@ -19,6 +19,7 @@ public sealed class IsmDbContext : DbContext
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Dish> Dishes => Set<Dish>();
     public DbSet<DishIngredient> DishIngredients => Set<DishIngredient>();
+    public DbSet<User> Users => Set<User>();
     
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -229,6 +230,47 @@ public sealed class IsmDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(ingredient => ingredient.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<User>(builder =>
+        {
+            builder.ToTable("users");
+
+            builder.HasKey(u => u.Id);
+
+            builder.Property(u => u.Name)
+                .HasMaxLength(150)
+                .IsRequired();
+
+            builder.Property(u => u.Email)
+                .HasMaxLength(150)
+                .IsRequired();
+
+            builder.HasIndex(u => u.Email)
+                .IsUnique();
+
+            builder.Property(u => u.PasswordHash)
+                .HasMaxLength(512)
+                .IsRequired();
+
+            builder.Property(u => u.Role)
+                .HasMaxLength(50)
+                .IsRequired();
+
+            builder.Property(u => u.IsActive)
+                .IsRequired();
+
+            builder.Property(u => u.CreatedAtUtc)
+                .HasColumnType("datetime(6)")
+                .IsRequired();
+
+            builder.Property(u => u.UpdatedAtUtc)
+                .HasColumnType("datetime(6)");
+
+            builder.HasOne(u => u.Restaurant)
+                .WithMany()
+                .HasForeignKey(u => u.RestaurantId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using ISM.Domain.Entities;
 using ISM.Domain.Modules.Menu.Entities;
 using ISM.Domain.Modules.Stock.Entities;
@@ -9,7 +11,24 @@ public static class DbSeeder
 {
     public static async Task SeedAsync(IsmDbContext context)
     {
-        // Se já houver restaurantes ou fornecedores cadastrados, não faz a seed
+        // 1. Seed usuário admin padrão (se não houver usuários)
+        if (!await context.Users.AnyAsync())
+        {
+            var adminPassword = HashPassword("admin123");
+            var admin = new User
+            {
+                Name = "Administrador ISM",
+                Email = "admin@ism.com.br",
+                PasswordHash = adminPassword,
+                Role = "Admin",
+                IsActive = true,
+                CreatedAtUtc = DateTime.UtcNow
+            };
+            await context.Users.AddAsync(admin);
+            await context.SaveChangesAsync();
+        }
+
+        // Se já houver restaurantes ou fornecedores cadastrados, não faz a seed de dados
         if (await context.Restaurants.AnyAsync() || await context.Fornecedores.AnyAsync())
         {
             return;
@@ -172,5 +191,19 @@ public static class DbSeeder
 
         await context.DishIngredients.AddRangeAsync(ingredients);
         await context.SaveChangesAsync();
+    }
+
+    private static string HashPassword(string password)
+    {
+        using var pbkdf2 = new Rfc2898DeriveBytes(password, 16, 100_000, HashAlgorithmName.SHA256);
+        var salt = pbkdf2.Salt;
+        var hash = pbkdf2.GetBytes(32);
+
+        var bytes = new byte[1 + salt.Length + hash.Length];
+        bytes[0] = 0x01;
+        Buffer.BlockCopy(salt, 0, bytes, 1, salt.Length);
+        Buffer.BlockCopy(hash, 0, bytes, 1 + salt.Length, hash.Length);
+
+        return Convert.ToBase64String(bytes);
     }
 }
