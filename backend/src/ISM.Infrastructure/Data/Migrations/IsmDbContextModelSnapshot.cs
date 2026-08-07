@@ -61,6 +61,55 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.ToTable("fornecedores", (string)null);
                 });
 
+            modelBuilder.Entity("ISM.Domain.Entities.Plano", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Descricao")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<int>("MaxCategorias")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaxPratos")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaxProdutos")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaxUsuarios")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<decimal>("PrecoMensal")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Nome")
+                        .IsUnique();
+
+                    b.ToTable("planos", (string)null);
+                });
+
             modelBuilder.Entity("ISM.Domain.Entities.Restaurant", b =>
                 {
                     b.Property<int>("Id")
@@ -85,6 +134,15 @@ namespace ISM.Infrastructure.Data.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("varchar(120)");
 
+                    b.Property<bool>("PlanoAtivo")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<int?>("PlanoId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("TrialEndAtUtc")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("datetime(6)");
 
@@ -92,6 +150,8 @@ namespace ISM.Infrastructure.Data.Migrations
 
                     b.HasIndex("CNPJ")
                         .IsUnique();
+
+                    b.HasIndex("PlanoId");
 
                     b.ToTable("restaurants", (string)null);
                 });
@@ -200,7 +260,6 @@ namespace ISM.Infrastructure.Data.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)");
 
@@ -228,7 +287,6 @@ namespace ISM.Infrastructure.Data.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("UrlImage")
-                        .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)");
 
@@ -279,6 +337,9 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.Property<decimal>("CurrentQuantity")
                         .HasColumnType("decimal(10,3)");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<decimal>("MinimumQuantity")
                         .HasColumnType("decimal(10,3)");
 
@@ -287,6 +348,9 @@ namespace ISM.Infrastructure.Data.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("varchar(120)");
 
+                    b.Property<int>("RestaurantId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Unit")
                         .IsRequired()
                         .HasMaxLength(10)
@@ -294,9 +358,11 @@ namespace ISM.Infrastructure.Data.Migrations
 
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("datetime(6)");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("Name");
+                    b.HasIndex("RestaurantId", "Name")
+                        .IsUnique();
 
                     b.ToTable("products", (string)null);
                 });
@@ -366,6 +432,31 @@ namespace ISM.Infrastructure.Data.Migrations
                         });
                 });
 
+            // ===== Relacionamentos FK =====
+            modelBuilder.Entity("ISM.Domain.Entities.Restaurant", b =>
+                {
+                    b.HasOne("ISM.Domain.Entities.Plano", "Plano")
+                        .WithMany("Restaurantes")
+                        .HasForeignKey("PlanoId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Plano");
+                    b.Navigation("Categories");
+                    b.Navigation("Dishes");
+                    b.Navigation("Products");
+                    b.Navigation("Users");
+                });
+
+            modelBuilder.Entity("ISM.Domain.Entities.User", b =>
+                {
+                    b.HasOne("ISM.Domain.Entities.Restaurant", "Restaurant")
+                        .WithMany("Users")
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Restaurant");
+                });
+
             modelBuilder.Entity("ISM.Domain.Modules.Menu.Entities.Category", b =>
                 {
                     b.HasOne("ISM.Domain.Entities.Restaurant", "Restaurant")
@@ -375,6 +466,7 @@ namespace ISM.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Restaurant");
+                    b.Navigation("Dishes");
                 });
 
             modelBuilder.Entity("ISM.Domain.Modules.Menu.Entities.Dish", b =>
@@ -392,8 +484,8 @@ namespace ISM.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Category");
-
                     b.Navigation("Restaurant");
+                    b.Navigation("Ingredients");
                 });
 
             modelBuilder.Entity("ISM.Domain.Modules.Menu.Entities.DishIngredient", b =>
@@ -411,35 +503,18 @@ namespace ISM.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Dish");
-
                     b.Navigation("Product");
                 });
 
-            modelBuilder.Entity("ISM.Domain.Entities.Restaurant", b =>
-                {
-                    b.Navigation("Categories");
-
-                    b.Navigation("Dishes");
-                });
-
-            modelBuilder.Entity("ISM.Domain.Entities.User", b =>
+            modelBuilder.Entity("ISM.Domain.Modules.Stock.Entities.Product", b =>
                 {
                     b.HasOne("ISM.Domain.Entities.Restaurant", "Restaurant")
-                        .WithMany()
+                        .WithMany("Products")
                         .HasForeignKey("RestaurantId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Restaurant");
-                });
-
-            modelBuilder.Entity("ISM.Domain.Modules.Menu.Entities.Category", b =>
-                {
-                    b.Navigation("Dishes");
-                });
-
-            modelBuilder.Entity("ISM.Domain.Modules.Menu.Entities.Dish", b =>
-                {
-                    b.Navigation("Ingredients");
                 });
 #pragma warning restore 612, 618
         }

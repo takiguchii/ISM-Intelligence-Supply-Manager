@@ -11,6 +11,51 @@ public static class DbSeeder
 {
     public static async Task SeedAsync(IsmDbContext context)
     {
+        // 0. Planos SaaS (Free / Pro / Enterprise) — sempre garante que existam
+        if (!await context.Planos.AnyAsync())
+        {
+            var planos = new List<Plano>
+            {
+                new()
+                {
+                    Nome = "Free",
+                    Descricao = "Plano trial básico para teste",
+                    MaxUsuarios = 2,
+                    MaxPratos = 10,
+                    MaxProdutos = 20,
+                    MaxCategorias = 3,
+                    PrecoMensal = 0,
+                    Ativo = true
+                },
+                new()
+                {
+                    Nome = "Pro",
+                    Descricao = "Plano profissional para restaurantes em crescimento",
+                    MaxUsuarios = 10,
+                    MaxPratos = 100,
+                    MaxProdutos = 200,
+                    MaxCategorias = 15,
+                    PrecoMensal = 149.90m,
+                    Ativo = true
+                },
+                new()
+                {
+                    Nome = "Enterprise",
+                    Descricao = "Plano ilimitado para redes e franquias",
+                    MaxUsuarios = 100,
+                    MaxPratos = 1000,
+                    MaxProdutos = 2000,
+                    MaxCategorias = 100,
+                    PrecoMensal = 499.90m,
+                    Ativo = true
+                }
+            };
+            await context.Planos.AddRangeAsync(planos);
+            await context.SaveChangesAsync();
+        }
+
+        var planoPro = await context.Planos.FirstOrDefaultAsync(p => p.Nome == "Pro");
+
         // 1. Seed usuário admin padrão (se não houver usuários)
         if (!await context.Users.AnyAsync())
         {
@@ -55,51 +100,62 @@ public static class DbSeeder
 
         await context.Fornecedores.AddRangeAsync(fornecedores);
 
-        // 2. Cadastra Restaurante
+        // 2. Cadastra Restaurante (vinculado ao Plano Pro)
         var restaurant = new Restaurant
         {
             Name = "Gourmet ISM Restaurant",
             CNPJ = "12345678000190",
-            Created = DateTime.UtcNow
+            Created = DateTime.UtcNow,
+            PlanoId = planoPro?.Id,
+            TrialEndAtUtc = DateTime.UtcNow.AddDays(14),
+            PlanoAtivo = true
         };
 
         await context.Restaurants.AddAsync(restaurant);
         await context.SaveChangesAsync(); // Salva para gerar o Id do Restaurante
 
-        // 3. Cadastra Produtos (Estoque)
+        // 3. Cadastra Produtos (Estoque) — agora com RestaurantId
         var products = new List<Product>
         {
             new()
             {
+                RestaurantId = restaurant.Id,
                 Name = "Arroz",
                 Unit = "Kg",
                 CurrentQuantity = 100m,
                 MinimumQuantity = 20m,
-                AverageCost = 5.50m
+                AverageCost = 5.50m,
+                IsActive = true
             },
             new()
             {
+                RestaurantId = restaurant.Id,
                 Name = "Feijão",
                 Unit = "Kg",
                 CurrentQuantity = 80m,
                 MinimumQuantity = 15m,
-                AverageCost = 7.20m
+                AverageCost = 7.20m,
+                IsActive = true
             },
             new()
             {
+                RestaurantId = restaurant.Id,
                 Name = "Carne Bovina",
                 Unit = "Kg",
                 CurrentQuantity = 50m,
                 MinimumQuantity = 10m,
-                AverageCost = 35.00m
+                AverageCost = 35.00m,
+                IsActive = true
             },
             new()
             {
+                RestaurantId = restaurant.Id,
                 Name = "Tomate",
                 Unit = "Kg",
                 CurrentQuantity = 30m,
                 MinimumQuantity = 5m,
-                AverageCost = 4.50m
+                AverageCost = 4.50m,
+                IsActive = true
             }
         };
 
