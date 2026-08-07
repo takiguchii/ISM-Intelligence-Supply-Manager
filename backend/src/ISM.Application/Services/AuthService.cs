@@ -76,6 +76,20 @@ public sealed class AuthService : IAuthService
         return user == null ? null : MapToUserDto(user);
     }
 
+    public Task<AuthResponse> GenerateTokenForUserAsync(User user, CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(GenerateAuthResponse(user));
+    }
+
+    public async Task<AuthResponse> GenerateAdminTokenAsync(CancellationToken cancellationToken = default)
+    {
+        var admin = await _userRepository.GetByIdAsync(1, cancellationToken);
+        if (admin == null)
+            throw new InvalidOperationException("Usuário admin padrão (ID=1) não encontrado no banco.");
+
+        return GenerateAuthResponse(admin);
+    }
+
     private AuthResponse GenerateAuthResponse(User user)
     {
         var expires = DateTime.UtcNow.AddMinutes(_jwtOptions.ExpiresInMinutes);
