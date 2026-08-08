@@ -69,13 +69,13 @@ const handleLogin = async () => {
   <main class="relative min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center overflow-hidden font-sans selection:bg-zinc-800 selection:text-white py-10 px-4">
     <!-- Glow Background Effects -->
     <div class="absolute -top-40 -left-40 w-96 h-96 bg-zinc-800/20 rounded-full blur-3xl pointer-events-none"></div>
-    <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
     <section class="relative z-10 w-full max-w-md flex flex-col items-center">
       <!-- Title Header -->
       <div class="mb-6 text-center space-y-2">
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900/90 border border-zinc-800 text-xs font-mono text-zinc-300 shadow-md">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></span>
           <span class="font-mono text-xs uppercase tracking-widest text-zinc-400">Autenticação</span>
         </div>
         <h1 class="text-3xl font-bold text-white tracking-tight">
@@ -97,52 +97,68 @@ const handleLogin = async () => {
         </el-alert>
       </div>
 
-      <!-- Flip Card Switch Wrapper -->
-      <div class="card-switch">
-        <label class="switch">
-          <input class="toggle" type="checkbox">
-          <span class="slider"></span>
-          <span class="card-side"></span>
-          
-          <div class="flip-card__inner">
-            <!-- Front (Log in) -->
-            <div class="flip-card__front">
-              <div class="title">Log in</div>
-              <form @submit.prevent="handleLogin" class="flip-card__form">
-                <input
-                  v-model="loginForm.email"
-                  type="email"
-                  placeholder="Email"
-                  name="email"
-                  class="flip-card__input"
-                  autocomplete="email"
-                >
-                <input
-                  v-model="loginForm.password"
-                  type="password"
-                  placeholder="Password"
-                  name="password"
-                  class="flip-card__input"
-                  autocomplete="current-password"
-                >
-                <button type="submit" class="flip-card__btn" :disabled="submitting">
-                  {{ submitting ? 'Aguarde...' : "Let`s go!" }}
-                </button>
-              </form>
-            </div>
-
-            <!-- Back (Sign up - Disabled) -->
-            <div class="flip-card__back">
-              <div class="title">Sign up</div>
-              <form @submit.prevent class="flip-card__form">
-                <input type="text" placeholder="Name" class="flip-card__input" disabled>
-                <input type="email" placeholder="Email" name="email" class="flip-card__input" disabled>
-                <input type="password" placeholder="Password" name="password" class="flip-card__input" disabled>
-                <button type="button" class="flip-card__btn opacity-50 cursor-not-allowed" title="Cadastro desativado">Confirm!</button>
-              </form>
+      <!-- Form Container -->
+      <div class="form-container shadow-2xl border border-gray-800/80">
+        <p class="title">Login</p>
+        <form class="form" @submit.prevent="handleLogin">
+          <div class="input-group">
+            <label for="username">E-mail</label>
+            <input
+              id="username"
+              v-model="loginForm.email"
+              type="email"
+              name="username"
+              placeholder="seu@email.com.br"
+              autocomplete="email"
+            >
+          </div>
+          <div class="input-group">
+            <label for="password">Senha</label>
+            <input
+              id="password"
+              v-model="loginForm.password"
+              type="password"
+              name="password"
+              placeholder="••••••••"
+              autocomplete="current-password"
+            >
+            <div class="forgot">
+              <a rel="noopener noreferrer" href="#">Esqueceu a senha?</a>
             </div>
           </div>
-        </label>
+          <button type="submit" class="sign" :disabled="submitting">
+            {{ submitting ? 'Aguarde...' : 'Sign in' }}
+          </button>
+        </form>
+
+        <div class="social-message">
+          <div class="line"></div>
+          <p class="message">Login social</p>
+          <div class="line"></div>
+        </div>
+
+        <div class="social-icons">
+          <button aria-label="Log in with Google" type="button" class="icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" class="w-5 h-5 fill-current">
+              <path d="M16.318 13.714v5.484h9.078c-0.37 2.354-2.745 6.901-9.078 6.901-5.458 0-9.917-4.521-9.917-10.099s4.458-10.099 9.917-10.099c3.109 0 5.193 1.318 6.38 2.464l4.339-4.182c-2.786-2.599-6.396-4.182-10.719-4.182-8.844 0-16 7.151-16 16s7.156 16 16 16c9.234 0 15.365-6.49 15.365-15.635 0-1.052-0.115-1.854-0.255-2.651z"></path>
+            </svg>
+          </button>
+          <button aria-label="Log in with Twitter" type="button" class="icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" class="w-5 h-5 fill-current">
+              <path d="M31.937 6.093c-1.177 0.516-2.437 0.871-3.765 1.032 1.355-0.813 2.391-2.099 2.885-3.631-1.271 0.74-2.677 1.276-4.172 1.579-1.192-1.276-2.896-2.079-4.787-2.079-3.625 0-6.563 2.937-6.563 6.557 0 0.521 0.063 1.021 0.172 1.495-5.453-0.255-10.287-2.875-13.52-6.833-0.568 0.964-0.891 2.084-0.891 3.303 0 2.281 1.161 4.281 2.916 5.457-1.073-0.031-2.083-0.328-2.968-0.817v0.079c0 3.181 2.26 5.833 5.26 6.437-0.547 0.145-1.131 0.229-1.724 0.229-0.421 0-0.823-0.041-1.224-0.115 0.844 2.604 3.26 4.5 6.14 4.557-2.239 1.755-5.077 2.801-8.135 2.801-0.521 0-1.041-0.025-1.563-0.088 2.917 1.86 6.36 2.948 10.079 2.948 12.067 0 18.661-9.995 18.661-18.651 0-0.276 0-0.557-0.021-0.839 1.287-0.917 2.401-2.079 3.281-3.396z"></path>
+            </svg>
+          </button>
+          <button aria-label="Log in with GitHub" type="button" class="icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" class="w-5 h-5 fill-current">
+              <path d="M16 0.396c-8.839 0-16 7.167-16 16 0 7.073 4.584 13.068 10.937 15.183 0.803 0.151 1.093-0.344 1.093-0.772 0-0.38-0.009-1.385-0.015-2.719-4.453 0.964-5.391-2.151-5.391-2.151-0.729-1.844-1.781-2.339-1.781-2.339-1.448-0.989 0.115-0.968 0.115-0.968 1.604 0.109 2.448 1.645 2.448 1.645 1.427 2.448 3.744 1.74 4.661 1.328 0.14-1.031 0.557-1.74 1.011-2.135-3.552-0.401-7.287-1.776-7.287-7.907 0-1.751 0.62-3.177 1.645-4.297-0.177-0.401-0.719-2.031 0.141-4.235 0 0 1.339-0.427 4.4 1.641 1.281-0.355 2.641-0.532 4-0.541 1.36 0.009 2.719 0.187 4 0.541 3.043-2.068 4.381-1.641 4.381-1.641 0.859 2.204 0.317 3.833 0.161 4.235 1.015 1.12 1.635 2.547 1.635 4.297 0 6.145-3.74 7.5-7.296 7.891 0.556 0.479 1.077 1.464 1.077 2.959 0 2.14-0.020 3.864-0.020 4.385 0 0.416 0.28 0.916 1.104 0.755 6.4-2.093 10.979-8.093 10.979-15.156 0-8.833-7.161-16-16-16z"></path>
+            </svg>
+          </button>
+        </div>
+
+        <p class="signup">
+          Não tem uma conta?
+          <a rel="noopener noreferrer" href="#">Criar conta</a>
+        </p>
       </div>
 
       <!-- Default User Hint -->
@@ -154,213 +170,151 @@ const handleLogin = async () => {
 </template>
 
 <style scoped>
-.card-switch {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.switch {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 50px;
-  height: 20px;
-  cursor: pointer;
-}
-
-.card-side {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-
-.card-side::before {
-  position: absolute;
-  content: 'Log in';
-  left: -75px;
-  top: -1px;
-  width: 65px;
-  text-align: right;
-  text-decoration: underline;
-  color: #fefefe;
-  font-weight: 600;
-  font-size: 14px;
-  white-space: nowrap;
-}
-
-.card-side::after {
-  position: absolute;
-  content: 'Sign up';
-  left: 60px;
-  top: -1px;
-  width: 65px;
-  text-align: left;
-  text-decoration: none;
-  color: #fefefe;
-  font-weight: 600;
-  font-size: 14px;
-  white-space: nowrap;
-}
-
-.toggle {
-  display: none;
-}
-
-.slider {
-  box-sizing: border-box;
-  border-radius: 5px;
-  border: 2px solid #fefefe;
-  box-shadow: 2px 2px 0px #fefefe;
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #111111;
-  transition: 0.3s;
-}
-
-.slider:before {
-  box-sizing: border-box;
-  position: absolute;
-  content: "";
-  height: 14px;
-  width: 14px;
-  border: 2px solid #fefefe;
-  border-radius: 3px;
-  left: 1px;
-  bottom: 1px;
-  background-color: #111111;
-  box-shadow: 0 2px 0 #fefefe;
-  transition: 0.3s;
-}
-
-.toggle:checked + .slider {
-  background-color: #2d8cf0;
-}
-
-.toggle:checked + .slider:before {
-  transform: translateX(26px);
-}
-
-.toggle:checked ~ .card-side:before {
-  text-decoration: none;
-}
-
-.toggle:checked ~ .card-side:after {
-  text-decoration: underline;
-}
-
-/* 3D Flip Card Container */
-.flip-card__inner {
+.form-container {
   width: 320px;
-  height: 380px;
-  position: relative;
-  background-color: transparent;
-  perspective: 1000px;
-  text-align: center;
-  transition: transform 0.8s;
-  transform-style: preserve-3d;
-  margin-top: 45px;
-}
-
-.toggle:checked ~ .flip-card__inner {
-  transform: rotateY(180deg);
-}
-
-.flip-card__front,
-.flip-card__back {
-  padding: 30px 20px;
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  background: #111111;
-  gap: 20px;
-  border-radius: 8px;
-  border: 2px solid #ffffff;
-  box-shadow: 4px 4px 0px #ffffff;
-  width: 100%;
-  height: 100%;
-  top: 0;
-  left: 0;
+  border-radius: 0.75rem;
+  background-color: rgba(17, 24, 39, 1);
+  padding: 2rem;
+  color: rgba(243, 244, 246, 1);
   box-sizing: border-box;
-}
-
-.flip-card__back {
-  transform: rotateY(180deg);
-}
-
-.flip-card__form {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 18px;
-  width: 100%;
 }
 
 .title {
-  margin-bottom: 5px;
-  font-size: 28px;
-  font-weight: 900;
   text-align: center;
-  color: #ffffff;
-  letter-spacing: -0.5px;
-}
-
-.flip-card__input {
-  width: 250px;
-  height: 42px;
-  border-radius: 6px;
-  border: 2px solid #ffffff;
-  background-color: #111111;
-  box-shadow: 4px 4px 0px #ffffff;
-  font-size: 14px;
-  font-weight: 600;
-  color: #ffffff;
-  padding: 0 12px;
-  outline: none;
-  box-sizing: border-box;
-  transition: all 0.2s ease;
-}
-
-.flip-card__input::placeholder {
-  color: #7e7e7e;
-  opacity: 0.9;
-}
-
-.flip-card__input:focus {
-  border: 2px solid #2d8cf0;
-  box-shadow: 4px 4px 0px #2d8cf0;
-}
-
-.flip-card__btn {
-  margin-top: 10px;
-  width: 130px;
-  height: 42px;
-  border-radius: 6px;
-  border: 2px solid #ffffff;
-  background-color: #111111;
-  box-shadow: 4px 4px 0px #ffffff;
-  font-size: 16px;
+  font-size: 1.5rem;
+  line-height: 2rem;
   font-weight: 700;
-  color: #ffffff;
-  cursor: pointer;
-  transition: all 0.15s ease;
+  color: rgba(243, 244, 246, 1);
 }
 
-.flip-card__btn:active {
-  box-shadow: 0px 0px 0px #ffffff;
-  transform: translate(4px, 4px);
+.form {
+  margin-top: 1.5rem;
+}
+
+.input-group {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.input-group label {
+  display: block;
+  color: rgba(156, 163, 175, 1);
+  margin-bottom: 4px;
+}
+
+.input-group input {
+  width: 100%;
+  border-radius: 0.375rem;
+  border: 1px solid rgba(55, 65, 81, 1);
+  outline: 0;
+  background-color: rgba(17, 24, 39, 1);
+  padding: 0.75rem 1rem;
+  color: rgba(243, 244, 246, 1);
+  box-sizing: border-box;
+  transition: border-color 0.2s ease;
+}
+
+.input-group input:focus {
+  border-color: rgba(167, 139, 250, 1);
+}
+
+.forgot {
+  display: flex;
+  justify-content: flex-end;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: rgba(156, 163, 175, 1);
+  margin: 8px 0 14px 0;
+}
+
+.forgot a,
+.signup a {
+  color: rgba(243, 244, 246, 1);
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.forgot a:hover,
+.signup a:hover {
+  text-decoration: underline rgba(167, 139, 250, 1);
+}
+
+.sign {
+  display: block;
+  width: 100%;
+  background-color: rgba(167, 139, 250, 1);
+  padding: 0.75rem;
+  text-align: center;
+  color: rgba(17, 24, 39, 1);
+  border: none;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.sign:hover {
+  background-color: rgba(192, 169, 252, 1);
+}
+
+.sign:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.social-message {
+  display: flex;
+  align-items: center;
+  padding-top: 1rem;
+}
+
+.line {
+  height: 1px;
+  flex: 1 1 0%;
+  background-color: rgba(55, 65, 81, 1);
+}
+
+.social-message .message {
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: rgba(156, 163, 175, 1);
+}
+
+.social-icons {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.social-icons .icon {
+  border-radius: 0.125rem;
+  padding: 0.75rem;
+  border: none;
+  background-color: transparent;
+  margin-left: 8px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.social-icons .icon:hover {
+  opacity: 0.8;
+}
+
+.social-icons .icon svg {
+  height: 1.25rem;
+  width: 1.25rem;
+  fill: #fff;
+}
+
+.signup {
+  text-align: center;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: rgba(156, 163, 175, 1);
+  margin-top: 12px;
 }
 </style>
