@@ -33,12 +33,12 @@ onMounted(() => {
 
 const loginRules = {
   email: [
-    { required: true, message: "E-mail é obrigatório", trigger: ["blur", "change"] },
-    { type: "email", message: "E-mail inválido", trigger: ["blur", "change"] }
+    { required: true, message: "E-mail é obrigatório", trigger: "blur" },
+    { type: "email", message: "E-mail inválido", trigger: "blur" }
   ],
   password: [
-    { required: true, message: "Senha é obrigatória", trigger: ["blur", "change"] },
-    { min: 6, message: "Senha deve ter pelo menos 6 caracteres", trigger: ["blur", "change"] }
+    { required: true, message: "Senha é obrigatória", trigger: "blur" },
+    { min: 6, message: "Senha deve ter pelo menos 6 caracteres", trigger: "blur" }
   ]
 };
 
