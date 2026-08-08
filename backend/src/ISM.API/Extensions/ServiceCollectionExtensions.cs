@@ -116,6 +116,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IDishService, DishService>();
         services.AddScoped<IRestaurantService, RestaurantService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IDevAuthService, DevAuthService>();
         services.AddScoped<IUserService, UserService>();
 
         return services;
