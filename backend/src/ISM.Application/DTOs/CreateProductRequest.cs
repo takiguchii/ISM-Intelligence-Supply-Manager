@@ -4,6 +4,8 @@ namespace ISM.Application.DTOs;
 
 public sealed record CreateProductRequest(
     [property: Required]
+    int RestaurantId,
+    [property: Required]
     [property: MaxLength(120)]
     string Name,
     [property: Required]

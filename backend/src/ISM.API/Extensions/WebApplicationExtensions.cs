@@ -16,6 +16,8 @@ public static class WebApplicationExtensions
             app.UseSwaggerUI();
         }
 
+        app.UseCors("AllowFrontend");
+        app.UseAuthentication();
         app.UseAuthorization();
         app.MapControllers();
 

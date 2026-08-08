@@ -1,11 +1,14 @@
 using ISM.Application.Interfaces;
 using ISM.Application.DTOs;
+using ISM.Application.Security;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ISM.API.Controllers;
 
 [ApiController]
 [Route("api/stock/products")]
+[Authorize(Policy = IsmPolicies.RestaurantAnyUser)]
 public sealed class ProductsController : ControllerBase
 {
     private readonly IProductService _productService;
@@ -33,6 +36,7 @@ public sealed class ProductsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
     [ProducesResponseType(typeof(ProductResponse), StatusCodes.Status201Created)]
     public async Task<ActionResult<ProductResponse>> Create([FromBody] CreateProductRequest request, CancellationToken cancellationToken)
     {
@@ -41,6 +45,7 @@ public sealed class ProductsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
     [ProducesResponseType(typeof(ProductResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ProductResponse>> Update(
@@ -53,6 +58,7 @@ public sealed class ProductsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)

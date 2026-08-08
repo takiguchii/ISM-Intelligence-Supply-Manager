@@ -19,22 +19,36 @@ public sealed class GlobalExceptionMiddleware
         {
             await _next(context);
         }
+        catch (UnauthorizedAccessException exception)
+        {
+            _logger.LogWarning(exception, "Unauthorized access attempt.");
+            await WriteErrorResponseAsync(context, StatusCodes.Status401Unauthorized, "Unauthorized", exception.Message);
+        }
+        catch (InvalidOperationException exception)
+        {
+            _logger.LogWarning(exception, "Invalid operation.");
+            await WriteErrorResponseAsync(context, StatusCodes.Status400BadRequest, "Bad Request", exception.Message);
+        }
         catch (Exception exception)
         {
             _logger.LogError(exception, "Unhandled exception while processing request.");
-
-            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            context.Response.ContentType = "application/json";
-
-            var payload = new
-            {
-                title = "Unexpected server error",
-                detail = exception.Message,
-                status = context.Response.StatusCode,
-                traceId = context.TraceIdentifier
-            };
-
-            await context.Response.WriteAsync(JsonSerializer.Serialize(payload));
+            await WriteErrorResponseAsync(context, StatusCodes.Status500InternalServerError, "Unexpected server error", exception.Message);
         }
+    }
+
+    private static async Task WriteErrorResponseAsync(HttpContext context, int statusCode, string title, string detail)
+    {
+        context.Response.StatusCode = statusCode;
+        context.Response.ContentType = "application/json";
+
+        var payload = new
+        {
+            title,
+            detail,
+            status = statusCode,
+            traceId = context.TraceIdentifier
+        };
+
+        await context.Response.WriteAsync(JsonSerializer.Serialize(payload));
     }
 }

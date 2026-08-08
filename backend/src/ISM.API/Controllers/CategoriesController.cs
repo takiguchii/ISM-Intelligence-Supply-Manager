@@ -1,11 +1,14 @@
 using ISM.Application.Interfaces;
 using ISM.Application.DTOs;
+using ISM.Application.Security;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ISM.API.Controllers;
 
 [ApiController]
 [Route("api/menu/categories")]
+[Authorize(Policy = IsmPolicies.RestaurantAnyUser)]
 public sealed class CategoriesController : ControllerBase
 {
     private readonly ICategoryService _categoryService;
@@ -35,6 +38,7 @@ public sealed class CategoriesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
     [ProducesResponseType(typeof(CategoryResponse), StatusCodes.Status201Created)]
     public async Task<ActionResult<CategoryResponse>> Create([FromBody] CreateCategoryRequest request, CancellationToken cancellationToken)
     {
@@ -43,6 +47,7 @@ public sealed class CategoriesController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
     [ProducesResponseType(typeof(CategoryResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<CategoryResponse>> Update(
@@ -55,6 +60,7 @@ public sealed class CategoriesController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
