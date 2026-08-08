@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import AppSidebar from "~/components/layout/AppSidebar.vue";
+import AppLoader from "~/components/base/AppLoader.vue";
 import StatusOverviewCard from "~/components/layout/StatusOverviewCard.vue";
 import { useAuthStore } from "~/stores/auth";
 
@@ -11,6 +12,8 @@ definePageMeta({
 const runtimeConfig = useRuntimeConfig();
 const authStore = useAuthStore();
 const router = useRouter();
+
+const isLoading = ref(true);
 
 const { data, pending, error, refresh } = await useSystemStatus();
 
@@ -26,10 +29,34 @@ const handleLogout = () => {
   authStore.logout();
   router.push("/login");
 };
+
+onMounted(async () => {
+  const startTime = Date.now();
+
+  // Verifica autenticação no cliente
+  authStore.initFromStorage();
+  if (!authStore.isAuthenticated) {
+    router.push("/login");
+    return;
+  }
+
+  // Garante que a animação rode por no MÍNIMO 2000ms (2 segundos)
+  // ou mais caso os dados da página ainda estejam sendo carregados
+  const elapsedTime = Date.now() - startTime;
+  const minDuration = 2000;
+  const remainingTime = Math.max(0, minDuration - elapsedTime);
+
+  setTimeout(() => {
+    isLoading.value = false;
+  }, remainingTime);
+});
 </script>
 
 <template>
   <div class="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-zinc-800 selection:text-white">
+    <!-- Overlay de Animação de Carregamento -->
+    <AppLoader :visible="isLoading" />
+
     <!-- Navbar Header -->
     <header class="h-16 border-b border-zinc-800/80 bg-zinc-900/60 backdrop-blur-xl sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between">
       <!-- Left side: Hamburger Icon & System Name -->
