@@ -66,14 +66,14 @@ const handleLogin = async () => {
 </script>
 
 <template>
-  <main class="relative min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center overflow-hidden font-sans selection:bg-zinc-800 selection:text-white py-12 px-4">
+  <main class="relative min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center overflow-hidden font-sans selection:bg-zinc-800 selection:text-white py-10 px-4">
     <!-- Glow Background Effects -->
     <div class="absolute -top-40 -left-40 w-96 h-96 bg-zinc-800/20 rounded-full blur-3xl pointer-events-none"></div>
     <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
     <section class="relative z-10 w-full max-w-md flex flex-col items-center">
       <!-- Title Header -->
-      <div class="mb-8 text-center space-y-3">
+      <div class="mb-6 text-center space-y-2">
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900/90 border border-zinc-800 text-xs font-mono text-zinc-300 shadow-md">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           <span class="font-mono text-xs uppercase tracking-widest text-zinc-400">Autenticação</span>
@@ -87,7 +87,7 @@ const handleLogin = async () => {
       </div>
 
       <!-- Error Alert -->
-      <div v-if="errorMessage" class="w-[300px] mb-6">
+      <div v-if="errorMessage" class="w-[320px] mb-4">
         <el-alert
           type="error"
           :closable="false"
@@ -97,57 +97,56 @@ const handleLogin = async () => {
         </el-alert>
       </div>
 
-      <!-- Flip Card Form Component -->
-      <div class="wrapper">
-        <div class="card-switch">
-          <label class="switch">
-            <input class="toggle" type="checkbox">
-            <span class="slider"></span>
-            <span class="card-side"></span>
-            <div class="flip-card__inner">
-              <!-- Log in Side -->
-              <div class="flip-card__front">
-                <div class="title">Log in</div>
-                <form @submit.prevent="handleLogin" class="flip-card__form">
-                  <input
-                    v-model="loginForm.email"
-                    type="email"
-                    placeholder="Email"
-                    name="email"
-                    class="flip-card__input"
-                    autocomplete="email"
-                  >
-                  <input
-                    v-model="loginForm.password"
-                    type="password"
-                    placeholder="Password"
-                    name="password"
-                    class="flip-card__input"
-                    autocomplete="current-password"
-                  >
-                  <button type="submit" class="flip-card__btn" :disabled="submitting">
-                    {{ submitting ? 'Aguarde...' : "Let`s go!" }}
-                  </button>
-                </form>
-              </div>
-
-              <!-- Sign up Side (Sem função / Desativado) -->
-              <div class="flip-card__back">
-                <div class="title">Sign up</div>
-                <form @submit.prevent class="flip-card__form">
-                  <input type="text" placeholder="Name" class="flip-card__input" disabled>
-                  <input type="email" placeholder="Email" name="email" class="flip-card__input" disabled>
-                  <input type="password" placeholder="Password" name="password" class="flip-card__input" disabled>
-                  <button type="button" class="flip-card__btn opacity-50 cursor-not-allowed" title="Cadastro desativado">Confirm!</button>
-                </form>
-              </div>
+      <!-- Flip Card Switch Wrapper -->
+      <div class="card-switch">
+        <label class="switch">
+          <input class="toggle" type="checkbox">
+          <span class="slider"></span>
+          <span class="card-side"></span>
+          
+          <div class="flip-card__inner">
+            <!-- Front (Log in) -->
+            <div class="flip-card__front">
+              <div class="title">Log in</div>
+              <form @submit.prevent="handleLogin" class="flip-card__form">
+                <input
+                  v-model="loginForm.email"
+                  type="email"
+                  placeholder="Email"
+                  name="email"
+                  class="flip-card__input"
+                  autocomplete="email"
+                >
+                <input
+                  v-model="loginForm.password"
+                  type="password"
+                  placeholder="Password"
+                  name="password"
+                  class="flip-card__input"
+                  autocomplete="current-password"
+                >
+                <button type="submit" class="flip-card__btn" :disabled="submitting">
+                  {{ submitting ? 'Aguarde...' : "Let`s go!" }}
+                </button>
+              </form>
             </div>
-          </label>
-        </div>
+
+            <!-- Back (Sign up - Disabled) -->
+            <div class="flip-card__back">
+              <div class="title">Sign up</div>
+              <form @submit.prevent class="flip-card__form">
+                <input type="text" placeholder="Name" class="flip-card__input" disabled>
+                <input type="email" placeholder="Email" name="email" class="flip-card__input" disabled>
+                <input type="password" placeholder="Password" name="password" class="flip-card__input" disabled>
+                <button type="button" class="flip-card__btn opacity-50 cursor-not-allowed" title="Cadastro desativado">Confirm!</button>
+              </form>
+            </div>
+          </div>
+        </label>
       </div>
 
-      <!-- Footer Note -->
-      <div class="mt-8 text-center text-xs font-mono text-zinc-500">
+      <!-- Default User Hint -->
+      <div class="mt-6 text-center text-xs font-mono text-zinc-500">
         <p>Usuário padrão: <span class="text-zinc-300 font-semibold">admin@ism.com.br</span> / <span class="text-zinc-300 font-semibold">admin123</span></p>
       </div>
     </section>
@@ -155,200 +154,213 @@ const handleLogin = async () => {
 </template>
 
 <style scoped>
-  .wrapper {
-    --input-focus: #2d8cf0;
-    --font-color: #fefefe;
-    --font-color-sub: #7e7e7e;
-    --bg-color: #111;
-    --bg-color-alt: #7e7e7e;
-    --main-color: #fefefe;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-  
-  .switch {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 30px;
-    width: 50px;
-    height: 20px;
-  }
+.card-switch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
 
-  .card-side::before {
-    position: absolute;
-    content: 'Log in';
-    left: -70px;
-    top: 0;
-    width: 100px;
-    text-decoration: underline;
-    color: var(--font-color);
-    font-weight: 600;
-  }
+.switch {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 50px;
+  height: 20px;
+  cursor: pointer;
+}
 
-  .card-side::after {
-    position: absolute;
-    content: 'Sign up';
-    left: 70px;
-    top: 0;
-    width: 100px;
-    text-decoration: none;
-    color: var(--font-color);
-    font-weight: 600;
-  }
+.card-side {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
 
-  .toggle {
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
+.card-side::before {
+  position: absolute;
+  content: 'Log in';
+  left: -75px;
+  top: -1px;
+  width: 65px;
+  text-align: right;
+  text-decoration: underline;
+  color: #fefefe;
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+}
 
-  .slider {
-    box-sizing: border-box;
-    border-radius: 5px;
-    border: 2px solid var(--main-color);
-    box-shadow: 4px 4px var(--main-color);
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: var(--bg-color);
-    transition: 0.3s;
-  }
+.card-side::after {
+  position: absolute;
+  content: 'Sign up';
+  left: 60px;
+  top: -1px;
+  width: 65px;
+  text-align: left;
+  text-decoration: none;
+  color: #fefefe;
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+}
 
-  .slider:before {
-    box-sizing: border-box;
-    position: absolute;
-    content: "";
-    height: 20px;
-    width: 20px;
-    border: 2px solid var(--main-color);
-    border-radius: 5px;
-    left: -2px;
-    bottom: 2px;
-    background-color: var(--bg-color);
-    box-shadow: 0 3px 0 var(--main-color);
-    transition: 0.3s;
-  }
+.toggle {
+  display: none;
+}
 
-  .toggle:checked + .slider {
-    background-color: var(--input-focus);
-  }
+.slider {
+  box-sizing: border-box;
+  border-radius: 5px;
+  border: 2px solid #fefefe;
+  box-shadow: 2px 2px 0px #fefefe;
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #111111;
+  transition: 0.3s;
+}
 
-  .toggle:checked + .slider:before {
-    transform: translateX(30px);
-  }
+.slider:before {
+  box-sizing: border-box;
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  border: 2px solid #fefefe;
+  border-radius: 3px;
+  left: 1px;
+  bottom: 1px;
+  background-color: #111111;
+  box-shadow: 0 2px 0 #fefefe;
+  transition: 0.3s;
+}
 
-  .toggle:checked ~ .card-side:before {
-    text-decoration: none;
-  }
+.toggle:checked + .slider {
+  background-color: #2d8cf0;
+}
 
-  .toggle:checked ~ .card-side:after {
-    text-decoration: underline;
-  }
+.toggle:checked + .slider:before {
+  transform: translateX(26px);
+}
 
-  .flip-card__inner {
-    width: 300px;
-    height: 350px;
-    position: relative;
-    background-color: transparent;
-    perspective: 1000px;
-    text-align: center;
-    transition: transform 0.8s;
-    transform-style: preserve-3d;
-    margin-top: 40px;
-  }
+.toggle:checked ~ .card-side:before {
+  text-decoration: none;
+}
 
-  .toggle:checked ~ .flip-card__inner {
-    transform: rotateY(180deg);
-  }
+.toggle:checked ~ .card-side:after {
+  text-decoration: underline;
+}
 
-  .toggle:checked ~ .flip-card__front {
-    box-shadow: none;
-  }
+/* 3D Flip Card Container */
+.flip-card__inner {
+  width: 320px;
+  height: 380px;
+  position: relative;
+  background-color: transparent;
+  perspective: 1000px;
+  text-align: center;
+  transition: transform 0.8s;
+  transform-style: preserve-3d;
+  margin-top: 45px;
+}
 
-  .flip-card__front, .flip-card__back {
-    padding: 20px;
-    position: absolute;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    background: var(--bg-color);
-    gap: 20px;
-    border-radius: 5px;
-    border: 2px solid var(--main-color);
-    box-shadow: 4px 4px var(--main-color);
-    width: 100%;
-    height: 100%;
-    top: 0;
-    left: 0;
-  }
+.toggle:checked ~ .flip-card__inner {
+  transform: rotateY(180deg);
+}
 
-  .flip-card__back {
-    transform: rotateY(180deg);
-  }
+.flip-card__front,
+.flip-card__back {
+  padding: 30px 20px;
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  background: #111111;
+  gap: 20px;
+  border-radius: 8px;
+  border: 2px solid #ffffff;
+  box-shadow: 4px 4px 0px #ffffff;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+}
 
-  .flip-card__form {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-  }
+.flip-card__back {
+  transform: rotateY(180deg);
+}
 
-  .title {
-    margin: 10px 0 10px 0;
-    font-size: 25px;
-    font-weight: 900;
-    text-align: center;
-    color: var(--main-color);
-  }
+.flip-card__form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+}
 
-  .flip-card__input {
-    width: 250px;
-    height: 40px;
-    border-radius: 5px;
-    border: 2px solid var(--main-color);
-    background-color: var(--bg-color);
-    box-shadow: 4px 4px var(--main-color);
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--font-color);
-    padding: 5px 10px;
-    outline: none;
-  }
+.title {
+  margin-bottom: 5px;
+  font-size: 28px;
+  font-weight: 900;
+  text-align: center;
+  color: #ffffff;
+  letter-spacing: -0.5px;
+}
 
-  .flip-card__input::placeholder {
-    color: var(--font-color-sub);
-    opacity: 0.8;
-  }
+.flip-card__input {
+  width: 250px;
+  height: 42px;
+  border-radius: 6px;
+  border: 2px solid #ffffff;
+  background-color: #111111;
+  box-shadow: 4px 4px 0px #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  padding: 0 12px;
+  outline: none;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
 
-  .flip-card__input:focus {
-    border: 2px solid var(--input-focus);
-  }
+.flip-card__input::placeholder {
+  color: #7e7e7e;
+  opacity: 0.9;
+}
 
-  .flip-card__btn:active, .button-confirm:active {
-    box-shadow: 0px 0px var(--main-color);
-    transform: translate(3px, 3px);
-  }
+.flip-card__input:focus {
+  border: 2px solid #2d8cf0;
+  box-shadow: 4px 4px 0px #2d8cf0;
+}
 
-  .flip-card__btn {
-    margin: 10px 0 10px 0;
-    width: 120px;
-    height: 40px;
-    border-radius: 5px;
-    border: 2px solid var(--main-color);
-    background-color: var(--bg-color);
-    box-shadow: 4px 4px var(--main-color);
-    font-size: 17px;
-    font-weight: 600;
-    color: var(--font-color);
-    cursor: pointer;
-  }
+.flip-card__btn {
+  margin-top: 10px;
+  width: 130px;
+  height: 42px;
+  border-radius: 6px;
+  border: 2px solid #ffffff;
+  background-color: #111111;
+  box-shadow: 4px 4px 0px #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.flip-card__btn:active {
+  box-shadow: 0px 0px 0px #ffffff;
+  transform: translate(4px, 4px);
+}
 </style>
