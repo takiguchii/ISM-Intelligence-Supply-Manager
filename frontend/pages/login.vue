@@ -111,7 +111,7 @@ const handleLogin = async () => {
 
           <el-form
             ref="loginFormRef"
-            v-model="loginForm"
+            :model="loginForm"
             :rules="loginRules"
             label-position="top"
             @submit.prevent="handleLogin"
