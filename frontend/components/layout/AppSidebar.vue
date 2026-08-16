@@ -15,16 +15,19 @@ const authStore = useAuthStore();
 const activeItem = ref("dashboard");
 
 const menuItems = [
-  { id: "dashboard", label: "Dashboard", icon: "dashboard" },
-  { id: "financeiro", label: "Financeiro", icon: "wallet" },
-  { id: "cardapio", label: "Cardápio", icon: "menu" },
-  { id: "estoque", label: "Estoque", icon: "boxes" },
-  { id: "fornecedores", label: "Fornecedores", icon: "truck" },
-  { id: "integracoes", label: "Integrações", icon: "plug" }
+  { id: "dashboard", label: "Dashboard", icon: "dashboard", route: "/" },
+  { id: "financeiro", label: "Financeiro", icon: "wallet", route: "/financeiro" },
+  { id: "cardapio", label: "Cardápio", icon: "menu", route: "/cardapio" },
+  { id: "estoque", label: "Estoque", icon: "boxes", route: "/estoque" },
+  { id: "fornecedores", label: "Fornecedores", icon: "truck", route: "/fornecedores" },
+  { id: "integracoes", label: "Integrações", icon: "plug", route: "/integracoes" }
 ];
 
-const selectItem = (id: string) => {
-  activeItem.value = id;
+const router = useRouter();
+
+const selectItem = (item: typeof menuItems[number]) => {
+  activeItem.value = item.id;
+  router.push(item.route);
 };
 
 const userInitials = computed(() => {
@@ -75,7 +78,7 @@ const userInitials = computed(() => {
         <button
           v-for="item in menuItems"
           :key="item.id"
-          @click="selectItem(item.id)"
+          @click="selectItem(item)"
           :class="[
             'w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-left',
             activeItem === item.id
