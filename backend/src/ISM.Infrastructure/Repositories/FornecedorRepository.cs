@@ -15,33 +15,38 @@ public sealed class FornecedorRepository : IFornecedorRepository
     }
 
     public async Task<Fornecedor?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
-    {
-        return await _dbContext.Fornecedores
+        => await _dbContext.Fornecedores
+            .AsNoTracking()
             .FirstOrDefaultAsync(f => f.Id == id, cancellationToken);
-    }
 
     public async Task<IReadOnlyList<Fornecedor>> GetAllAsync(CancellationToken cancellationToken = default)
+        => await _dbContext.Fornecedores
+            .AsNoTracking()
+            .OrderBy(f => f.Name)
+            .ToListAsync(cancellationToken);
+
+    public async Task<Fornecedor> AddAsync(Fornecedor fornecedor, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Fornecedores.ToListAsync(cancellationToken);
+        _dbContext.Fornecedores.Add(fornecedor);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return fornecedor;
     }
 
-    public async Task AddAsync(Fornecedor fornecedor, CancellationToken cancellationToken = default)
-    {
-        await _dbContext.Fornecedores.AddAsync(fornecedor, cancellationToken);
-    }
-
-    public void Update(Fornecedor fornecedor)
+    public async Task<Fornecedor> UpdateAsync(Fornecedor fornecedor, CancellationToken cancellationToken = default)
     {
         _dbContext.Fornecedores.Update(fornecedor);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return fornecedor;
     }
 
-    public void Delete(Fornecedor fornecedor)
+    public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
-        _dbContext.Fornecedores.Remove(fornecedor);
-    }
+        var entity = await _dbContext.Fornecedores.FirstOrDefaultAsync(f => f.Id == id, cancellationToken);
+        if (entity is null)
+            return false;
 
-    public async Task<bool> SaveChangesAsync(CancellationToken cancellationToken = default)
-    {
-        return await _dbContext.SaveChangesAsync(cancellationToken) > 0;
+        _dbContext.Fornecedores.Remove(entity);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
     }
 }
