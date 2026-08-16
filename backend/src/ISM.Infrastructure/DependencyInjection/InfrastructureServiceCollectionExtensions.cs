@@ -1,6 +1,7 @@
 using ISM.Infrastructure.Data.Context;
 using ISM.Infrastructure.Data.Options;
 using ISM.Domain.Interfaces;
+using ISM.Domain.Modules.DataImport;
 using ISM.Domain.Modules.Menu.Interfaces;
 using ISM.Domain.Modules.Stock.Interfaces;
 using ISM.Infrastructure.Repositories;
@@ -41,6 +42,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IDishRepository, DishRepository>();
         services.AddScoped<IRestaurantRepository, RestaurantRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IImportAuditRepository, ImportAuditRepository>();
 
         return services;
     }

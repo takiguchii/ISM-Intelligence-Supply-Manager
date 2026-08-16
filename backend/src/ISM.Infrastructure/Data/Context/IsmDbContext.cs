@@ -5,6 +5,7 @@ using ISM.Domain.Entities;
 using ISM.Domain.Modules.Stock.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using ISM.Domain.Modules.DataImport;
 using ISM.Domain.Modules.Menu.Entities;
 
 namespace ISM.Infrastructure.Data.Context;
@@ -27,6 +28,8 @@ public sealed class IsmDbContext : DbContext
     public DbSet<Dish> Dishes => Set<Dish>();
     public DbSet<DishIngredient> DishIngredients => Set<DishIngredient>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<ImportAudit> ImportAudits => Set<ImportAudit>();
+    public DbSet<ImportErrorLog> ImportErrorLogs => Set<ImportErrorLog>();
 
     internal int? CurrentUserRestaurantId =>
         _currentUser != null && !_currentUser.IsSuperAdmin
@@ -58,12 +61,23 @@ public sealed class IsmDbContext : DbContext
         {
             builder.ToTable("fornecedores");
             builder.HasKey(f => f.Id);
-            builder.Property(f => f.Nome).HasMaxLength(150).IsRequired();
-            builder.Property(f => f.Categoria).HasMaxLength(100).IsRequired();
+            builder.Property(f => f.RestaurantId).IsRequired();
+            builder.Property(f => f.Name).HasMaxLength(150).IsRequired();
+            builder.Property(f => f.Category).HasMaxLength(100).IsRequired();
+            builder.Property(f => f.Description).HasMaxLength(500).IsRequired(false);
             builder.Property(f => f.Email).HasMaxLength(150).IsRequired();
-            builder.Property(f => f.Telefone).HasMaxLength(20).IsRequired();
+            builder.Property(f => f.Phone).HasMaxLength(20).IsRequired();
+            builder.Property(f => f.IsActive).IsRequired();
             builder.Property(f => f.CreatedAtUtc).HasColumnType("datetime(6)").IsRequired();
             builder.Property(f => f.UpdatedAtUtc).HasColumnType("datetime(6)");
+            builder.HasIndex(f => new { f.RestaurantId, f.Name }).IsUnique();
+
+            builder.HasOne(f => f.Restaurant)
+                .WithMany()
+                .HasForeignKey(f => f.RestaurantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.ApplyTenantQueryFilter(this);
         });
 
         modelBuilder.Entity<Product>(builder =>
@@ -195,6 +209,58 @@ public sealed class IsmDbContext : DbContext
                 .OnDelete(DeleteBehavior.SetNull);
 
             builder.ApplyTenantQueryFilter(this);
+        });
+
+        modelBuilder.Entity<ImportAudit>(builder =>
+        {
+            builder.ToTable("import_audits");
+            builder.HasKey(a => a.ImportId);
+            builder.Property(a => a.ImportId).ValueGeneratedNever();
+
+            builder.Property(a => a.RestaurantId).IsRequired();
+            builder.Property(a => a.DataSourceName).HasMaxLength(200).IsRequired();
+            builder.Property(a => a.DataSourceType).IsRequired()
+                .HasConversion<string>();
+            builder.Property(a => a.TargetEntity).IsRequired()
+                .HasConversion<string>();
+            builder.Property(a => a.UpsertStrategy).IsRequired()
+                .HasConversion<string>();
+
+            builder.Property(a => a.SourceOriginalFilename).HasMaxLength(500);
+            builder.Property(a => a.SourceEndpointOrUrl).HasMaxLength(500);
+            builder.Property(a => a.SourceContentHashSha256).HasMaxLength(80).IsRequired();
+
+            builder.Property(a => a.ReceivedAtUtc).HasColumnType("datetime(6)").IsRequired();
+            builder.Property(a => a.FinishedAtUtc).HasColumnType("datetime(6)");
+
+            builder.Property(a => a.TotalRecordsInSource).IsRequired();
+            builder.Property(a => a.RecordsSucceeded).IsRequired();
+            builder.Property(a => a.RecordsFailed).IsRequired();
+
+            builder.Property(a => a.LineageSerializedJson).HasMaxLength(4000);
+
+            builder.HasIndex(a => new { a.RestaurantId, a.ReceivedAtUtc });
+
+            builder.HasMany(a => a.Errors)
+                .WithOne(e => e.Import)
+                .HasForeignKey(e => e.ImportId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ImportErrorLog>(builder =>
+        {
+            builder.ToTable("import_error_logs");
+            builder.HasKey(e => e.Id);
+            builder.Property(e => e.Id).ValueGeneratedOnAdd();
+
+            builder.Property(e => e.ImportId).IsRequired();
+            builder.Property(e => e.SourceRowNumber).IsRequired();
+            builder.Property(e => e.EntityKeyValue).HasMaxLength(255);
+            builder.Property(e => e.ErrorMessage).HasMaxLength(500).IsRequired();
+            builder.Property(e => e.RawRowPayloadJson).HasMaxLength(4000);
+            builder.Property(e => e.CreatedAtUtc).HasColumnType("datetime(6)").IsRequired();
+
+            builder.HasIndex(e => e.ImportId);
         });
     }
 }
