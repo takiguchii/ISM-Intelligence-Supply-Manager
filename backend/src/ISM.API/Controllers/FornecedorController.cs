@@ -1,13 +1,14 @@
 using ISM.Application.DTOs;
 using ISM.Application.Interfaces;
-using ISM.Application.Services;
-using Microsoft.AspNetCore.Http;
+using ISM.Application.Security;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ISM.API.Controllers;
 
 [ApiController]
 [Route("api/fornecedores")]
+[Authorize(Policy = IsmPolicies.RestaurantAnyUser)]
 public sealed class FornecedorController : ControllerBase
 {
     private readonly IFornecedorService _fornecedorService;
@@ -18,62 +19,61 @@ public sealed class FornecedorController : ControllerBase
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(IReadOnlyList<FornecedorDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IReadOnlyList<FornecedorDto>>> GetAll(CancellationToken cancellationToken)
+    [ProducesResponseType(typeof(IReadOnlyList<FornecedorResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<FornecedorResponse>>> GetAll(CancellationToken cancellationToken)
     {
-        var response = await _fornecedorService.GetAllAsync(cancellationToken);
-        return Ok(response);
+        var fornecedores = await _fornecedorService.GetAllAsync(cancellationToken);
+        return Ok(fornecedores);
     }
 
     [HttpGet("{id:int}")]
-    [ProducesResponseType(typeof(FornecedorDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(FornecedorResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<FornecedorDto>> GetById(int id, CancellationToken cancellationToken)
+    public async Task<ActionResult<FornecedorResponse>> GetById(int id, CancellationToken cancellationToken)
     {
-        var response = await _fornecedorService.GetByIdAsync(id, cancellationToken);
-        if (response == null)
-            return NotFound();
-
-        return Ok(response);
+        var fornecedor = await _fornecedorService.GetByIdAsync(id, cancellationToken);
+        return fornecedor is null ? NotFound() : Ok(fornecedor);
     }
 
     [HttpPost]
-    [ProducesResponseType(typeof(FornecedorDto), StatusCodes.Status201Created)]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
+    [ProducesResponseType(typeof(FornecedorResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<FornecedorDto>> Create([FromBody] FornecedorDto dto, CancellationToken cancellationToken)
+    public async Task<ActionResult<FornecedorResponse>> Create(
+        [FromBody] CreateFornecedorRequest request,
+        CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var response = await _fornecedorService.CreateAsync(dto, cancellationToken);
-        return CreatedAtAction(nameof(GetById), new { id = response.Id }, response);
+        var created = await _fornecedorService.CreateAsync(request, cancellationToken);
+        return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
     [HttpPut("{id:int}")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
+    [ProducesResponseType(typeof(FornecedorResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Update(int id, [FromBody] FornecedorDto dto, CancellationToken cancellationToken)
+    public async Task<ActionResult<FornecedorResponse>> Update(
+        int id,
+        [FromBody] UpdateFornecedorRequest request,
+        CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var success = await _fornecedorService.UpdateAsync(id, dto, cancellationToken);
-        if (!success)
-            return NotFound();
-
-        return NoContent();
+        var updated = await _fornecedorService.UpdateAsync(id, request, cancellationToken);
+        return updated is null ? NotFound() : Ok(updated);
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
-        var success = await _fornecedorService.DeleteAsync(id, cancellationToken);
-        if (!success)
-            return NotFound();
-
-        return NoContent();
+        var deleted = await _fornecedorService.DeleteAsync(id, cancellationToken);
+        return deleted ? NoContent() : NotFound();
     }
 }

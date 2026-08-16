@@ -73,34 +73,13 @@ public static class DbSeeder
             await context.SaveChangesAsync();
         }
 
-        // Se já houver restaurantes ou fornecedores cadastrados, não faz a seed de dados
-        if (await context.Restaurants.AnyAsync() || await context.Fornecedores.AnyAsync())
+        // Se já houver restaurantes cadastrados, não faz a seed de dados
+        if (await context.Restaurants.AnyAsync())
         {
             return;
         }
 
-        // 1. Cadastra Fornecedores
-        var fornecedores = new List<Fornecedor>
-        {
-            new()
-            {
-                Nome = "Distribuidora Alimentos Ltda",
-                Categoria = "Grãos e Alimentos Secos",
-                Email = "vendas@distribuidoraalimentos.com",
-                Telefone = "(11) 99999-1111"
-            },
-            new()
-            {
-                Nome = "Hortifruti Central",
-                Categoria = "Hortifrúti",
-                Email = "pedidos@hortifruticentral.com.br",
-                Telefone = "(11) 98888-2222"
-            }
-        };
-
-        await context.Fornecedores.AddRangeAsync(fornecedores);
-
-        // 2. Cadastra Restaurante (vinculado ao Plano Pro)
+        // 1. Cadastra Restaurante (vinculado ao Plano Pro)
         var restaurant = new Restaurant
         {
             Name = "Gourmet ISM Restaurant",
@@ -113,6 +92,34 @@ public static class DbSeeder
 
         await context.Restaurants.AddAsync(restaurant);
         await context.SaveChangesAsync(); // Salva para gerar o Id do Restaurante
+
+        // 2. Cadastra Fornecedores (vinculados ao restaurante recém-criado)
+        var fornecedores = new List<Fornecedor>
+        {
+            new()
+            {
+                RestaurantId = restaurant.Id,
+                Name = "Distribuidora Alimentos Ltda",
+                Category = "Grãos e Alimentos Secos",
+                Description = "Distribuidora líder em grãos e alimentos não perecíveis com entrega em 24h.",
+                Email = "vendas@distribuidoraalimentos.com",
+                Phone = "(11) 99999-1111",
+                IsActive = true
+            },
+            new()
+            {
+                RestaurantId = restaurant.Id,
+                Name = "Hortifruti Central",
+                Category = "Hortifrúti",
+                Description = "Fornecedor de frutas, legumes e verduras frescas, colhidas diariamente.",
+                Email = "pedidos@hortifruticentral.com.br",
+                Phone = "(11) 98888-2222",
+                IsActive = true
+            }
+        };
+
+        await context.Fornecedores.AddRangeAsync(fornecedores);
+        await context.SaveChangesAsync();
 
         // 3. Cadastra Produtos (Estoque) — agora com RestaurantId
         var products = new List<Product>
