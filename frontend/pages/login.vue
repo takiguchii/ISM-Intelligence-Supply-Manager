@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-amarelo-ISM flex items-center justify-center p-4">
+  <div class="min-h-screen bg-cinza-ISM flex items-center justify-center p-4">
     
     <div class="bg-white rounded-3xl shadow-2xl flex flex-col md:flex-row w-full max-w-5xl overflow-hidden min-h-[600px]">
       
@@ -27,11 +27,6 @@
             type="password" 
             placeholder="Senha" 
             class="w-full bg-gray-100 text-gray-900 border-none rounded-md px-4 py-3 mb-4 focus:ring-2 focus:ring-vermelho-ISM outline-none" />
-            <input 
-            type="number" 
-            placeholder="Código da Loja" 
-            class="w-full bg-gray-100 text-gray-900 border-none rounded-md px-4 py-3 mb-4 focus:ring-2 focus:ring-vermelho-ISM outline-none" />
-          
           <a href="#" class="text-sm text-gray-500 hover:underline mb-6">Esqueceu sua senha?</a>
           <button class="bg-vermelho-ISM text-white rounded-full px-12 py-3 font-semibold hover:bg-red-600 transition-colors">ENTRAR</button>
         </div>
