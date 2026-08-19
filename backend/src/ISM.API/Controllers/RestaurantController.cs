@@ -1,11 +1,14 @@
 using ISM.Application.DTOs;
 using ISM.Application.Interfaces;
+using ISM.Application.Security;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ISM.API.Controllers;
 
 [ApiController]
 [Route("api/restaurants")]
+[Authorize(Policy = IsmPolicies.SuperAdminOnly)]
 public sealed class RestaurantController : ControllerBase
 {
     private readonly IRestaurantService _restaurantService;
@@ -43,7 +46,7 @@ public sealed class RestaurantController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var response = await _restaurantService.CreateRestaurantAsync(dto, cancellationToken);
+        var response = await _restaurantService.CreateRestaurantAsync(dto, null, cancellationToken);
         return CreatedAtAction(nameof(GetById), new { id = response.Id }, response);
     }
 
