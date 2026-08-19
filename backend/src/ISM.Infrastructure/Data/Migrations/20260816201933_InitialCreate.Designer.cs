@@ -4,6 +4,7 @@ using ISM.Infrastructure.Data.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,15 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ISM.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(IsmDbContext))]
-    partial class IsmDbContextModelSnapshot : ModelSnapshot
+<<<<<<<< HEAD:backend/src/ISM.Infrastructure/Data/Migrations/20260816201933_InitialCreate.Designer.cs
+    [Migration("20260816201933_InitialCreate")]
+========
+    [Migration("20260811011621_InitialCreate")]
+>>>>>>>> origin/develop:backend/src/ISM.Infrastructure/Data/Migrations/20260811011621_InitialCreate.Designer.cs
+    partial class InitialCreate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -219,110 +226,6 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.ToTable("users", (string)null);
                 });
 
-            modelBuilder.Entity("ISM.Domain.Modules.DataImport.ImportAudit", b =>
-                {
-                    b.Property<Guid>("ImportId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("DataSourceName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
-
-                    b.Property<string>("DataSourceType")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<DateTime?>("FinishedAtUtc")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("LineageSerializedJson")
-                        .HasMaxLength(4000)
-                        .HasColumnType("varchar(4000)");
-
-                    b.Property<DateTime>("ReceivedAtUtc")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<int?>("ReceivedByUserId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("RecordsFailed")
-                        .HasColumnType("int");
-
-                    b.Property<int>("RecordsSucceeded")
-                        .HasColumnType("int");
-
-                    b.Property<int>("RestaurantId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("SourceContentHashSha256")
-                        .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("varchar(80)");
-
-                    b.Property<string>("SourceEndpointOrUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)");
-
-                    b.Property<string>("SourceOriginalFilename")
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)");
-
-                    b.Property<string>("TargetEntity")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<int>("TotalRecordsInSource")
-                        .HasColumnType("int");
-
-                    b.Property<string>("UpsertStrategy")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.HasKey("ImportId");
-
-                    b.HasIndex("RestaurantId", "ReceivedAtUtc");
-
-                    b.ToTable("import_audits", (string)null);
-                });
-
-            modelBuilder.Entity("ISM.Domain.Modules.DataImport.ImportErrorLog", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("EntityKeyValue")
-                        .HasMaxLength(255)
-                        .HasColumnType("varchar(255)");
-
-                    b.Property<string>("ErrorMessage")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)");
-
-                    b.Property<Guid>("ImportId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("RawRowPayloadJson")
-                        .HasMaxLength(4000)
-                        .HasColumnType("varchar(4000)");
-
-                    b.Property<int>("SourceRowNumber")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ImportId");
-
-                    b.ToTable("import_error_logs", (string)null);
-                });
-
             modelBuilder.Entity("ISM.Domain.Modules.Menu.Entities.Category", b =>
                 {
                     b.Property<int>("Id")
@@ -484,6 +387,7 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.ToTable("products", (string)null);
                 });
 
+<<<<<<<< HEAD:backend/src/ISM.Infrastructure/Data/Migrations/20260816201933_InitialCreate.Designer.cs
             modelBuilder.Entity("ISM.Domain.Entities.Fornecedor", b =>
                 {
                     b.HasOne("ISM.Domain.Entities.Restaurant", "Restaurant")
@@ -495,6 +399,8 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.Navigation("Restaurant");
                 });
 
+========
+>>>>>>>> origin/develop:backend/src/ISM.Infrastructure/Data/Migrations/20260811011621_InitialCreate.Designer.cs
             modelBuilder.Entity("ISM.Domain.Entities.Restaurant", b =>
                 {
                     b.HasOne("ISM.Domain.Entities.Plano", "Plano")
@@ -513,28 +419,6 @@ namespace ISM.Infrastructure.Data.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Restaurant");
-                });
-
-            modelBuilder.Entity("ISM.Domain.Modules.DataImport.ImportAudit", b =>
-                {
-                    b.HasOne("ISM.Domain.Entities.Restaurant", "Restaurant")
-                        .WithMany()
-                        .HasForeignKey("RestaurantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Restaurant");
-                });
-
-            modelBuilder.Entity("ISM.Domain.Modules.DataImport.ImportErrorLog", b =>
-                {
-                    b.HasOne("ISM.Domain.Modules.DataImport.ImportAudit", "Import")
-                        .WithMany("Errors")
-                        .HasForeignKey("ImportId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Import");
                 });
 
             modelBuilder.Entity("ISM.Domain.Modules.Menu.Entities.Category", b =>
@@ -611,11 +495,6 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.Navigation("Products");
 
                     b.Navigation("Users");
-                });
-
-            modelBuilder.Entity("ISM.Domain.Modules.DataImport.ImportAudit", b =>
-                {
-                    b.Navigation("Errors");
                 });
 
             modelBuilder.Entity("ISM.Domain.Modules.Menu.Entities.Category", b =>

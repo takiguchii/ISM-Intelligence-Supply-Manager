@@ -1,5 +1,6 @@
 using ISM.Application.DTOs;
 using ISM.Application.Interfaces;
+using ISM.Application.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -39,7 +40,7 @@ public sealed class AuthController : ControllerBase
     }
 
     [HttpPost("register")]
-    [Authorize]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -52,6 +53,32 @@ public sealed class AuthController : ControllerBase
         {
             var response = await _authService.RegisterAsync(request, cancellationToken);
             return CreatedAtAction(nameof(Register), response);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("register-tenant")]
+    [Authorize(Policy = IsmPolicies.SuperAdminOnly)]
+    [ProducesResponseType(typeof(RegisterTenantResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<RegisterTenantResponse>> RegisterTenant([FromBody] RegisterTenantRequest request, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        try
+        {
+            var response = await _authService.RegisterTenantAsync(request, cancellationToken);
+            return CreatedAtAction(nameof(RegisterTenant), response);
         }
         catch (InvalidOperationException ex)
         {

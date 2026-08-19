@@ -4,9 +4,9 @@ namespace ISM.Application.Interfaces;
 
 public interface IFornecedorService
 {
-    Task<FornecedorDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<FornecedorDto>> GetAllAsync(CancellationToken cancellationToken = default);
-    Task<FornecedorDto> CreateAsync(FornecedorDto dto, CancellationToken cancellationToken = default);
-    Task<bool> UpdateAsync(int id, FornecedorDto dto, CancellationToken cancellationToken = default);
+    Task<FornecedorResponse?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<FornecedorResponse>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<FornecedorResponse> CreateAsync(CreateFornecedorRequest request, CancellationToken cancellationToken = default);
+    Task<FornecedorResponse?> UpdateAsync(int id, UpdateFornecedorRequest request, CancellationToken cancellationToken = default);
     Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
 }

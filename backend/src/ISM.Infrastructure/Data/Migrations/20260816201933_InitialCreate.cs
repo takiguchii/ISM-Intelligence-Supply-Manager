@@ -16,6 +16,8 @@ namespace ISM.Infrastructure.Data.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+<<<<<<<< HEAD:backend/src/ISM.Infrastructure/Data/Migrations/20260816201933_InitialCreate.cs
+========
                 name: "fornecedores",
                 columns: table => new
                 {
@@ -39,6 +41,7 @@ namespace ISM.Infrastructure.Data.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+>>>>>>>> origin/develop:backend/src/ISM.Infrastructure/Data/Migrations/20260811011621_InitialCreate.cs
                 name: "planos",
                 columns: table => new
                 {
@@ -119,6 +122,42 @@ namespace ISM.Infrastructure.Data.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+<<<<<<<< HEAD:backend/src/ISM.Infrastructure/Data/Migrations/20260816201933_InitialCreate.cs
+                name: "fornecedores",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    RestaurantId = table.Column<int>(type: "int", nullable: false),
+                    Name = table.Column<string>(type: "varchar(150)", maxLength: 150, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Category = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Description = table.Column<string>(type: "varchar(500)", maxLength: 500, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Email = table.Column<string>(type: "varchar(150)", maxLength: 150, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Phone = table.Column<string>(type: "varchar(20)", maxLength: 20, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    IsActive = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    CreatedAtUtc = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTime>(type: "datetime(6)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_fornecedores", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_fornecedores_restaurants_RestaurantId",
+                        column: x => x.RestaurantId,
+                        principalTable: "restaurants",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+========
+>>>>>>>> origin/develop:backend/src/ISM.Infrastructure/Data/Migrations/20260811011621_InitialCreate.cs
                 name: "products",
                 columns: table => new
                 {
@@ -273,6 +312,15 @@ namespace ISM.Infrastructure.Data.Migrations
                 column: "ProductId");
 
             migrationBuilder.CreateIndex(
+<<<<<<<< HEAD:backend/src/ISM.Infrastructure/Data/Migrations/20260816201933_InitialCreate.cs
+                name: "IX_fornecedores_RestaurantId_Name",
+                table: "fornecedores",
+                columns: new[] { "RestaurantId", "Name" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+========
+>>>>>>>> origin/develop:backend/src/ISM.Infrastructure/Data/Migrations/20260811011621_InitialCreate.cs
                 name: "IX_planos_Nome",
                 table: "planos",
                 column: "Nome",

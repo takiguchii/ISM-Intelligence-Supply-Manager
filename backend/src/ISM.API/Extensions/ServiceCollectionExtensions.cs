@@ -2,9 +2,11 @@ using System.Text;
 using System.Security.Claims;
 using ISM.API.Security;
 using ISM.Application.Interfaces;
+using ISM.Application.Interfaces.DataImport;
 using ISM.Application.Options;
 using ISM.Application.Security;
 using ISM.Application.Services;
+using ISM.Application.Services.DataImport;
 using ISM.Infrastructure.Data.Options;
 using ISM.Infrastructure.DependencyInjection;
 using ISM.Infrastructure.Services;
@@ -118,6 +120,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IDevAuthService, DevAuthService>();
         services.AddScoped<IUserService, UserService>();
+
+        services.AddScoped<IImportOrchestrator, ImportOrchestrator>();
+        services.AddScoped<IFileImporter, CsvProductImporter>();
+        services.AddScoped<IFileImporter, CsvFornecedorImporter>();
 
         return services;
     }
