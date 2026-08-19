@@ -9,6 +9,10 @@ namespace ISM.Infrastructure.Data.Context;
 
 public static class DbSeeder
 {
+    private const int SaltSize = 16;
+    private const int HashSize = 32;
+    private const int Pbkdf2Iterations = 100_000;
+    private const byte FormatVersion = 0x01;
     public static async Task SeedAsync(IsmDbContext context)
     {
         // 0. Planos SaaS (Free / Pro / Enterprise) — sempre garante que existam
@@ -258,14 +262,15 @@ public static class DbSeeder
 
     private static string HashPassword(string password)
     {
-        using var pbkdf2 = new Rfc2898DeriveBytes(password, 16, 100_000, HashAlgorithmName.SHA256);
-        var salt = pbkdf2.Salt;
-        var hash = pbkdf2.GetBytes(32);
+        var passwordBytes = Encoding.UTF8.GetBytes(password);
+        var salt = RandomNumberGenerator.GetBytes(SaltSize);
+        using var pbkdf2 = new Rfc2898DeriveBytes(passwordBytes, salt, Pbkdf2Iterations, HashAlgorithmName.SHA256);
+        var hash = pbkdf2.GetBytes(HashSize);
 
-        var bytes = new byte[1 + salt.Length + hash.Length];
-        bytes[0] = 0x01;
-        Buffer.BlockCopy(salt, 0, bytes, 1, salt.Length);
-        Buffer.BlockCopy(hash, 0, bytes, 1 + salt.Length, hash.Length);
+        var bytes = new byte[1 + SaltSize + HashSize];
+        bytes[0] = FormatVersion;
+        Buffer.BlockCopy(salt, 0, bytes, 1, SaltSize);
+        Buffer.BlockCopy(hash, 0, bytes, 1 + SaltSize, HashSize);
 
         return Convert.ToBase64String(bytes);
     }

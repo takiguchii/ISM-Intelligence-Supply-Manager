@@ -15,8 +15,13 @@ namespace ISM.Application.Services;
 
 public sealed class AuthService : IAuthService
 {
+    private const int SaltSize = 16;
+    private const int HashSize = 32;
+    private const int Pbkdf2Iterations = 100_000;
+    private const byte FormatVersion = 0x01;
     private readonly IUserRepository _userRepository;
     private readonly IRestaurantRepository _restaurantRepository;
+    private readonly IRestaurantService _restaurantService;
     private readonly JwtOptions _jwtOptions;
     private readonly ICurrentUser _currentUser;
     private readonly IPlanEnforcer _planEnforcer;
@@ -24,12 +29,14 @@ public sealed class AuthService : IAuthService
     public AuthService(
         IUserRepository userRepository,
         IRestaurantRepository restaurantRepository,
+        IRestaurantService restaurantService,
         IOptions<JwtOptions> jwtOptions,
         ICurrentUser currentUser,
         IPlanEnforcer planEnforcer)
     {
         _userRepository = userRepository;
         _restaurantRepository = restaurantRepository;
+        _restaurantService = restaurantService;
         _jwtOptions = jwtOptions.Value;
         _currentUser = currentUser;
         _planEnforcer = planEnforcer;
@@ -117,6 +124,43 @@ public sealed class AuthService : IAuthService
         return GenerateAuthResponse(user);
     }
 
+    public async Task<RegisterTenantResponse> RegisterTenantAsync(RegisterTenantRequest request, CancellationToken cancellationToken = default)
+    {
+        if (await _userRepository.EmailExistsAsync(request.ManagerEmail, cancellationToken))
+            throw new InvalidOperationException("E-mail do gerente já cadastrado no sistema.");
+
+        var restaurantDto = await _restaurantService.CreateRestaurantAsync(
+            new RestaurantDto { Name = request.RestaurantName, CNPJ = request.RestaurantCnpj },
+            request.PlanoId,
+            cancellationToken);
+
+        var now = DateTime.UtcNow;
+        var user = new User
+        {
+            Name = request.ManagerName,
+            Email = request.ManagerEmail,
+            PasswordHash = HashPassword(request.ManagerPassword),
+            Role = IsmRoles.Manager,
+            IsActive = true,
+            RestaurantId = restaurantDto.Id,
+            CreatedAtUtc = now
+        };
+
+        await _userRepository.AddAsync(user, cancellationToken);
+        await _userRepository.SaveChangesAsync(cancellationToken);
+
+        var auth = GenerateAuthResponse(user);
+        return new RegisterTenantResponse(
+            RestaurantId: restaurantDto.Id,
+            RestaurantName: restaurantDto.Name,
+            RestaurantCnpj: restaurantDto.CNPJ,
+            ManagerUserId: user.Id,
+            ManagerName: user.Name,
+            ManagerEmail: user.Email,
+            AccessToken: auth.Token,
+            TokenExpiresAt: auth.ExpiresAt);
+    }
+
     public async Task<UserDto?> GetUserByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         var user = await _userRepository.GetByIdAsync(id, cancellationToken);
@@ -178,14 +222,15 @@ public sealed class AuthService : IAuthService
 
     private static string HashPassword(string password)
     {
-        using var pbkdf2 = new Rfc2898DeriveBytes(password, 16, 100_000, HashAlgorithmName.SHA256);
-        var salt = pbkdf2.Salt;
-        var hash = pbkdf2.GetBytes(32);
+        var passwordBytes = Encoding.UTF8.GetBytes(password);
+        var salt = RandomNumberGenerator.GetBytes(SaltSize);
+        using var pbkdf2 = new Rfc2898DeriveBytes(passwordBytes, salt, Pbkdf2Iterations, HashAlgorithmName.SHA256);
+        var hash = pbkdf2.GetBytes(HashSize);
 
-        var bytes = new byte[1 + salt.Length + hash.Length];
-        bytes[0] = 0x01;
-        Buffer.BlockCopy(salt, 0, bytes, 1, salt.Length);
-        Buffer.BlockCopy(hash, 0, bytes, 1 + salt.Length, hash.Length);
+        var bytes = new byte[1 + SaltSize + HashSize];
+        bytes[0] = FormatVersion;
+        Buffer.BlockCopy(salt, 0, bytes, 1, SaltSize);
+        Buffer.BlockCopy(hash, 0, bytes, 1 + SaltSize, HashSize);
 
         return Convert.ToBase64String(bytes);
     }
@@ -195,16 +240,17 @@ public sealed class AuthService : IAuthService
         try
         {
             var bytes = Convert.FromBase64String(storedHash);
-            if (bytes.Length < 49 || bytes[0] != 0x01)
+            if (bytes.Length < 1 + SaltSize + HashSize || bytes[0] != FormatVersion)
                 return false;
 
-            var salt = new byte[16];
-            Buffer.BlockCopy(bytes, 1, salt, 0, 16);
-            var stored = new byte[32];
-            Buffer.BlockCopy(bytes, 17, stored, 0, 32);
+            var salt = new byte[SaltSize];
+            Buffer.BlockCopy(bytes, 1, salt, 0, SaltSize);
+            var stored = new byte[HashSize];
+            Buffer.BlockCopy(bytes, 1 + SaltSize, stored, 0, HashSize);
 
-            using var pbkdf2 = new Rfc2898DeriveBytes(password, salt, 100_000, HashAlgorithmName.SHA256);
-            var computed = pbkdf2.GetBytes(32);
+            var passwordBytes = Encoding.UTF8.GetBytes(password);
+            using var pbkdf2 = new Rfc2898DeriveBytes(passwordBytes, salt, Pbkdf2Iterations, HashAlgorithmName.SHA256);
+            var computed = pbkdf2.GetBytes(HashSize);
             return CryptographicOperations.FixedTimeEquals(stored, computed);
         }
         catch
