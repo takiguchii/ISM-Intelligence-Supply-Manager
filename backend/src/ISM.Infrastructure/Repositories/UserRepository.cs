@@ -17,18 +17,22 @@ public sealed class UserRepository : IUserRepository
     public async Task<User?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         return await _dbContext.Users
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
     }
 
     public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
         return await _dbContext.Users
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
     }
 
     public async Task<IReadOnlyList<User>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Users.ToListAsync(cancellationToken);
+        return await _dbContext.Users
+            .IgnoreQueryFilters()
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<User>> GetByRestaurantIdAsync(int restaurantId, CancellationToken cancellationToken = default)
@@ -55,7 +59,9 @@ public sealed class UserRepository : IUserRepository
 
     public async Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Users.AnyAsync(u => u.Email == email, cancellationToken);
+        return await _dbContext.Users
+            .IgnoreQueryFilters()
+            .AnyAsync(u => u.Email == email, cancellationToken);
     }
 
     public async Task<bool> SaveChangesAsync(CancellationToken cancellationToken = default)
