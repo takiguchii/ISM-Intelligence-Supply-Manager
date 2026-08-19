@@ -126,20 +126,20 @@ public sealed class AuthService : IAuthService
 
     public async Task<RegisterTenantResponse> RegisterTenantAsync(RegisterTenantRequest request, CancellationToken cancellationToken = default)
     {
-        if (await _userRepository.EmailExistsAsync(request.ManagerEmail, cancellationToken))
+        if (await _userRepository.EmailExistsAsync(request.Manager.Email, cancellationToken))
             throw new InvalidOperationException("E-mail do gerente já cadastrado no sistema.");
 
         var restaurantDto = await _restaurantService.CreateRestaurantAsync(
-            new RestaurantDto { Name = request.RestaurantName, CNPJ = request.RestaurantCnpj },
+            new RestaurantDto { Name = request.Restaurant.Name, CNPJ = request.Restaurant.Cnpj },
             request.PlanoId,
             cancellationToken);
 
         var now = DateTime.UtcNow;
         var user = new User
         {
-            Name = request.ManagerName,
-            Email = request.ManagerEmail,
-            PasswordHash = HashPassword(request.ManagerPassword),
+            Name = request.Manager.Name,
+            Email = request.Manager.Email,
+            PasswordHash = HashPassword(request.Manager.Password),
             Role = IsmRoles.Manager,
             IsActive = true,
             RestaurantId = restaurantDto.Id,
@@ -151,12 +151,8 @@ public sealed class AuthService : IAuthService
 
         var auth = GenerateAuthResponse(user);
         return new RegisterTenantResponse(
-            RestaurantId: restaurantDto.Id,
-            RestaurantName: restaurantDto.Name,
-            RestaurantCnpj: restaurantDto.CNPJ,
-            ManagerUserId: user.Id,
-            ManagerName: user.Name,
-            ManagerEmail: user.Email,
+            Restaurant: new RestaurantTenantResponse(restaurantDto.Id, restaurantDto.Name, restaurantDto.CNPJ),
+            Manager: new ManagerTenantResponse(user.Id, user.Name, user.Email, user.Role, user.RestaurantId!.Value),
             AccessToken: auth.Token,
             TokenExpiresAt: auth.ExpiresAt);
     }
