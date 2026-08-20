@@ -12,11 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ISM.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(IsmDbContext))]
-<<<<<<<< HEAD:backend/src/ISM.Infrastructure/Data/Migrations/20260816201933_InitialCreate.Designer.cs
     [Migration("20260816201933_InitialCreate")]
-========
-    [Migration("20260811011621_InitialCreate")]
->>>>>>>> origin/develop:backend/src/ISM.Infrastructure/Data/Migrations/20260811011621_InitialCreate.Designer.cs
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -387,7 +383,6 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.ToTable("products", (string)null);
                 });
 
-<<<<<<<< HEAD:backend/src/ISM.Infrastructure/Data/Migrations/20260816201933_InitialCreate.Designer.cs
             modelBuilder.Entity("ISM.Domain.Entities.Fornecedor", b =>
                 {
                     b.HasOne("ISM.Domain.Entities.Restaurant", "Restaurant")
@@ -399,8 +394,6 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.Navigation("Restaurant");
                 });
 
-========
->>>>>>>> origin/develop:backend/src/ISM.Infrastructure/Data/Migrations/20260811011621_InitialCreate.Designer.cs
             modelBuilder.Entity("ISM.Domain.Entities.Restaurant", b =>
                 {
                     b.HasOne("ISM.Domain.Entities.Plano", "Plano")
