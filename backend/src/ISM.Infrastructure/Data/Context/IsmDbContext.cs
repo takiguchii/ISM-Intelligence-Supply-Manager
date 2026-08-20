@@ -20,10 +20,10 @@ public sealed class IsmDbContext : DbContext
         _currentUser = currentUser;
     }
 
-    public DbSet<Fornecedor> Fornecedores => Set<Fornecedor>();
+    public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Restaurant> Restaurants => Set<Restaurant>();
-    public DbSet<Plano> Planos => Set<Plano>();
+    public DbSet<Plan> Plans => Set<Plan>();
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Dish> Dishes => Set<Dish>();
     public DbSet<DishIngredient> DishIngredients => Set<DishIngredient>();
@@ -40,26 +40,26 @@ public sealed class IsmDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<Plano>(builder =>
+        modelBuilder.Entity<Plan>(builder =>
         {
-            builder.ToTable("planos");
+            builder.ToTable("plans");
             builder.HasKey(p => p.Id);
-            builder.Property(p => p.Nome).HasMaxLength(50).IsRequired();
-            builder.Property(p => p.Descricao).HasMaxLength(200);
-            builder.Property(p => p.PrecoMensal).HasColumnType("decimal(10,2)").IsRequired();
-            builder.Property(p => p.MaxUsuarios).IsRequired();
-            builder.Property(p => p.MaxPratos).IsRequired();
-            builder.Property(p => p.MaxProdutos).IsRequired();
-            builder.Property(p => p.MaxCategorias).IsRequired();
-            builder.Property(p => p.Ativo).IsRequired();
+            builder.Property(p => p.Name).HasMaxLength(50).IsRequired();
+            builder.Property(p => p.Description).HasMaxLength(200);
+            builder.Property(p => p.MonthlyPrice).HasColumnType("decimal(10,2)").IsRequired();
+            builder.Property(p => p.MaxUsers).IsRequired();
+            builder.Property(p => p.MaxDishes).IsRequired();
+            builder.Property(p => p.MaxProducts).IsRequired();
+            builder.Property(p => p.MaxCategories).IsRequired();
+            builder.Property(p => p.IsActive).IsRequired();
             builder.Property(p => p.CreatedAtUtc).HasColumnType("datetime(6)").IsRequired();
             builder.Property(p => p.UpdatedAtUtc).HasColumnType("datetime(6)");
-            builder.HasIndex(p => p.Nome).IsUnique();
+            builder.HasIndex(p => p.Name).IsUnique();
         });
 
-        modelBuilder.Entity<Fornecedor>(builder =>
+        modelBuilder.Entity<Supplier>(builder =>
         {
-            builder.ToTable("fornecedores");
+            builder.ToTable("suppliers");
             builder.HasKey(f => f.Id);
             builder.Property(f => f.RestaurantId).IsRequired();
             builder.Property(f => f.Name).HasMaxLength(150).IsRequired();
@@ -111,13 +111,13 @@ public sealed class IsmDbContext : DbContext
             builder.Property(r => r.CNPJ).HasMaxLength(14).IsRequired();
             builder.HasIndex(r => r.CNPJ).IsUnique();
             builder.Property(r => r.Created).HasColumnType("datetime(6)").IsRequired();
-            builder.Property(r => r.PlanoId);
+            builder.Property(r => r.PlanId);
             builder.Property(r => r.TrialEndAtUtc).HasColumnType("datetime(6)");
-            builder.Property(r => r.PlanoAtivo).IsRequired();
+            builder.Property(r => r.IsPlanActive).IsRequired();
 
-            builder.HasOne(r => r.Plano)
-                .WithMany(p => p.Restaurantes)
-                .HasForeignKey(r => r.PlanoId)
+            builder.HasOne(r => r.Plan)
+                .WithMany(p => p.Restaurants)
+                .HasForeignKey(r => r.PlanId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
 
@@ -175,7 +175,7 @@ public sealed class IsmDbContext : DbContext
 
         modelBuilder.Entity<DishIngredient>(builder =>
         {
-            builder.ToTable("dishing_ingredients");
+            builder.ToTable("dish_ingredients");
             builder.HasKey(di => new { di.DishId, di.ProductId });
             builder.Property(di => di.Quantity).HasColumnType("decimal(10,3)");
 

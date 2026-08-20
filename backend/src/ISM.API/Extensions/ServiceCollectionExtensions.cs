@@ -138,7 +138,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICurrentUser, CurrentUserApi>();
         services.AddScoped<IPlanEnforcer, PlanEnforcer>();
         services.AddInfrastructure(databaseOptions);
-        services.AddScoped<IFornecedorService, FornecedorService>();
+        services.AddScoped<ISupplierService, SupplierService>();
         services.AddScoped<IProductService, ProductService>();
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IDishService, DishService>();
@@ -149,7 +149,7 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IImportOrchestrator, ImportOrchestrator>();
         services.AddScoped<IFileImporter, CsvProductImporter>();
-        services.AddScoped<IFileImporter, CsvFornecedorImporter>();
+        services.AddScoped<IFileImporter, CsvSupplierImporter>();
 
         return services;
     }

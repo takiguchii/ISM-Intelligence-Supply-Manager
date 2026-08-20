@@ -6,51 +6,51 @@ using ISM.Domain.Interfaces;
 
 namespace ISM.Application.Services;
 
-public sealed class FornecedorService : IFornecedorService
+public sealed class SupplierService : ISupplierService
 {
-    private readonly IFornecedorRepository _fornecedorRepository;
+    private readonly ISupplierRepository _supplierRepository;
     private readonly ICurrentUser _currentUser;
 
-    public FornecedorService(
-        IFornecedorRepository fornecedorRepository,
+    public SupplierService(
+        ISupplierRepository supplierRepository,
         ICurrentUser currentUser)
     {
-        _fornecedorRepository = fornecedorRepository;
+        _supplierRepository = supplierRepository;
         _currentUser = currentUser;
     }
 
-    public async Task<FornecedorResponse?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<SupplierResponse?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var fornecedor = await _fornecedorRepository.GetByIdAsync(id, cancellationToken);
-        if (fornecedor is null) return null;
+        var supplier = await _supplierRepository.GetByIdAsync(id, cancellationToken);
+        if (supplier is null) return null;
 
         if (!_currentUser.IsSuperAdmin && _currentUser.RestaurantId.HasValue)
         {
-            if (fornecedor.RestaurantId != _currentUser.RestaurantId.Value)
+            if (supplier.RestaurantId != _currentUser.RestaurantId.Value)
                 return null;
         }
 
-        return Map(fornecedor);
+        return Map(supplier);
     }
 
-    public async Task<IReadOnlyList<FornecedorResponse>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<SupplierResponse>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var fornecedores = await _fornecedorRepository.GetAllAsync(cancellationToken);
+        var suppliers = await _supplierRepository.GetAllAsync(cancellationToken);
         if (!_currentUser.IsSuperAdmin && _currentUser.RestaurantId.HasValue)
         {
-            fornecedores = fornecedores.Where(f => f.RestaurantId == _currentUser.RestaurantId.Value).ToList();
+            suppliers = suppliers.Where(f => f.RestaurantId == _currentUser.RestaurantId.Value).ToList();
         }
-        return fornecedores.Select(Map).ToArray();
+        return suppliers.Select(Map).ToArray();
     }
 
-    public async Task<FornecedorResponse> CreateAsync(CreateFornecedorRequest request, CancellationToken cancellationToken = default)
+    public async Task<SupplierResponse> CreateAsync(CreateSupplierRequest request, CancellationToken cancellationToken = default)
     {
         var restaurantId = ResolveRestaurantId(request.RestaurantId);
 
         if (!_currentUser.IsSuperAdmin && !_currentUser.IsManagerOrAbove)
             throw new UnauthorizedAccessException("Apenas gerentes podem cadastrar fornecedores.");
 
-        var fornecedor = new Fornecedor
+        var supplier = new Supplier
         {
             RestaurantId = restaurantId,
             Name = request.Name.Trim(),
@@ -62,13 +62,13 @@ public sealed class FornecedorService : IFornecedorService
             CreatedAtUtc = DateTime.UtcNow
         };
 
-        await _fornecedorRepository.AddAsync(fornecedor, cancellationToken);
-        return Map(fornecedor);
+        await _supplierRepository.AddAsync(supplier, cancellationToken);
+        return Map(supplier);
     }
 
-    public async Task<FornecedorResponse?> UpdateAsync(int id, UpdateFornecedorRequest request, CancellationToken cancellationToken = default)
+    public async Task<SupplierResponse?> UpdateAsync(int id, UpdateSupplierRequest request, CancellationToken cancellationToken = default)
     {
-        var existing = await _fornecedorRepository.GetByIdAsync(id, cancellationToken);
+        var existing = await _supplierRepository.GetByIdAsync(id, cancellationToken);
         if (existing is null) return null;
 
         if (!_currentUser.IsSuperAdmin && _currentUser.RestaurantId.HasValue)
@@ -79,7 +79,7 @@ public sealed class FornecedorService : IFornecedorService
                 throw new UnauthorizedAccessException("Apenas gerentes podem editar fornecedores.");
         }
 
-        var updated = new Fornecedor
+        var updated = new Supplier
         {
             Id = id,
             RestaurantId = existing.RestaurantId,
@@ -93,13 +93,13 @@ public sealed class FornecedorService : IFornecedorService
             UpdatedAtUtc = DateTime.UtcNow
         };
 
-        await _fornecedorRepository.UpdateAsync(updated, cancellationToken);
+        await _supplierRepository.UpdateAsync(updated, cancellationToken);
         return Map(updated);
     }
 
     public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
-        var existing = await _fornecedorRepository.GetByIdAsync(id, cancellationToken);
+        var existing = await _supplierRepository.GetByIdAsync(id, cancellationToken);
         if (existing is null) return false;
 
         if (!_currentUser.IsSuperAdmin && _currentUser.RestaurantId.HasValue)
@@ -110,7 +110,7 @@ public sealed class FornecedorService : IFornecedorService
                 throw new UnauthorizedAccessException("Apenas gerentes podem deletar fornecedores.");
         }
 
-        return await _fornecedorRepository.DeleteAsync(id, cancellationToken);
+        return await _supplierRepository.DeleteAsync(id, cancellationToken);
     }
 
     private int ResolveRestaurantId(int requestRestaurantId)
@@ -131,16 +131,16 @@ public sealed class FornecedorService : IFornecedorService
         return _currentUser.RestaurantId.Value;
     }
 
-    private static FornecedorResponse Map(Fornecedor fornecedor)
+    private static SupplierResponse Map(Supplier supplier)
         => new(
-            fornecedor.Id,
-            fornecedor.RestaurantId,
-            fornecedor.Name,
-            fornecedor.Category,
-            fornecedor.Description,
-            fornecedor.Email,
-            fornecedor.Phone,
-            fornecedor.IsActive,
-            fornecedor.CreatedAtUtc,
-            fornecedor.UpdatedAtUtc);
+            supplier.Id,
+            supplier.RestaurantId,
+            supplier.Name,
+            supplier.Category,
+            supplier.Description,
+            supplier.Email,
+            supplier.Phone,
+            supplier.IsActive,
+            supplier.CreatedAtUtc,
+            supplier.UpdatedAtUtc);
 }

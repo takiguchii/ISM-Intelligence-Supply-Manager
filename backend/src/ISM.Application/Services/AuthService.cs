@@ -51,9 +51,9 @@ public sealed class AuthService : IAuthService
         if (!user.IsActive)
             throw new UnauthorizedAccessException("Usuário inativo.");
 
-        var (planoAtivo, mensagemPlano) = await _planEnforcer.ValidateRestaurantAccessAsync(user.RestaurantId, cancellationToken);
-        if (!planoAtivo)
-            throw new UnauthorizedAccessException(mensagemPlano ?? "Acesso bloqueado.");
+        var (isPlanActive, planMessage) = await _planEnforcer.ValidateRestaurantAccessAsync(user.RestaurantId, cancellationToken);
+        if (!isPlanActive)
+            throw new UnauthorizedAccessException(planMessage ?? "Acesso bloqueado.");
 
         return GenerateAuthResponse(user);
     }
@@ -131,7 +131,7 @@ public sealed class AuthService : IAuthService
 
         var restaurantDto = await _restaurantService.CreateRestaurantAsync(
             new RestaurantDto { Name = request.Restaurant.Name, CNPJ = request.Restaurant.Cnpj },
-            request.PlanoId,
+            request.PlanId,
             cancellationToken);
 
         var now = DateTime.UtcNow;

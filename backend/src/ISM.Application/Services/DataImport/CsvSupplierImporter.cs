@@ -11,17 +11,17 @@ using ISM.Domain.Modules.DataImport;
 
 namespace ISM.Application.Services.DataImport;
 
-public sealed class CsvFornecedorImporter : IFileImporter
+public sealed class CsvSupplierImporter : IFileImporter
 {
     public DataSourceType HandlesType => DataSourceType.Csv;
-    public TargetImportEntity HandlesEntity => TargetImportEntity.Fornecedor;
+    public TargetImportEntity HandlesEntity => TargetImportEntity.Supplier;
 
-    private readonly IFornecedorRepository _fornecedorRepo;
+    private readonly ISupplierRepository _supplierRepo;
     private readonly IImportAuditRepository _auditRepo;
 
-    public CsvFornecedorImporter(IFornecedorRepository fornecedorRepo, IImportAuditRepository auditRepo)
+    public CsvSupplierImporter(ISupplierRepository supplierRepo, IImportAuditRepository auditRepo)
     {
-        _fornecedorRepo = fornecedorRepo;
+        _supplierRepo = supplierRepo;
         _auditRepo = auditRepo;
     }
 
@@ -70,7 +70,7 @@ public sealed class CsvFornecedorImporter : IFileImporter
         var newOrUpdatedIds = new List<int>();
         var lineage = new Dictionary<int, int>();
 
-        var existingByName = (await _fornecedorRepo.GetAllAsync(ct))
+        var existingByName = (await _supplierRepo.GetAllAsync(ct))
             .Where(f => f.RestaurantId == context.RestaurantId)
             .GroupBy(f => f.Name.Trim(), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
@@ -83,7 +83,7 @@ public sealed class CsvFornecedorImporter : IFileImporter
             {
                 var (name, category, description, email, phone) = NormalizeRow(row, rowNumber);
                 var key = name.Trim();
-                Fornecedor? entity = null;
+                Supplier? entity = null;
 
                 if (context.UpsertStrategy == UpsertStrategy.MergeByNameAndRestaurant &&
                     existingByName.TryGetValue(key, out var existing))
@@ -94,12 +94,12 @@ public sealed class CsvFornecedorImporter : IFileImporter
                     entity.Email = email;
                     entity.Phone = phone;
                     entity.UpdatedAtUtc = DateTime.UtcNow;
-                    entity = await _fornecedorRepo.UpdateAsync(entity, ct);
+                    entity = await _supplierRepo.UpdateAsync(entity, ct);
                     existingByName[key] = entity;
                 }
                 else
                 {
-                    entity = new Fornecedor
+                    entity = new Supplier
                     {
                         RestaurantId = context.RestaurantId,
                         Name = name.Trim(),
@@ -110,7 +110,7 @@ public sealed class CsvFornecedorImporter : IFileImporter
                         IsActive = true,
                         CreatedAtUtc = DateTime.UtcNow
                     };
-                    entity = await _fornecedorRepo.AddAsync(entity, ct);
+                    entity = await _supplierRepo.AddAsync(entity, ct);
                     existingByName.TryAdd(key, entity);
                 }
 
@@ -125,7 +125,7 @@ public sealed class CsvFornecedorImporter : IFileImporter
                 {
                     ImportId = audit.ImportId,
                     SourceRowNumber = rowNumber,
-                    EntityKeyValue = Try(row, "Nome", "Name", "Fornecedor"),
+                    EntityKeyValue = Try(row, "Nome", "Name", "Fornecedor", "Supplier"),
                     ErrorMessage = ex.Message,
                     RawRowPayloadJson = JsonSerializer.Serialize(row),
                     CreatedAtUtc = DateTime.UtcNow
@@ -246,7 +246,7 @@ public sealed class CsvFornecedorImporter : IFileImporter
             return string.Empty;
         }
 
-        var name = Get("Nome", "Name", "Fornecedor");
+        var name = Get("Nome", "Name", "Fornecedor", "Supplier");
         if (string.IsNullOrWhiteSpace(name))
             throw new InvalidOperationException($"Nome do fornecedor é obrigatório na linha {rowNumber}.");
 

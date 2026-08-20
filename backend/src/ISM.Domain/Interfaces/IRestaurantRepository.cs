@@ -10,4 +10,5 @@ public interface IRestaurantRepository
     void Update(Restaurant restaurant);
     void Delete(Restaurant restaurant);
     Task<bool> SaveChangesAsync(CancellationToken cancellationToken = default);
+    Task<bool> CanConnectAsync(CancellationToken cancellationToken = default);
 }
