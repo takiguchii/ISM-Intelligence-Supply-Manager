@@ -46,6 +46,38 @@ public sealed class ProductService : IProductService
         return products.Select(Map).ToArray();
     }
 
+    public async Task<PagedResult<ProductResponse>> GetPagedAsync(
+        int pageNumber = 1,
+        int pageSize = 10,
+        string? search = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (pageNumber < 1) pageNumber = 1;
+        if (pageSize < 1) pageSize = 10;
+        if (pageSize > 100) pageSize = 100;
+
+        int? filterRestaurantId = null;
+        if (!_currentUser.IsSuperAdmin)
+        {
+            filterRestaurantId = _currentUser.RestaurantId ?? 1;
+        }
+
+        var (items, totalCount) = await _productRepository.GetPagedAsync(
+            filterRestaurantId, pageNumber, pageSize, search, cancellationToken);
+
+        var responses = items.Select(Map).ToList();
+        int totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
+
+        return new PagedResult<ProductResponse>(
+            responses,
+            pageNumber,
+            pageSize,
+            totalCount,
+            totalPages,
+            pageNumber > 1,
+            pageNumber < totalPages);
+    }
+
     public async Task<ProductResponse> CreateAsync(CreateProductRequest request, CancellationToken cancellationToken = default)
     {
         var restaurantId = ResolveRestaurantId(request.RestaurantId);

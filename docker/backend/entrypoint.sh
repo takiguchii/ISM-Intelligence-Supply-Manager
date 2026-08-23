@@ -14,10 +14,5 @@ done
 echo "Restoring backend dependencies..."
 dotnet restore ISM.sln --packages "${NUGET_PACKAGES}" || dotnet restore ISM.sln
 
-echo "Applying Entity Framework migrations..."
-dotnet ef database update \
-  --project src/ISM.Infrastructure \
-  --startup-project src/ISM.API
-
 echo "Starting ASP.NET Core with hot reload..."
 exec dotnet watch --project src/ISM.API run --no-launch-profile --urls http://0.0.0.0:8080

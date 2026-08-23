@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ISM.Application.DTOs;
 
-public sealed record CreateFornecedorRequest(
+public sealed record CreateSupplierRequest(
     int RestaurantId,
     [Required]
     [MaxLength(150)]

@@ -21,7 +21,7 @@ public enum UpsertStrategy
 public enum TargetImportEntity
 {
     Product = 1,
-    Fornecedor = 2,
+    Supplier = 2,
     Category = 3,
     Dish = 4,
     DishIngredient = 5,

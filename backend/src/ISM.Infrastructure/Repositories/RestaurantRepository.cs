@@ -44,4 +44,16 @@ public sealed class RestaurantRepository : IRestaurantRepository
     {
         return await _dbContext.SaveChangesAsync(cancellationToken) > 0;
     }
+
+    public async Task<bool> CanConnectAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await _dbContext.Database.CanConnectAsync(cancellationToken);
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }

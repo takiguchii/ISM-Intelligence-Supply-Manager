@@ -10,7 +10,7 @@ public sealed class RegisterTenantRequest
     [Required(ErrorMessage = "Os dados do gerente são obrigatórios.")]
     public ManagerTenantRequest Manager { get; set; } = new();
 
-    public int? PlanoId { get; set; }
+    public int? PlanId { get; set; }
 }
 
 public sealed class RestaurantTenantRequest
