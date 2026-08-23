@@ -1,7 +1,6 @@
-using ISM.Infrastructure.Data.Context;
+using ISM.Domain.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace ISM.API.Controllers;
 
@@ -10,12 +9,12 @@ namespace ISM.API.Controllers;
 [AllowAnonymous]
 public sealed class SystemController : ControllerBase
 {
-    private readonly IsmDbContext _dbContext;
+    private readonly IRestaurantRepository _restaurantRepository;
     private readonly IWebHostEnvironment _env;
 
-    public SystemController(IsmDbContext dbContext, IWebHostEnvironment env)
+    public SystemController(IRestaurantRepository restaurantRepository, IWebHostEnvironment env)
     {
-        _dbContext = dbContext;
+        _restaurantRepository = restaurantRepository;
         _env = env;
     }
 
@@ -23,16 +22,7 @@ public sealed class SystemController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<object>> Status(CancellationToken cancellationToken)
     {
-        bool dbConnected;
-        try
-        {
-            await _dbContext.Database.CanConnectAsync(cancellationToken);
-            dbConnected = true;
-        }
-        catch
-        {
-            dbConnected = false;
-        }
+        bool dbConnected = await _restaurantRepository.CanConnectAsync(cancellationToken);
 
         var enabledModules = new[]
         {

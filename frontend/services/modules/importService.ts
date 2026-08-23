@@ -71,7 +71,7 @@ export const importService = {
     return uploadFormDataFile("/api/import/stock/products", file, strategy, restaurantId);
   },
   uploadFornecedoresCsv(file: File, strategy?: string, restaurantId?: number | null) {
-    return uploadFormDataFile("/api/import/fornecedores", file, strategy, restaurantId);
+    return uploadFormDataFile("/api/import/suppliers", file, strategy, restaurantId);
   },
   history(limit = 50, restaurantId?: number | null) {
     const params = new URLSearchParams();

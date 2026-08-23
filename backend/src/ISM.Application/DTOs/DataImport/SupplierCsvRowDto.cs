@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ISM.Application.DTOs.DataImport;
 
-public sealed record FornecedorCsvRowDto(
+public sealed record SupplierCsvRowDto(
     [Required] [MaxLength(150)] string Name,
     [Required] [MaxLength(100)] string Category,
     [MaxLength(500)] string? Description,

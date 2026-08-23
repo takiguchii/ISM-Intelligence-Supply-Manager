@@ -9,7 +9,7 @@ public sealed class DependencyDirectionTests
     [Fact]
     public void Controllers_ShouldNotDependOnInfrastructureImplementations()
     {
-        var controllerTypes = typeof(FornecedorController).Assembly
+        var controllerTypes = typeof(SuppliersController).Assembly
             .GetTypes()
             .Where(type => !type.IsAbstract && typeof(ControllerBase).IsAssignableFrom(type));
 

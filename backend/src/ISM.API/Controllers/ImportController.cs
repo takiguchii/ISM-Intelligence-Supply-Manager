@@ -54,12 +54,12 @@ public sealed class ImportController : ControllerBase
         return Ok(result);
     }
 
-    [HttpPost("fornecedores")]
+    [HttpPost("suppliers")]
     [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
     [RequestSizeLimit(50 * 1024 * 1024)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> ImportFornecedoresCsv(
+    public async Task<IActionResult> ImportSuppliersCsv(
         IFormFile file,
         [FromQuery] UpsertStrategy strategy = UpsertStrategy.MergeByNameAndRestaurant,
         [FromQuery(Name = "restaurantId")] int? restaurantIdQuery = null,
@@ -79,9 +79,9 @@ public sealed class ImportController : ControllerBase
                 RestaurantId: restaurantId,
                 UserId: _currentUser.UserId,
                 DataSourceType: DataSourceType.Csv,
-                TargetEntity: TargetImportEntity.Fornecedor,
+                TargetEntity: TargetImportEntity.Supplier,
                 UpsertStrategy: strategy,
-                DataSourceName: $"Upload CSV fornecedores - {file.FileName}",
+                DataSourceName: $"Upload CSV suppliers - {file.FileName}",
                 OriginalFileName: file.FileName),
             ct);
 

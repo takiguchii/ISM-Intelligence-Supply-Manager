@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ISM.Application.DTOs;
 
-public sealed record UpdateFornecedorRequest(
+public sealed record UpdateSupplierRequest(
     [Required]
     [MaxLength(150)]
     string Name,

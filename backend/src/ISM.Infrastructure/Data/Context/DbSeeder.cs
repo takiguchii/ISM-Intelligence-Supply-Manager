@@ -16,49 +16,49 @@ public static class DbSeeder
     public static async Task SeedAsync(IsmDbContext context)
     {
         // 0. Planos SaaS (Free / Pro / Enterprise) — sempre garante que existam
-        if (!await context.Planos.AnyAsync())
+        if (!await context.Plans.AnyAsync())
         {
-            var planos = new List<Plano>
+            var plans = new List<Plan>
             {
                 new()
                 {
-                    Nome = "Free",
-                    Descricao = "Plano trial básico para teste",
-                    MaxUsuarios = 2,
-                    MaxPratos = 10,
-                    MaxProdutos = 20,
-                    MaxCategorias = 3,
-                    PrecoMensal = 0,
-                    Ativo = true
+                    Name = "Free",
+                    Description = "Plano trial básico para teste",
+                    MaxUsers = 2,
+                    MaxDishes = 10,
+                    MaxProducts = 20,
+                    MaxCategories = 3,
+                    MonthlyPrice = 0,
+                    IsActive = true
                 },
                 new()
                 {
-                    Nome = "Pro",
-                    Descricao = "Plano profissional para restaurantes em crescimento",
-                    MaxUsuarios = 10,
-                    MaxPratos = 100,
-                    MaxProdutos = 200,
-                    MaxCategorias = 15,
-                    PrecoMensal = 149.90m,
-                    Ativo = true
+                    Name = "Pro",
+                    Description = "Plano profissional para restaurantes em crescimento",
+                    MaxUsers = 10,
+                    MaxDishes = 100,
+                    MaxProducts = 200,
+                    MaxCategories = 15,
+                    MonthlyPrice = 149.90m,
+                    IsActive = true
                 },
                 new()
                 {
-                    Nome = "Enterprise",
-                    Descricao = "Plano ilimitado para redes e franquias",
-                    MaxUsuarios = 100,
-                    MaxPratos = 1000,
-                    MaxProdutos = 2000,
-                    MaxCategorias = 100,
-                    PrecoMensal = 499.90m,
-                    Ativo = true
+                    Name = "Enterprise",
+                    Description = "Plano ilimitado para redes e franquias",
+                    MaxUsers = 100,
+                    MaxDishes = 1000,
+                    MaxProducts = 2000,
+                    MaxCategories = 100,
+                    MonthlyPrice = 499.90m,
+                    IsActive = true
                 }
             };
-            await context.Planos.AddRangeAsync(planos);
+            await context.Plans.AddRangeAsync(plans);
             await context.SaveChangesAsync();
         }
 
-        var planoPro = await context.Planos.FirstOrDefaultAsync(p => p.Nome == "Pro");
+        var planPro = await context.Plans.FirstOrDefaultAsync(p => p.Name == "Pro");
 
         // 1. Seed usuário admin padrão (se não houver usuários)
         if (!await context.Users.AnyAsync())
@@ -89,16 +89,16 @@ public static class DbSeeder
             Name = "Gourmet ISM Restaurant",
             CNPJ = "12345678000190",
             Created = DateTime.UtcNow,
-            PlanoId = planoPro?.Id,
+            PlanId = planPro?.Id,
             TrialEndAtUtc = DateTime.UtcNow.AddDays(14),
-            PlanoAtivo = true
+            IsPlanActive = true
         };
 
         await context.Restaurants.AddAsync(restaurant);
         await context.SaveChangesAsync(); // Salva para gerar o Id do Restaurante
 
         // 2. Cadastra Fornecedores (vinculados ao restaurante recém-criado)
-        var fornecedores = new List<Fornecedor>
+        var suppliers = new List<Supplier>
         {
             new()
             {
@@ -122,7 +122,7 @@ public static class DbSeeder
             }
         };
 
-        await context.Fornecedores.AddRangeAsync(fornecedores);
+        await context.Suppliers.AddRangeAsync(suppliers);
         await context.SaveChangesAsync();
 
         // 3. Cadastra Produtos (Estoque) — agora com RestaurantId

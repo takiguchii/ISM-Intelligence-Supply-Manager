@@ -1,6 +1,6 @@
 namespace ISM.Application.DTOs;
 
-public sealed record FornecedorResponse(
+public sealed record SupplierResponse(
     int Id,
     int RestaurantId,
     string Name,
