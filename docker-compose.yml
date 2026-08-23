@@ -83,6 +83,7 @@ services:
           - frontend
 
   db-migrate:
+    profiles: ["tools"]
     build:
       context: .
       dockerfile: docker/backend/Dockerfile
@@ -109,6 +110,7 @@ services:
       "
 
   db-reset:
+    profiles: ["tools"]
     build:
       context: .
       dockerfile: docker/backend/Dockerfile
