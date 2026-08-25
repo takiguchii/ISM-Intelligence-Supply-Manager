@@ -151,6 +151,13 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IFileImporter, CsvProductImporter>();
         services.AddScoped<IFileImporter, CsvSupplierImporter>();
 
+        // Categorias reconhecidas na análise de planilhas (dry-run / confirmação).
+        // Para uma nova categoria: implemente IImportCategoryProfile e registre aqui.
+        services.AddScoped<IImportCategoryProfile, StockCategoryProfile>();
+        services.AddScoped<IImportCategoryProfile, SuppliersCategoryProfile>();
+        services.AddScoped<IImportCategoryProfile, FinanceCategoryProfile>();
+        services.AddScoped<ICsvStructureAnalyzer, CsvStructureAnalyzer>();
+
         return services;
     }
 }

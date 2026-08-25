@@ -8,12 +8,25 @@ public sealed class ImportOrchestrator : IImportOrchestrator
 {
     private readonly IEnumerable<IFileImporter> _importers;
     private readonly IImportAuditRepository _auditRepo;
+    private readonly ICsvStructureAnalyzer _analyzer;
 
-    public ImportOrchestrator(IEnumerable<IFileImporter> importers, IImportAuditRepository auditRepo)
+    public ImportOrchestrator(
+        IEnumerable<IFileImporter> importers,
+        IImportAuditRepository auditRepo,
+        ICsvStructureAnalyzer analyzer)
     {
         _importers = importers;
         _auditRepo = auditRepo;
+        _analyzer = analyzer;
     }
+
+    /// <summary>Dry-run: analisa a planilha e retorna as confirmações por categoria sem gravar nada.</summary>
+    public Task<ImportPreviewDto> PreviewFileAsync(
+        Stream fileContent,
+        string? contentType,
+        string fileName,
+        CancellationToken ct)
+        => _analyzer.AnalyzeAsync(fileContent, fileName, contentType, ct);
 
     public async Task<ImportResultDto> ExecuteFileImportAsync(
         Stream fileContent,
