@@ -14,8 +14,11 @@ public sealed class CsvProductImporter : CsvImporterBase
     private readonly IProductRepository _productRepo;
     private Dictionary<string, Product>? _existingByName;
 
-    public CsvProductImporter(IProductRepository productRepo, IImportAuditRepository auditRepo)
-        : base(auditRepo)
+    public CsvProductImporter(
+        IProductRepository productRepo,
+        IImportAuditRepository auditRepo,
+        IImportFileReaderResolver fileReaders)
+        : base(auditRepo, fileReaders)
         => _productRepo = productRepo;
 
     protected override async Task OnBeforeRowsAsync(ImportContext context, CancellationToken ct)

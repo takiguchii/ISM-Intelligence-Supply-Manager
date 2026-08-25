@@ -75,9 +75,10 @@ function onDrop(evt: DragEvent) {
       <div class="mt-6 flex flex-wrap justify-center gap-2 text-xs font-mono text-zinc-400">
         <span class="px-2 py-1 rounded-md bg-zinc-800/80 border border-zinc-700/60">CSV</span>
         <span class="px-2 py-1 rounded-md bg-zinc-800/80 border border-zinc-700/60">XLSX</span>
-        <span class="px-2 py-1 rounded-md bg-zinc-800/80 border border-zinc-700/60">XML NF-e*</span>
-        <span class="px-2 py-1 rounded-md bg-zinc-800/80 border border-zinc-700/60">JSON*</span>
-        <span class="px-2 py-1 rounded-md bg-violet-500/10 border border-violet-500/30 text-violet-300">📷 Foto do caderno / PDF escaneado</span>
+        <span class="px-2 py-1 rounded-md bg-zinc-800/80 border border-zinc-700/60">XML NF-e</span>
+        <span class="px-2 py-1 rounded-md bg-zinc-800/80 border border-zinc-700/60">JSON</span>
+        <span class="px-2 py-1 rounded-md bg-zinc-800/80 border border-zinc-700/60">JPEG</span>
+        <span class="px-2 py-1 rounded-md bg-zinc-800/80 border border-zinc-700/60">JPG</span>
       </div>
       <p class="text-xs text-zinc-600 mt-4">* em breve · Fotos são interpretadas por IA de visão</p>
 

@@ -1,5 +1,6 @@
 using System.Text;
 using ISM.Application.Services.DataImport;
+using ISM.Application.Services.DataImport.Readers;
 
 namespace ISM.UnitTests;
 
@@ -10,7 +11,8 @@ public class CsvStructureAnalyzerTests
         new StockCategoryProfile(),
         new SuppliersCategoryProfile(),
         new FinanceCategoryProfile()
-    ]);
+    ],
+    new ImportFileReaderResolver([new CsvImportFileReader()]));
 
     private static Stream Csv(string content) => new MemoryStream(Encoding.UTF8.GetBytes(content));
 

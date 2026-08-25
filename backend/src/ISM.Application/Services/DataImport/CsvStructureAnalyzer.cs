@@ -11,9 +11,15 @@ namespace ISM.Application.Services.DataImport;
 public sealed class CsvStructureAnalyzer : ICsvStructureAnalyzer
 {
     private readonly IEnumerable<IImportCategoryProfile> _profiles;
+    private readonly IImportFileReaderResolver _fileReaders;
 
-    public CsvStructureAnalyzer(IEnumerable<IImportCategoryProfile> profiles)
-        => _profiles = profiles;
+    public CsvStructureAnalyzer(
+        IEnumerable<IImportCategoryProfile> profiles,
+        IImportFileReaderResolver fileReaders)
+    {
+        _profiles = profiles;
+        _fileReaders = fileReaders;
+    }
 
     public async Task<ImportPreviewDto> AnalyzeAsync(
         Stream fileContent,
@@ -21,14 +27,11 @@ public sealed class CsvStructureAnalyzer : ICsvStructureAnalyzer
         string? contentType,
         CancellationToken ct)
     {
-        fileContent.Position = 0;
-        using var buffered = new MemoryStream();
-        await fileContent.CopyToAsync(buffered, ct);
-        buffered.Position = 0;
-
-        var headers = await CsvParser.ReadHeadersAsync(buffered, ct);
-        buffered.Position = 0;
-        var (rows, parseErrors) = await CsvParser.ReadRowsAsync(buffered, ct);
+        // Qualquer formato suportado (CSV, XLSX, XML NF-e, SpreadsheetML, JSON) vira linhas normalizadas
+        var content = await _fileReaders.ReadAsync(fileContent, fileName, contentType, ct);
+        var headers = content.Headers;
+        var rows = content.Rows;
+        var parseErrors = content.Errors;
 
         var selectedProfiles = _profiles
             .Select(p => (Profile: p, Score: p.MatchScore(headers)))
@@ -63,7 +66,7 @@ public sealed class CsvStructureAnalyzer : ICsvStructureAnalyzer
 
     private static CategoryConfirmationDto BuildConfirmation(
         IImportCategoryProfile profile,
-        List<Dictionary<string, string>> rows)
+        IReadOnlyList<Dictionary<string, string>> rows)
     {
         var mappedFields = new List<Dictionary<string, string?>>();
         var rowsWithErrors = new List<int>();
