@@ -8,21 +8,28 @@ using ISM.Domain.Modules.DataImport;
 namespace ISM.Application.Services.DataImport;
 
 /// <summary>
-/// Classe base para importers CSV: centraliza o ciclo de vida de auditoria
-/// (hash SHA256, start/append errors/finish), o parsing compartilhado via
-/// CsvParser e o loop de linhas com tratamento de erro por linha.
+/// Classe base para importers de arquivo: centraliza o ciclo de vida de auditoria
+/// (hash SHA256, start/append errors/finish), a normalização de qualquer formato
+/// suportado via IImportFileReaderResolver e o loop de linhas com tratamento de erro.
 /// As subclasses implementam apenas a lógica de domínio (upsert por linha).
 /// </summary>
 public abstract class CsvImporterBase : IFileImporter
 {
-    private readonly IImportAuditRepository _auditRepo;
+    private static readonly string[] SupportedExtensions = [".csv", ".xlsx", ".xlsm", ".xml", ".json", ".txt"];
 
-    protected CsvImporterBase(IImportAuditRepository auditRepo)
-        => _auditRepo = auditRepo;
+    public static bool IsSupportedFormat(string? contentType, string? fileName)
+        => SupportedExtensions.Contains(Path.GetExtension(fileName ?? ""), StringComparer.OrdinalIgnoreCase)
+           || CsvParser.IsCsv(contentType, fileName);
+
+    private readonly IImportAuditRepository _auditRepo;
+    private readonly IImportFileReaderResolver _fileReaders;
+
+    protected CsvImporterBase(IImportAuditRepository auditRepo, IImportFileReaderResolver fileReaders)
+        => (_auditRepo, _fileReaders) = (auditRepo, fileReaders);
 
     public DataSourceType HandlesType => DataSourceType.Csv;
     public abstract TargetImportEntity HandlesEntity { get; }
-    public bool CanHandle(string? contentType, string? fileName) => CsvParser.IsCsv(contentType, fileName);
+    public bool CanHandle(string? contentType, string? fileName) => IsSupportedFormat(contentType, fileName);
 
     public async Task<ImportResultDto> ImportAsync(
         Stream fileContent,
@@ -35,7 +42,6 @@ public abstract class CsvImporterBase : IFileImporter
         await fileContent.CopyToAsync(bufferedStream, ct);
         var sha256 = ComputeSha256(bufferedStream.ToArray());
         bufferedStream.Position = 0;
-
         var audit = new ImportAudit
         {
             ImportId = Guid.NewGuid(),
@@ -54,11 +60,15 @@ public abstract class CsvImporterBase : IFileImporter
         };
         await _auditRepo.StartImportAsync(audit, ct);
 
-        var (rows, parseErrors) = await CsvParser.ReadRowsAsync(bufferedStream, ct);
-        audit.TotalRecordsInSource = rows.Count;
+        // Qualquer formato suportado vira linhas normalizadas antes do loop de domínio
+        var content = await _fileReaders.ReadAsync(
+            bufferedStream, context.OriginalFileName ?? string.Empty, contentType: null, ct);
+
+        audit.TotalRecordsInSource = content.Rows.Count;
 
         var errors = new List<ImportErrorLog>();
-        errors.AddRange(parseErrors);
+        errors.AddRange(content.Errors);
+        var rows = content.Rows;
 
         var newOrUpdatedIds = new List<int>();
         var lineage = new Dictionary<int, int>();

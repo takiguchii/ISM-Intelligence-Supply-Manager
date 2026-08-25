@@ -24,7 +24,8 @@ public class PhotoImportServiceTests
             new StockCategoryProfile(),
             new SuppliersCategoryProfile(),
             new FinanceCategoryProfile()
-        ]));
+        ],
+        new ImportFileReaderResolver([new CsvImportFileReader()])));
 
     private static Stream Bytes(string s) => new MemoryStream(Encoding.UTF8.GetBytes(s));
 

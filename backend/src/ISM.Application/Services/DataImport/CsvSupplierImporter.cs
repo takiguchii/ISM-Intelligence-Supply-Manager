@@ -14,8 +14,11 @@ public sealed class CsvSupplierImporter : CsvImporterBase
     private readonly ISupplierRepository _supplierRepo;
     private Dictionary<string, Supplier>? _existingByName;
 
-    public CsvSupplierImporter(ISupplierRepository supplierRepo, IImportAuditRepository auditRepo)
-        : base(auditRepo)
+    public CsvSupplierImporter(
+        ISupplierRepository supplierRepo,
+        IImportAuditRepository auditRepo,
+        IImportFileReaderResolver fileReaders)
+        : base(auditRepo, fileReaders)
         => _supplierRepo = supplierRepo;
 
     protected override async Task OnBeforeRowsAsync(ImportContext context, CancellationToken ct)
