@@ -17,9 +17,15 @@ public abstract class ImportCategoryProfileBase : IImportCategoryProfile
 
     public double MatchScore(IReadOnlyCollection<string> headers)
     {
-        var totalAliases = KnownFields.Sum(f => f.Aliases.Length);
-        var matched = CountMatchedHeaders(headers);
-        return totalAliases == 0 ? 0 : (double)matched / totalAliases;
+        if (KnownFields.Length == 0) return 0;
+
+        // Um campo conta como reconhecido se QUALQUER dos seus aliases bater com um cabeçalho.
+        // Score = campos reconhecidos / total de campos da categoria.
+        // (Antes dividia pelo total de aliases, o que tornava o score inalcançável:
+        //  uma planilha perfeita ficava ~0.18 e nunca passava do mínimo de 0.3.)
+        var matchedFields = KnownFields.Count(f =>
+            headers.Any(h => f.Aliases.Contains(h.Trim(), StringComparer.OrdinalIgnoreCase)));
+        return (double)matchedFields / KnownFields.Length;
     }
 
     public Dictionary<string, string?> MapRow(Dictionary<string, string> row)
@@ -36,10 +42,6 @@ public abstract class ImportCategoryProfileBase : IImportCategoryProfile
             .ToList();
 
     public virtual string? Validate(Dictionary<string, string?> mappedRow) => null;
-
-    private int CountMatchedHeaders(IReadOnlyCollection<string> headers)
-        => KnownFields.Sum(f =>
-            headers.Count(h => f.Aliases.Contains(h.Trim(), StringComparer.OrdinalIgnoreCase)));
 
     protected static string? FirstValue(Dictionary<string, string> row, string[] aliases)
     {
