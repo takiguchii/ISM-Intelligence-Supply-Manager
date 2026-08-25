@@ -36,6 +36,30 @@ public sealed class ImportController : ControllerBase
         return Ok(preview);
     }
 
+    /// <summary>Dry-run: extrai a tabela de uma foto/PDF escaneado (visão computacional) e gera confirmações por categoria.</summary>
+    [HttpPost("photo-preview")]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
+    [RequestSizeLimit(20 * 1024 * 1024)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> PreviewPhotoImport(IFormFile file, CancellationToken ct = default)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest("Arquivo não enviado.");
+
+        var contentType = string.IsNullOrWhiteSpace(file.ContentType) ? "image/jpeg" : file.ContentType;
+        using var stream = file.OpenReadStream();
+        try
+        {
+            var preview = await _orchestrator.PreviewPhotoAsync(stream, contentType, file.FileName, ct);
+            return Ok(preview);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
     [HttpPost("stock/products")]
     [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
     [RequestSizeLimit(50 * 1024 * 1024)]

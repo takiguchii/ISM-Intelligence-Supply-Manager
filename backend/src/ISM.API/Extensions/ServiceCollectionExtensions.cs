@@ -158,6 +158,11 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IImportCategoryProfile, FinanceCategoryProfile>();
         services.AddScoped<ICsvStructureAnalyzer, CsvStructureAnalyzer>();
 
+        // Importação por foto/PDF escaneado (visão computacional)
+        services.Configure<PhotoImportOptions>(configuration.GetSection(PhotoImportOptions.SectionName));
+        services.AddHttpClient<IPhotoImportExtractor, LlmVisionPhotoExtractor>();
+        services.AddScoped<IPhotoImportService, PhotoImportService>();
+
         return services;
     }
 }
