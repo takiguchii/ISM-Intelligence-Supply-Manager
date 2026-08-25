@@ -20,6 +20,22 @@ public sealed class ImportController : ControllerBase
         _currentUser = currentUser;
     }
 
+    /// <summary>Dry-run: analisa a estrutura da planilha e gera confirmações por categoria (estoque, fornecedores, finanças...) sem gravar nada.</summary>
+    [HttpPost("preview")]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
+    [RequestSizeLimit(50 * 1024 * 1024)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> PreviewImport(IFormFile file, CancellationToken ct = default)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest("Arquivo não enviado.");
+
+        using var stream = file.OpenReadStream();
+        var preview = await _orchestrator.PreviewFileAsync(stream, file.ContentType, file.FileName, ct);
+        return Ok(preview);
+    }
+
     [HttpPost("stock/products")]
     [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
     [RequestSizeLimit(50 * 1024 * 1024)]
