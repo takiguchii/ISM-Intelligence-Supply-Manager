@@ -29,3 +29,4 @@ backend/TestResults/
 # Local development tools
 .gemini/
 *.skill
+.sandbox-cache/
