@@ -9,15 +9,18 @@ public sealed class ImportOrchestrator : IImportOrchestrator
     private readonly IEnumerable<IFileImporter> _importers;
     private readonly IImportAuditRepository _auditRepo;
     private readonly ICsvStructureAnalyzer _analyzer;
+    private readonly IPhotoImportService _photoImportService;
 
     public ImportOrchestrator(
         IEnumerable<IFileImporter> importers,
         IImportAuditRepository auditRepo,
-        ICsvStructureAnalyzer analyzer)
+        ICsvStructureAnalyzer analyzer,
+        IPhotoImportService photoImportService)
     {
         _importers = importers;
         _auditRepo = auditRepo;
         _analyzer = analyzer;
+        _photoImportService = photoImportService;
     }
 
     /// <summary>Dry-run: analisa a planilha e retorna as confirmações por categoria sem gravar nada.</summary>
@@ -27,6 +30,14 @@ public sealed class ImportOrchestrator : IImportOrchestrator
         string fileName,
         CancellationToken ct)
         => _analyzer.AnalyzeAsync(fileContent, fileName, contentType, ct);
+
+    /// <summary>Dry-run: extrai a tabela de uma foto/PDF escaneado e gera as confirmações por categoria.</summary>
+    public Task<ImportPreviewDto> PreviewPhotoAsync(
+        Stream fileContent,
+        string contentType,
+        string fileName,
+        CancellationToken ct)
+        => _photoImportService.AnalyzePhotoAsync(fileContent, fileName, contentType, ct);
 
     public async Task<ImportResultDto> ExecuteFileImportAsync(
         Stream fileContent,
