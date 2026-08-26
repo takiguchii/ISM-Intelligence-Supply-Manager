@@ -522,12 +522,12 @@ onMounted(async () => {
         </div>
 
         <!-- GRID DE SKILLS E CONEXÕES PLUG-IN-PLAY -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div class="skills-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           
           <div
             v-for="skill in skills"
             :key="skill.id"
-            class="rounded-2xl bg-[#121214] border border-zinc-800/80 p-5 flex flex-col justify-between hover:border-zinc-700/90 transition-all duration-200 shadow-lg group hover:-translate-y-0.5"
+            class="skill-card rounded-2xl bg-[#121214] border border-zinc-800/80 p-5 flex flex-col justify-between hover:border-zinc-700/90 shadow-lg group relative"
           >
             <!-- Card Content Header -->
             <div>
@@ -776,3 +776,29 @@ onMounted(async () => {
     </footer>
   </div>
 </template>
+
+<style scoped>
+.skills-grid {
+  perspective: 1000px;
+}
+
+.skill-card {
+  transition: transform 400ms cubic-bezier(0.4, 0, 0.2, 1),
+              filter 400ms cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 200ms ease,
+              box-shadow 200ms ease;
+  will-change: transform, filter;
+}
+
+.skills-grid:hover > .skill-card:not(:hover) {
+  filter: blur(6px) opacity(0.5);
+  transform: scale(0.96);
+}
+
+.skill-card:hover {
+  transform: scale(1.04);
+  filter: blur(0px) opacity(1);
+  z-index: 10;
+}
+</style>
+
