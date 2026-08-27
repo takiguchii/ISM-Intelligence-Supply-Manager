@@ -109,7 +109,7 @@ export interface IntegrationSkill {
   id: string;
   name: string;
   description: string;
-  category: "delivery" | "payments" | "erp" | "suppliers" | "files";
+  category: "delivery" | "payments" | "suppliers" | "files" | "menu";
   icon: string;
   status: "ativo" | "disponivel";
   badgeText: string;
@@ -133,71 +133,22 @@ const skills = ref<IntegrationSkill[]>([
     status: "ativo",
     badgeText: "Ativo",
     config: {
-      merchantId: "IFOOD-REST-8921",
-      clientId: "client_ifood_ism",
       autoSync: true,
       syncInterval: "Tempo real (SWS WebSocket)",
       lastSync: "Há 3 minutos"
     }
   },
   {
-    id: "rappi",
-    name: "Rappi",
-    description: "Sincroniza vendas e disponibilidade.",
+    id: "99food",
+    name: "99 Food",
+    description: "Sincronização de vendas e entregas.",
     category: "delivery",
-    icon: "rappi",
-    status: "ativo",
-    badgeText: "Ativo",
-    config: {
-      storeId: "RAPPI-BR-4410",
-      apiKey: "************************",
-      autoSync: true,
-      syncInterval: "A cada 5 minutos",
-      lastSync: "Há 12 minutos"
-    }
-  },
-  {
-    id: "stone",
-    name: "Stone",
-    description: "Recebíveis e taxas por bandeira.",
-    category: "payments",
-    icon: "stone",
-    status: "ativo",
-    badgeText: "Ativo",
-    config: {
-      stoneCode: "STN-998231",
-      autoSync: true,
-      syncInterval: "Fechamento diário (00:00)",
-      lastSync: "Hoje às 06:00"
-    }
-  },
-  {
-    id: "omie",
-    name: "Omie ERP",
-    description: "Notas fiscais e contas a pagar.",
-    category: "erp",
-    icon: "omie",
+    icon: "99food",
     status: "disponivel",
     badgeText: "Disponível",
     config: {
-      apiKey: "",
-      clientId: "",
       autoSync: false,
-      syncInterval: "Diário"
-    }
-  },
-  {
-    id: "fornecedor_x",
-    name: "Fornecedor X",
-    description: "Catálogo e disparo de pedidos.",
-    category: "suppliers",
-    icon: "supplier",
-    status: "disponivel",
-    badgeText: "Disponível",
-    config: {
-      apiKey: "",
-      autoSync: false,
-      syncInterval: "Sob demanda"
+      syncInterval: "A cada 5 minutos"
     }
   },
   {
@@ -212,6 +163,46 @@ const skills = ref<IntegrationSkill[]>([
       autoSync: true,
       syncInterval: "Manual / Upload universal",
       lastSync: "Auditado via Hash SHA256"
+    }
+  },
+  {
+    id: "cardapio_digital",
+    name: "Cardápio Digital",
+    description: "Atualização de itens e preços.",
+    category: "menu",
+    icon: "menu",
+    status: "disponivel",
+    badgeText: "Disponível",
+    config: {
+      autoSync: false,
+      syncInterval: "Em tempo real"
+    }
+  },
+  {
+    id: "stone",
+    name: "Stone",
+    description: "Recebíveis e taxas por bandeira.",
+    category: "payments",
+    icon: "stone",
+    status: "ativo",
+    badgeText: "Ativo",
+    config: {
+      autoSync: true,
+      syncInterval: "Fechamento diário (00:00)",
+      lastSync: "Hoje às 06:00"
+    }
+  },
+  {
+    id: "fornecedores",
+    name: "Fornecedores",
+    description: "Catálogo e disparo de pedidos.",
+    category: "suppliers",
+    icon: "supplier",
+    status: "disponivel",
+    badgeText: "Disponível",
+    config: {
+      autoSync: false,
+      syncInterval: "Sob demanda"
     }
   }
 ]);
@@ -469,22 +460,26 @@ onMounted(async () => {
             @dragleave="dragging = false"
             @drop="onDrop"
             :class="[
-              'border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center group',
+              'dropzone-container border-2 border-dashed rounded-2xl p-8 sm:p-10 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center group relative overflow-hidden',
               dragging
                 ? 'border-indigo-500 bg-indigo-500/10 scale-[0.99]'
-                : 'border-zinc-800 bg-[#09090b]/50 hover:border-zinc-700 hover:bg-[#09090b]'
+                : 'border-zinc-800 bg-[#09090b]/50 hover:border-zinc-700/90 hover:bg-[#09090b]'
             ]"
           >
-            <!-- Ícone Nuvem com Seta -->
-            <div class="w-14 h-14 rounded-full bg-zinc-800/90 group-hover:bg-zinc-800 border border-zinc-700/60 flex items-center justify-center text-zinc-200 mb-4 transition-all duration-200 group-hover:scale-105 shadow-md">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-              </svg>
+            <!-- PASTA ANIMADA 3D COMPACTA (SEM FUNDO AZUL) -->
+            <div class="folder-3d-wrapper" @click.stop="triggerFileSelect">
+              <div class="animated-folder">
+                <div class="front-side">
+                  <div class="tip"></div>
+                  <div class="cover"></div>
+                </div>
+                <div class="back-side cover"></div>
+              </div>
             </div>
 
             <!-- Título & Formatos -->
             <p class="text-base font-bold text-white tracking-tight mb-1">Importe sua carga diária</p>
-            <p class="text-xs text-zinc-400 mb-6 font-normal">Formatos aceitos: .xlsx, .csv, .xls, .json — até 25MB.</p>
+            <p class="text-xs text-zinc-400 mb-5 font-normal">Formatos aceitos: .xlsx, .csv, .xls, .json — até 25MB.</p>
 
             <!-- Botão Selecionar Arquivo -->
             <button
@@ -540,9 +535,14 @@ onMounted(async () => {
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 3h18v18H3z"></path>
                   </svg>
 
-                  <!-- Rappi / Shopping Bag -->
-                  <svg v-else-if="skill.icon === 'rappi'" class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                  <!-- 99 Food / Delivery -->
+                  <svg v-else-if="skill.icon === '99food'" class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                  </svg>
+
+                  <!-- Cardápio Digital / Menu -->
+                  <svg v-else-if="skill.icon === 'menu'" class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                   </svg>
 
                   <!-- Stone / Card -->
@@ -550,12 +550,7 @@ onMounted(async () => {
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
                   </svg>
 
-                  <!-- Omie ERP / Server Database -->
-                  <svg v-else-if="skill.icon === 'omie'" class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 7v10c0 2.21 3.58 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.58 4 8 4s8-1.79 8-4M4 7c0-2.21 3.58-4 8-4s8 1.79 8 4m0 5c0 2.21-3.58 4-8 4s-8-1.79-8-4"></path>
-                  </svg>
-
-                  <!-- Fornecedor X / Truck -->
+                  <!-- Fornecedores / Truck -->
                   <svg v-else-if="skill.icon === 'supplier'" class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"></path>
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8h4l3 3v5h-2m-6 0h2"></path>
@@ -799,6 +794,110 @@ onMounted(async () => {
   transform: scale(1.04);
   filter: blur(0px) opacity(1);
   z-index: 10;
+}
+
+/* ESTILOS DA PASTA ANIMADA 3D COMPACTA (SEM FUNDO AZUL) */
+.folder-3d-wrapper {
+  position: relative;
+  width: 70px;
+  height: 52px;
+  margin: 0 auto 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.animated-folder {
+  position: relative;
+  width: 64px;
+  height: 42px;
+  animation: floatFolder 2.5s infinite ease-in-out;
+  transition: transform 350ms ease;
+}
+
+.animated-folder:hover,
+.dropzone-container:hover .animated-folder {
+  transform: scale(1.08);
+}
+
+.animated-folder .front-side,
+.animated-folder .back-side {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 64px;
+  height: 42px;
+  transition: transform 350ms cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: bottom center;
+}
+
+.animated-folder .back-side::before,
+.animated-folder .back-side::after {
+  content: "";
+  display: block;
+  background-color: #ffffff;
+  opacity: 0.55;
+  width: 64px;
+  height: 42px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: bottom center;
+  border-radius: 8px;
+  transition: transform 350ms cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 0;
+}
+
+.dropzone-container:hover .back-side::before,
+.folder-3d-wrapper:hover .back-side::before {
+  transform: rotateX(-8deg) skewX(6deg) translateY(-2px);
+}
+
+.dropzone-container:hover .back-side::after,
+.folder-3d-wrapper:hover .back-side::after {
+  transform: rotateX(-18deg) skewX(12deg) translateY(-4px);
+}
+
+.animated-folder .front-side {
+  z-index: 1;
+}
+
+.dropzone-container:hover .front-side,
+.folder-3d-wrapper:hover .front-side {
+  transform: rotateX(-38deg) skewX(14deg);
+}
+
+.animated-folder .tip {
+  background: linear-gradient(135deg, #ff9a56, #ff6f56);
+  width: 44px;
+  height: 12px;
+  border-radius: 6px 6px 0 0;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+  position: absolute;
+  top: -6px;
+  left: 0;
+  z-index: 2;
+}
+
+.animated-folder .cover {
+  background: linear-gradient(135deg, #ffe563, #ffc663);
+  width: 64px;
+  height: 42px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  border-radius: 7px;
+}
+
+@keyframes floatFolder {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
 }
 </style>
 
