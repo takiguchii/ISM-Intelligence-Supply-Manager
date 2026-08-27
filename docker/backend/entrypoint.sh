@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export DOTNET_CLI_HOME="${DOTNET_CLI_HOME:-/root}"
+export NUGET_PACKAGES="${NUGET_PACKAGES:-/root/.nuget/packages}"
+export NUGET_HTTP_CACHE_PATH="${NUGET_HTTP_CACHE_PATH:-/root/.nuget/http-cache}"
+mkdir -p "${NUGET_PACKAGES}" "${NUGET_HTTP_CACHE_PATH}"
+
 echo "Waiting for MySQL to accept TCP connections..."
 until nc -z -w 2 mysql 3306 >/dev/null 2>&1; do
   sleep 2
 done
 
 echo "Restoring backend dependencies..."
-dotnet restore ISM.sln
-
-echo "Applying Entity Framework migrations..."
-dotnet ef database update \
-  --project src/ISM.Infrastructure \
-  --startup-project src/ISM.API
+dotnet restore ISM.sln --packages "${NUGET_PACKAGES}" || dotnet restore ISM.sln
 
 echo "Starting ASP.NET Core with hot reload..."
 exec dotnet watch --project src/ISM.API run --no-launch-profile --urls http://0.0.0.0:8080

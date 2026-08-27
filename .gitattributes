@@ -1,0 +1,19 @@
+# Arquivos GERADOS AUTOMATICAMENTE pelo EF Core Tools
+#
+# Nunca tente "mergear linha a linha" esses arquivos. Eles são gerados
+# a partir do estado do IsmDbContext atual e qualquer merge manual
+# costuma produzir markers `<<<<<<<` dentro do arquivo, que causam
+# erro de compilação CS8300 (merge conflict marker) / CS1525.
+#
+# Estratégia escolhida:
+#   Quando houver merge com outra branch, SEMPRE prevalece a versão
+#   DA BRANCH ATUAL (ours). Depois do merge concluído, se precisar
+#   aplicar as migrations da outra branch, use as ferramentas oficiais:
+#     1. `dotnet ef migrations remove` (se tiver migration quebrada)
+#     2. `dotnet ef database update`
+#     3. `dotnet ef migrations add <Nome>` (regenera baseline)
+#
+# Documentação: https://learn.microsoft.com/ef/core/managing-schemas/migrations/projects
+backend/src/ISM.Infrastructure/Data/Migrations/*Designer.cs  merge=ours
+backend/src/ISM.Infrastructure/Data/Migrations/IsmDbContextModelSnapshot.cs merge=ours
+backend/src/ISM.Infrastructure/Data/Migrations/*InitialCreate*.cs merge=ours

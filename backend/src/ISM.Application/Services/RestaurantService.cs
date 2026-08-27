@@ -29,7 +29,7 @@ public sealed class RestaurantService : IRestaurantService
         return restaurants.Select(MapToDto).ToList();
     }
 
-    public async Task<RestaurantDto> CreateRestaurantAsync(RestaurantDto dto, CancellationToken cancellationToken = default)
+    public async Task<RestaurantDto> CreateRestaurantAsync(RestaurantDto dto, int? planId = null, CancellationToken cancellationToken = default)
     {
         var now = DateTime.UtcNow;
         var restaurant = new Restaurant
@@ -37,7 +37,10 @@ public sealed class RestaurantService : IRestaurantService
             Name = dto.Name,
             CNPJ = dto.CNPJ,
             Created = now,
-            CreatedAtUtc = now
+            CreatedAtUtc = now,
+            PlanId = planId ?? 1,
+            IsPlanActive = true,
+            TrialEndAtUtc = now.AddDays(14)
         };
 
         await _restaurantRepository.AddRestaurantAsync(restaurant, cancellationToken);

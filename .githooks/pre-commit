@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# .githooks/pre-commit
+#
+# Ponto de entrada do pre-commit do Git. Chamado AUTOMATICAMENTE quando
+# o usuário executa `git commit`, desde que o core.hooksPath aponte para
+# a pasta .githooks/ (comando: git config core.hooksPath .githooks/)
+#
+# Atualmente executa uma única verificação (conflict markers), mas pode
+# ser extendido futuramente com:
+#   - dotnet format / lint
+#   - ESLint frontend
+#   - shellcheck
+#   - dotnet test UnitTests
+#
+set -euo pipefail
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+"${ROOT_DIR}/scripts/pre-commit-check-conflicts.sh"

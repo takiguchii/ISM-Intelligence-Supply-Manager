@@ -1,11 +1,14 @@
 using ISM.Application.Interfaces;
 using ISM.Application.DTOs;
+using ISM.Application.Security;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ISM.API.Controllers;
 
 [ApiController]
 [Route("api/menu/dishes")]
+[Authorize(Policy = IsmPolicies.RestaurantAnyUser)]
 public sealed class DishesController : ControllerBase
 {
     private readonly IDishService _dishService;
@@ -36,6 +39,7 @@ public sealed class DishesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
     [ProducesResponseType(typeof(DishResponse), StatusCodes.Status201Created)]
     public async Task<ActionResult<DishResponse>> Create([FromBody] CreateDishRequest request, CancellationToken cancellationToken)
     {
@@ -44,6 +48,7 @@ public sealed class DishesController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
     [ProducesResponseType(typeof(DishResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<DishResponse>> Update(
@@ -56,6 +61,7 @@ public sealed class DishesController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)

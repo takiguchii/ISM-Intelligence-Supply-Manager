@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using ISM.Domain.Entities;
 using ISM.Domain.Modules.Menu.Entities;
 using ISM.Domain.Modules.Stock.Entities;
@@ -7,97 +9,164 @@ namespace ISM.Infrastructure.Data.Context;
 
 public static class DbSeeder
 {
+    private const int SaltSize = 16;
+    private const int HashSize = 32;
+    private const int Pbkdf2Iterations = 100_000;
+    private const byte FormatVersion = 0x01;
     public static async Task SeedAsync(IsmDbContext context)
     {
-        // Seed default User (admin / admin123)
-        if (!await context.Users.AnyAsync())
+        // 0. Planos SaaS (Free / Pro / Enterprise) — sempre garante que existam
+        if (!await context.Plans.AnyAsync())
         {
-            var adminUser = new User
+            var plans = new List<Plan>
             {
-                Username = "admin",
-                Email = "admin@ism.com",
-                Role = "Admin",
-                CreatedAtUtc = DateTime.UtcNow
+                new()
+                {
+                    Name = "Free",
+                    Description = "Plano trial básico para teste",
+                    MaxUsers = 2,
+                    MaxDishes = 10,
+                    MaxProducts = 20,
+                    MaxCategories = 3,
+                    MonthlyPrice = 0,
+                    IsActive = true
+                },
+                new()
+                {
+                    Name = "Pro",
+                    Description = "Plano profissional para restaurantes em crescimento",
+                    MaxUsers = 10,
+                    MaxDishes = 100,
+                    MaxProducts = 200,
+                    MaxCategories = 15,
+                    MonthlyPrice = 149.90m,
+                    IsActive = true
+                },
+                new()
+                {
+                    Name = "Enterprise",
+                    Description = "Plano ilimitado para redes e franquias",
+                    MaxUsers = 100,
+                    MaxDishes = 1000,
+                    MaxProducts = 2000,
+                    MaxCategories = 100,
+                    MonthlyPrice = 499.90m,
+                    IsActive = true
+                }
             };
-            var passwordHasher = new Microsoft.AspNetCore.Identity.PasswordHasher<User>();
-            adminUser.PasswordHash = passwordHasher.HashPassword(adminUser, "admin123");
-
-            await context.Users.AddAsync(adminUser);
+            await context.Plans.AddRangeAsync(plans);
             await context.SaveChangesAsync();
         }
 
-        // Se já houver restaurantes ou fornecedores cadastrados, não faz a seed
-        if (await context.Restaurants.AnyAsync() || await context.Fornecedores.AnyAsync())
+        var planPro = await context.Plans.FirstOrDefaultAsync(p => p.Name == "Pro");
+
+        // 1. Seed usuário admin padrão (se não houver usuários)
+        if (!await context.Users.AnyAsync())
+        {
+            var adminPassword = HashPassword("admin123");
+            var admin = new User
+            {
+                Name = "Administrador ISM",
+                Email = "admin@ism.com.br",
+                PasswordHash = adminPassword,
+                Role = "Admin",
+                IsActive = true,
+                CreatedAtUtc = DateTime.UtcNow
+            };
+            await context.Users.AddAsync(admin);
+            await context.SaveChangesAsync();
+        }
+
+        // Se já houver restaurantes cadastrados, não faz a seed de dados
+        if (await context.Restaurants.AnyAsync())
         {
             return;
         }
 
-        // 1. Cadastra Fornecedores
-        var fornecedores = new List<Fornecedor>
-        {
-            new()
-            {
-                Nome = "Distribuidora Alimentos Ltda",
-                Categoria = "Grãos e Alimentos Secos",
-                Email = "vendas@distribuidoraalimentos.com",
-                Telefone = "(11) 99999-1111"
-            },
-            new()
-            {
-                Nome = "Hortifruti Central",
-                Categoria = "Hortifrúti",
-                Email = "pedidos@hortifruticentral.com.br",
-                Telefone = "(11) 98888-2222"
-            }
-        };
-
-        await context.Fornecedores.AddRangeAsync(fornecedores);
-
-        // 2. Cadastra Restaurante
+        // 1. Cadastra Restaurante (vinculado ao Plano Pro)
         var restaurant = new Restaurant
         {
             Name = "Gourmet ISM Restaurant",
             CNPJ = "12345678000190",
-            Created = DateTime.UtcNow
+            Created = DateTime.UtcNow,
+            PlanId = planPro?.Id,
+            TrialEndAtUtc = DateTime.UtcNow.AddDays(14),
+            IsPlanActive = true
         };
 
         await context.Restaurants.AddAsync(restaurant);
         await context.SaveChangesAsync(); // Salva para gerar o Id do Restaurante
 
-        // 3. Cadastra Produtos (Estoque)
+        // 2. Cadastra Fornecedores (vinculados ao restaurante recém-criado)
+        var suppliers = new List<Supplier>
+        {
+            new()
+            {
+                RestaurantId = restaurant.Id,
+                Name = "Distribuidora Alimentos Ltda",
+                Category = "Grãos e Alimentos Secos",
+                Description = "Distribuidora líder em grãos e alimentos não perecíveis com entrega em 24h.",
+                Email = "vendas@distribuidoraalimentos.com",
+                Phone = "(11) 99999-1111",
+                IsActive = true
+            },
+            new()
+            {
+                RestaurantId = restaurant.Id,
+                Name = "Hortifruti Central",
+                Category = "Hortifrúti",
+                Description = "Fornecedor de frutas, legumes e verduras frescas, colhidas diariamente.",
+                Email = "pedidos@hortifruticentral.com.br",
+                Phone = "(11) 98888-2222",
+                IsActive = true
+            }
+        };
+
+        await context.Suppliers.AddRangeAsync(suppliers);
+        await context.SaveChangesAsync();
+
+        // 3. Cadastra Produtos (Estoque) — agora com RestaurantId
         var products = new List<Product>
         {
             new()
             {
+                RestaurantId = restaurant.Id,
                 Name = "Arroz",
                 Unit = "Kg",
                 CurrentQuantity = 100m,
                 MinimumQuantity = 20m,
-                AverageCost = 5.50m
+                AverageCost = 5.50m,
+                IsActive = true
             },
             new()
             {
+                RestaurantId = restaurant.Id,
                 Name = "Feijão",
                 Unit = "Kg",
                 CurrentQuantity = 80m,
                 MinimumQuantity = 15m,
-                AverageCost = 7.20m
+                AverageCost = 7.20m,
+                IsActive = true
             },
             new()
             {
+                RestaurantId = restaurant.Id,
                 Name = "Carne Bovina",
                 Unit = "Kg",
                 CurrentQuantity = 50m,
                 MinimumQuantity = 10m,
-                AverageCost = 35.00m
+                AverageCost = 35.00m,
+                IsActive = true
             },
             new()
             {
+                RestaurantId = restaurant.Id,
                 Name = "Tomate",
                 Unit = "Kg",
                 CurrentQuantity = 30m,
                 MinimumQuantity = 5m,
-                AverageCost = 4.50m
+                AverageCost = 4.50m,
+                IsActive = true
             }
         };
 
@@ -189,5 +258,20 @@ public static class DbSeeder
 
         await context.DishIngredients.AddRangeAsync(ingredients);
         await context.SaveChangesAsync();
+    }
+
+    private static string HashPassword(string password)
+    {
+        var passwordBytes = Encoding.UTF8.GetBytes(password);
+        var salt = RandomNumberGenerator.GetBytes(SaltSize);
+        using var pbkdf2 = new Rfc2898DeriveBytes(passwordBytes, salt, Pbkdf2Iterations, HashAlgorithmName.SHA256);
+        var hash = pbkdf2.GetBytes(HashSize);
+
+        var bytes = new byte[1 + SaltSize + HashSize];
+        bytes[0] = FormatVersion;
+        Buffer.BlockCopy(salt, 0, bytes, 1, SaltSize);
+        Buffer.BlockCopy(hash, 0, bytes, 1 + SaltSize, HashSize);
+
+        return Convert.ToBase64String(bytes);
     }
 }

@@ -1,17 +1,34 @@
-export interface LoginCredentials {
-  username: string;
-  password?: string;
-  rememberMe?: boolean;
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  restaurantId: number | null;
 }
 
-export interface UserProfile {
-  id: string;
-  username: string;
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterRequest {
   name: string;
-  role: string;
+  email: string;
+  password: string;
+  role?: string;
+  restaurantId?: number | null;
 }
 
 export interface AuthResponse {
   token: string;
-  user: UserProfile;
+  expiresAt: string;
+  user: User;
+}
+
+export interface ApiError {
+  title: string;
+  detail: string;
+  status: number;
+  traceId?: string;
+  message?: string;
 }
