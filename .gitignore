@@ -29,3 +29,5 @@ backend/TestResults/
 # Local development tools
 .gemini/
 *.skill
+AGENTS.md
+
