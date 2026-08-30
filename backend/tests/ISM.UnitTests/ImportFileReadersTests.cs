@@ -7,13 +7,13 @@ namespace ISM.UnitTests;
 
 public class XlsxImportFileReaderTests
 {
-    private static Stream BuildWorkbook((object?[] Values)[] rows)
+    private static Stream BuildWorkbook(object?[][] rows)
     {
         using var wb = new XLWorkbook();
         var ws = wb.Worksheets.Add("Estoque");
         for (var r = 0; r < rows.Length; r++)
-            for (var c = 0; c < rows[r].Values.Length; c++)
-                ws.Cell(r + 1, c + 1).Value = XLCellValue.FromObject(rows[r].Values[c] ?? string.Empty);
+            for (var c = 0; c < rows[r].Length; c++)
+                ws.Cell(r + 1, c + 1).Value = XLCellValue.FromObject(rows[r][c] ?? string.Empty);
 
         var ms = new MemoryStream();
         wb.SaveAs(ms);
