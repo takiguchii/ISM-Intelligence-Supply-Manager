@@ -18,6 +18,9 @@ export default defineNuxtConfig({
           name: "description",
           content: "Foundation environment for the ISM vertical SaaS platform."
         }
+      ],
+      link: [
+        { rel: "icon", type: "image/png", href: "/favicon.png" }
       ]
     }
   }
