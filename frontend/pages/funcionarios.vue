@@ -136,7 +136,7 @@ const isValidEmail = (value: string): boolean => {
   return dot > 0 && dot < domain.length - 1 && !/\s/.test(value);
 };
 
-/** Cobre os três formatos de erro da API: { message }, { detail } e ModelState. */
+/** Cobre os três formatos de erro da API: { message }, { detail } e ModelState, além de falhas de conexão de rede. */
 const extractApiError = (error: any, fallback: string): string => {
   const data = error?.data;
   if (data?.message) return data.message;
@@ -146,6 +146,17 @@ const extractApiError = (error: any, fallback: string): string => {
   if (validationErrors && typeof validationErrors === "object") {
     const firstMessage = Object.values(validationErrors).flat()[0];
     if (typeof firstMessage === "string") return firstMessage;
+  }
+
+  const message = error?.message || "";
+  if (
+    typeof message === "string" &&
+    (message.toLowerCase().includes("failed to fetch") ||
+      message.toLowerCase().includes("fetch failed") ||
+      message.toLowerCase().includes("network error") ||
+      message.toLowerCase().includes("econnrefused"))
+  ) {
+    return "Não foi possível conectar ao servidor. Verifique se o backend está em execução.";
   }
 
   return error?.message || fallback;
