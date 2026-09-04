@@ -1032,126 +1032,628 @@ onMounted(async () => {
         <!-- Seção Geral -->
         <section v-else-if="activeSectionId === 'general'" class="space-y-6">
           <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <div class="xl:col-span-2 rounded-2xl border bg-zinc-900/50 border-zinc-800 shadow-xl overflow-hidden">
-              <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-zinc-800/80">
-                <div class="flex items-start gap-3 flex-1">
-                  <div class="w-10 h-10 rounded-xl bg-indigo-500/15 border-indigo-500/30 text-indigo-300 flex items-center justify-center flex-shrink-0">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
-                    </svg>
+            <div class="xl:col-span-2 space-y-6">
+              <div
+                :class="[
+                  'rounded-2xl border shadow-xl overflow-hidden',
+                  themeStore.isDark
+                    ? 'bg-zinc-900/50 border-zinc-800'
+                    : 'bg-white border-zinc-200'
+                ]"
+              >
+                <div
+                  :class="[
+                    'p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b',
+                    themeStore.isDark ? 'border-zinc-800/80' : 'border-zinc-200'
+                  ]"
+                >
+                  <div class="flex items-start gap-3 flex-1">
+                    <div
+                      :class="[
+                        'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border',
+                        themeStore.isDark
+                          ? 'bg-indigo-500/15 border-indigo-500/30 text-indigo-300'
+                          : 'bg-indigo-50 border-indigo-200 text-indigo-600'
+                      ]"
+                    >
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                      </svg>
+                    </div>
+                    <div class="space-y-0.5 flex-1">
+                      <h2
+                        :class="[
+                          'text-base sm:text-lg font-semibold tracking-tight',
+                          themeStore.isDark ? 'text-white' : 'text-zinc-900'
+                        ]"
+                      >Informações do restaurante</h2>
+                      <p
+                        :class="[
+                          'text-xs sm:text-sm leading-relaxed max-w-2xl',
+                          themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500'
+                        ]"
+                      >Dados básicos do estabelecimento e preferências regionais.</p>
+                    </div>
                   </div>
-                  <div class="space-y-0.5 flex-1">
-                    <h2 class="text-base sm:text-lg font-semibold text-white tracking-tight">Informações do restaurante</h2>
-                    <p class="text-xs sm:text-sm text-zinc-400 leading-relaxed max-w-2xl">Dados básicos do estabelecimento e preferências regionais.</p>
+                </div>
+                <div class="p-5 sm:p-6 space-y-4 sm:space-y-5">
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-5">
+                    <div class="space-y-2">
+                      <label
+                        :class="[
+                          'flex items-center gap-2 text-xs uppercase tracking-widest font-semibold',
+                          themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500'
+                        ]"
+                      >
+                        Nome fantasia
+                        <span
+                          :class="[
+                            'text-[10px] font-bold tracking-normal normal-case px-1.5 py-0.5 rounded-md border',
+                            themeStore.isDark
+                              ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-300'
+                              : 'bg-indigo-50 border-indigo-200 text-indigo-600'
+                          ]"
+                        >Lido do banco</span>
+                      </label>
+                      <input
+                        :value="authStore.currentUser?.restaurantName || ''"
+                        disabled
+                        :class="[
+                          'w-full rounded-xl px-3.5 py-3 text-sm border opacity-80 cursor-not-allowed',
+                          themeStore.isDark
+                            ? 'bg-zinc-900/60 border-zinc-700/70 text-zinc-300'
+                            : 'bg-zinc-100 border-zinc-200 text-zinc-600'
+                        ]"
+                        placeholder="Nome do restaurante"
+                      />
+                      <p :class="['text-xs', themeStore.isDark ? 'text-zinc-500' : 'text-zinc-400']">Nome cadastrado no perfil do restaurante (não editável aqui).</p>
+                    </div>
+                    <div class="space-y-2">
+                      <label
+                        :class="[
+                          'flex items-center gap-2 text-xs uppercase tracking-widest font-semibold',
+                          themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500'
+                        ]"
+                      >
+                        CNPJ
+                        <span
+                          :class="[
+                            'text-[10px] font-bold tracking-normal normal-case px-1.5 py-0.5 rounded-md border',
+                            themeStore.isDark
+                              ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400'
+                              : 'bg-zinc-200 border-zinc-300 text-zinc-600'
+                          ]"
+                        >🔒 Sem backend</span>
+                      </label>
+                      <input
+                        disabled
+                        :class="[
+                          'w-full rounded-xl px-3.5 py-3 text-sm cursor-not-allowed placeholder font-mono border',
+                          themeStore.isDark
+                            ? 'bg-zinc-900/40 border-zinc-700/50 text-zinc-500 placeholder:text-zinc-600'
+                            : 'bg-zinc-100 border-zinc-200 text-zinc-500 placeholder:text-zinc-400'
+                        ]"
+                        placeholder="00.000.000/0001-00"
+                      />
+                      <p :class="['text-xs', themeStore.isDark ? 'text-zinc-500' : 'text-zinc-400']">Campo existe na model mas não há endpoint de edição — vamos discutir.</p>
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-5 pt-2">
+                    <div class="space-y-2">
+                      <label
+                        :class="[
+                          'flex items-center gap-2 text-xs uppercase tracking-widest font-semibold',
+                          themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500'
+                        ]"
+                      >
+                        Fuso horário
+                        <span
+                          :class="[
+                            'text-[10px] font-bold tracking-normal normal-case px-1.5 py-0.5 rounded-md border',
+                            themeStore.isDark
+                              ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400'
+                              : 'bg-zinc-200 border-zinc-300 text-zinc-600'
+                          ]"
+                        >🔒 Sem backend</span>
+                      </label>
+                      <select
+                        disabled
+                        :class="[
+                          'w-full rounded-xl px-3.5 py-3 text-sm cursor-not-allowed border',
+                          themeStore.isDark
+                            ? 'bg-zinc-900/40 border-zinc-700/50 text-zinc-500'
+                            : 'bg-zinc-100 border-zinc-200 text-zinc-500'
+                        ]"
+                      >
+                        <option>America/Sao_Paulo (UTC-3)</option>
+                      </select>
+                    </div>
+                    <div class="space-y-2">
+                      <label
+                        :class="[
+                          'flex items-center gap-2 text-xs uppercase tracking-widest font-semibold',
+                          themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500'
+                        ]"
+                      >
+                        Moeda
+                        <span
+                          :class="[
+                            'text-[10px] font-bold tracking-normal normal-case px-1.5 py-0.5 rounded-md border',
+                            themeStore.isDark
+                              ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400'
+                              : 'bg-zinc-200 border-zinc-300 text-zinc-600'
+                          ]"
+                        >🔒 Sem backend</span>
+                      </label>
+                      <select
+                        disabled
+                        :class="[
+                          'w-full rounded-xl px-3.5 py-3 text-sm cursor-not-allowed border',
+                          themeStore.isDark
+                            ? 'bg-zinc-900/40 border-zinc-700/50 text-zinc-500'
+                            : 'bg-zinc-100 border-zinc-200 text-zinc-500'
+                        ]"
+                      >
+                        <option>BRL — Real (R$)</option>
+                      </select>
+                    </div>
+                    <div class="space-y-2">
+                      <label
+                        :class="[
+                          'flex items-center gap-2 text-xs uppercase tracking-widest font-semibold',
+                          themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500'
+                        ]"
+                      >
+                        Idioma
+                        <span
+                          :class="[
+                            'text-[10px] font-bold tracking-normal normal-case px-1.5 py-0.5 rounded-md border',
+                            themeStore.isDark
+                              ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400'
+                              : 'bg-zinc-200 border-zinc-300 text-zinc-600'
+                          ]"
+                        >🔒 Sem backend</span>
+                      </label>
+                      <select
+                        disabled
+                        :class="[
+                          'w-full rounded-xl px-3.5 py-3 text-sm cursor-not-allowed border',
+                          themeStore.isDark
+                            ? 'bg-zinc-900/40 border-zinc-700/50 text-zinc-500'
+                            : 'bg-zinc-100 border-zinc-200 text-zinc-500'
+                        ]"
+                      >
+                        <option>Português (Brasil)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div
+                    :class="[
+                      'rounded-xl border-dashed border p-4 sm:p-5 space-y-2',
+                      themeStore.isDark
+                        ? 'border-zinc-700/80 bg-zinc-900/30'
+                        : 'border-zinc-300 bg-zinc-50/60'
+                    ]"
+                  >
+                    <p
+                      :class="[
+                        'text-[11px] uppercase tracking-widest font-semibold flex items-center gap-1.5',
+                        themeStore.isDark ? 'text-zinc-500' : 'text-zinc-500'
+                      ]"
+                    >
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                      Campos faltantes no backend (discutir)
+                    </p>
+                    <ul
+                      :class="[
+                        'list-disc list-inside text-xs space-y-1',
+                        themeStore.isDark ? 'text-zinc-400' : 'text-zinc-600'
+                      ]"
+                    >
+                      <li>Endereço completo, telefone e email de contato do restaurante</li>
+                      <li>Horário de funcionamento (dias/turnos para pedidos, fechamento semanal)</li>
+                      <li>Logo do restaurante (upload de imagem)</li>
+                      <li>Taxas padrão (serviço, entrega, embalagem)</li>
+                    </ul>
+                  </div>
+
+                  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 pt-2">
+                    <button
+                      disabled
+                      :class="[
+                        'inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold cursor-not-allowed border',
+                        themeStore.isDark
+                          ? 'text-zinc-500 bg-zinc-800/50 border-zinc-700/60'
+                          : 'text-zinc-500 bg-zinc-200/60 border-zinc-300'
+                      ]"
+                      title="Edições do perfil do restaurante ainda não implementadas no backend"
+                    >
+                      🔒 Salvar alterações
+                    </button>
                   </div>
                 </div>
               </div>
-              <div class="p-5 sm:p-6 space-y-4 sm:space-y-5">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-5">
-                  <div class="space-y-2">
-                    <label class="flex items-center gap-2 text-xs uppercase tracking-widest text-zinc-400 font-semibold">
-                      Nome fantasia
-                      <span class="text-[10px] font-bold tracking-normal normal-case px-1.5 py-0.5 rounded-md bg-indigo-500/10 border-indigo-500/20 text-indigo-300">Lido do banco</span>
-                    </label>
-                    <input
-                      :value="authStore.currentUser?.restaurantName || ''"
-                      disabled
-                      class="w-full rounded-xl px-3.5 py-3 text-sm bg-zinc-900/60 border border-zinc-700/70 text-zinc-300 opacity-80 cursor-not-allowed"
-                      placeholder="Nome do restaurante"
-                    />
-                    <p class="text-xs text-zinc-500">Nome cadastrado no perfil do restaurante (não editável aqui).</p>
-                  </div>
-                  <div class="space-y-2">
-                    <label class="flex items-center gap-2 text-xs uppercase tracking-widest text-zinc-400 font-semibold">
-                      CNPJ
-                      <span class="text-[10px] font-bold tracking-normal normal-case px-1.5 py-0.5 rounded-md bg-zinc-800/70 border border-zinc-700/60 text-zinc-400">🔒 Sem backend</span>
-                    </label>
-                    <input
-                      disabled
-                      class="w-full rounded-xl px-3.5 py-3 text-sm bg-zinc-900/40 border border-zinc-700/50 text-zinc-500 cursor-not-allowed placeholder:text-zinc-600 font-mono"
-                      placeholder="00.000.000/0001-00"
-                    />
-                    <p class="text-xs text-zinc-500">Campo existe na model mas não há endpoint de edição — vamos discutir.</p>
+
+              <!-- CARD: Marketplace & Entregas (iFood / escalável) -->
+              <div
+                :class="[
+                  'rounded-2xl border shadow-xl overflow-hidden',
+                  themeStore.isDark
+                    ? 'bg-zinc-900/50 border-zinc-800'
+                    : 'bg-white border-zinc-200'
+                ]"
+              >
+                <div
+                  :class="[
+                    'p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b',
+                    themeStore.isDark ? 'border-zinc-800/80' : 'border-zinc-200'
+                  ]"
+                >
+                  <div class="flex items-start gap-3 flex-1">
+                    <div
+                      :class="[
+                        'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border',
+                        themeStore.isDark
+                          ? 'bg-rose-500/15 border-rose-500/30 text-rose-300'
+                          : 'bg-rose-50 border-rose-200 text-rose-600'
+                      ]"
+                    >
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8h4l3 3v5h-2m-6 0h2"></path>
+                      </svg>
+                    </div>
+                    <div class="space-y-0.5 flex-1">
+                      <h2
+                        :class="[
+                          'text-base sm:text-lg font-semibold tracking-tight',
+                          themeStore.isDark ? 'text-white' : 'text-zinc-900'
+                        ]"
+                      >Marketplace & Entregas</h2>
+                      <p
+                        :class="[
+                          'text-xs sm:text-sm leading-relaxed max-w-2xl',
+                          themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500'
+                        ]"
+                      >
+                        Integrações com plataformas externas e configuração de entrega.
+                        <strong>iFood</strong> virá primeiro, mas a estrutura já está pensada para crescer (Rappi, Uber Eats, entrega própria).
+                      </p>
+                    </div>
+                    <span
+                      :class="[
+                        'text-[10px] font-bold tracking-wide uppercase px-2.5 py-1 rounded-md border shrink-0 self-start sm:self-auto',
+                        themeStore.isDark
+                          ? 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                          : 'bg-rose-50 border-rose-200 text-rose-700'
+                      ]"
+                    >Em breve · escalável</span>
                   </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-5 pt-2">
-                  <div class="space-y-2">
-                    <label class="flex items-center gap-2 text-xs uppercase tracking-widest text-zinc-400 font-semibold">
-                      Fuso horário
-                      <span class="text-[10px] font-bold tracking-normal normal-case px-1.5 py-0.5 rounded-md bg-zinc-800/70 border border-zinc-700/60 text-zinc-400">🔒 Sem backend</span>
-                    </label>
-                    <select disabled class="w-full rounded-xl px-3.5 py-3 text-sm bg-zinc-900/40 border border-zinc-700/50 text-zinc-500 cursor-not-allowed">
-                      <option>America/Sao_Paulo (UTC-3)</option>
-                    </select>
-                  </div>
-                  <div class="space-y-2">
-                    <label class="flex items-center gap-2 text-xs uppercase tracking-widest text-zinc-400 font-semibold">
-                      Moeda
-                      <span class="text-[10px] font-bold tracking-normal normal-case px-1.5 py-0.5 rounded-md bg-zinc-800/70 border border-zinc-700/60 text-zinc-400">🔒 Sem backend</span>
-                    </label>
-                    <select disabled class="w-full rounded-xl px-3.5 py-3 text-sm bg-zinc-900/40 border border-zinc-700/50 text-zinc-500 cursor-not-allowed">
-                      <option>BRL — Real (R$)</option>
-                    </select>
-                  </div>
-                  <div class="space-y-2">
-                    <label class="flex items-center gap-2 text-xs uppercase tracking-widest text-zinc-400 font-semibold">
-                      Idioma
-                      <span class="text-[10px] font-bold tracking-normal normal-case px-1.5 py-0.5 rounded-md bg-zinc-800/70 border border-zinc-700/60 text-zinc-400">🔒 Sem backend</span>
-                    </label>
-                    <select disabled class="w-full rounded-xl px-3.5 py-3 text-sm bg-zinc-900/40 border border-zinc-700/50 text-zinc-500 cursor-not-allowed">
-                      <option>Português (Brasil)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div class="rounded-xl border border-dashed border-zinc-700/80 bg-zinc-900/30 p-4 sm:p-5 space-y-2">
-                  <p class="text-[11px] uppercase tracking-widest text-zinc-500 font-semibold flex items-center gap-1.5">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    Campos faltantes no backend (discutir)
-                  </p>
-                  <ul class="list-disc list-inside text-xs text-zinc-400 space-y-1">
-                    <li>Endereço completo, telefone e email de contato do restaurante</li>
-                    <li>Horário de funcionamento (dias/turnos para pedidos, fechamento semanal)</li>
-                    <li>Logo do restaurante (upload de imagem)</li>
-                    <li>Taxas padrão (serviço, entrega, embalagem)</li>
-                  </ul>
-                </div>
-
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 pt-2">
-                  <button
-                    disabled
-                    class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-zinc-500 bg-zinc-800/50 border border-zinc-700/60 cursor-not-allowed"
-                    title="Edições do perfil do restaurante ainda não implementadas no backend"
+                <div class="p-5 sm:p-6 space-y-4 sm:space-y-5">
+                  <div
+                    :class="[
+                      'grid gap-4',
+                      'grid-cols-1 lg:grid-cols-3'
+                    ]"
                   >
-                    🔒 Salvar alterações
-                  </button>
+                    <div
+                      :class="[
+                        'rounded-xl border p-4 space-y-3 lg:col-span-1 transition-colors',
+                        themeStore.isDark
+                          ? 'border-zinc-800 bg-zinc-900/60'
+                          : 'border-zinc-200 bg-zinc-50'
+                      ]"
+                    >
+                      <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2.5">
+                          <div
+                            class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-white font-black text-sm shadow-md"
+                            style="background: linear-gradient(135deg, #e53e3e 0%, #dc2626 100%);"
+                          >
+                            iF
+                          </div>
+                          <div>
+                            <p
+                              :class="[
+                                'text-sm font-bold',
+                                themeStore.isDark ? 'text-white' : 'text-zinc-900'
+                              ]"
+                            >iFood</p>
+                            <p
+                              :class="[
+                                'text-[10px] uppercase tracking-wider font-semibold',
+                                themeStore.isDark ? 'text-rose-300' : 'text-rose-600'
+                              ]"
+                            >Prioridade 1</p>
+                          </div>
+                        </div>
+                        <span
+                          :class="[
+                            'text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border',
+                            themeStore.isDark
+                              ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400'
+                              : 'bg-zinc-200 border-zinc-300 text-zinc-600'
+                          ]"
+                        >Aguardando credenciais</span>
+                      </div>
+                      <div class="space-y-2 pt-1">
+                        <label
+                          :class="[
+                            'text-[10px] uppercase tracking-widest font-semibold',
+                            themeStore.isDark ? 'text-zinc-500' : 'text-zinc-500'
+                          ]"
+                        >Client ID / Merchant ID</label>
+                        <input
+                          disabled
+                          placeholder="•••••••••••• (aguardando integração)"
+                          :class="[
+                            'w-full rounded-lg px-3 py-2 text-xs border font-mono cursor-not-allowed',
+                            themeStore.isDark
+                              ? 'bg-zinc-900/40 border-zinc-700/50 text-zinc-500 placeholder:text-zinc-600'
+                              : 'bg-white border-zinc-200 text-zinc-500 placeholder:text-zinc-400'
+                          ]"
+                        />
+                      </div>
+                      <div class="space-y-2">
+                        <label
+                          :class="[
+                            'text-[10px] uppercase tracking-widest font-semibold',
+                            themeStore.isDark ? 'text-zinc-500' : 'text-zinc-500'
+                          ]"
+                        >Sincronização</label>
+                        <div
+                          :class="[
+                            'rounded-lg border-dashed border p-3 space-y-2',
+                            themeStore.isDark
+                              ? 'border-zinc-700/70 bg-zinc-900/30'
+                              : 'border-zinc-200 bg-white/50'
+                          ]"
+                        >
+                          <div
+                            :class="[
+                              'flex items-center justify-between text-xs',
+                              themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500'
+                            ]"
+                          >
+                            <span>Puxar pedidos automaticamente</span>
+                            <span>🔒</span>
+                          </div>
+                          <div
+                            :class="[
+                              'flex items-center justify-between text-xs',
+                              themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500'
+                            ]"
+                          >
+                            <span>Enviar cardápio sincronizado</span>
+                            <span>🔒</span>
+                          </div>
+                          <div
+                            :class="[
+                              'flex items-center justify-between text-xs',
+                              themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500'
+                            ]"
+                          >
+                            <span>Webhook status entrega</span>
+                            <span>🔒</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div
+                      :class="[
+                        'rounded-xl border p-4 space-y-3 opacity-70 lg:col-span-1',
+                        themeStore.isDark
+                          ? 'border-zinc-800 bg-zinc-900/30'
+                          : 'border-zinc-200 bg-zinc-50/60'
+                      ]"
+                    >
+                      <div class="flex items-center gap-2.5">
+                        <div
+                          class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 font-black text-sm text-white shadow-md"
+                          style="background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);"
+                        >
+                          RE
+                        </div>
+                        <div>
+                          <p
+                            :class="[
+                              'text-sm font-bold',
+                              themeStore.isDark ? 'text-white' : 'text-zinc-900'
+                            ]"
+                          >Rappi / AiQfome</p>
+                          <p
+                            :class="[
+                              'text-[10px] uppercase tracking-wider font-semibold',
+                              themeStore.isDark ? 'text-zinc-500' : 'text-zinc-500'
+                            ]"
+                          >Roadmap</p>
+                        </div>
+                      </div>
+                      <p
+                        :class="[
+                          'text-xs leading-relaxed',
+                          themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500'
+                        ]"
+                      >
+                        Modelo de integração será o mesmo do iFood —
+                        reaproveitamos interface e camada de serviço.
+                      </p>
+                    </div>
+
+                    <div
+                      :class="[
+                        'rounded-xl border p-4 space-y-3 opacity-70 lg:col-span-1',
+                        themeStore.isDark
+                          ? 'border-zinc-800 bg-zinc-900/30'
+                          : 'border-zinc-200 bg-zinc-50/60'
+                      ]"
+                    >
+                      <div class="flex items-center gap-2.5">
+                        <div
+                          class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 font-black text-sm text-white shadow-md"
+                          style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);"
+                        >
+                          EP
+                        </div>
+                        <div>
+                          <p
+                            :class="[
+                              'text-sm font-bold',
+                              themeStore.isDark ? 'text-white' : 'text-zinc-900'
+                            ]"
+                          >Entrega própria</p>
+                          <p
+                            :class="[
+                              'text-[10px] uppercase tracking-wider font-semibold',
+                              themeStore.isDark ? 'text-zinc-500' : 'text-zinc-500'
+                            ]"
+                          >Configuração de taxas</p>
+                        </div>
+                      </div>
+                      <div class="space-y-1.5 text-xs">
+                        <div
+                          :class="[
+                            'flex items-center justify-between',
+                            themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500'
+                          ]"
+                        >
+                          <span>Taxa entrega padrão</span>
+                          <span class="font-mono">R$ 0,00 🔒</span>
+                        </div>
+                        <div
+                          :class="[
+                            'flex items-center justify-between',
+                            themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500'
+                          ]"
+                        >
+                          <span>Taxa embalagem</span>
+                          <span class="font-mono">R$ 0,00 🔒</span>
+                        </div>
+                        <div
+                          :class="[
+                            'flex items-center justify-between',
+                            themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500'
+                          ]"
+                        >
+                          <span>Tempo médio entrega</span>
+                          <span>-- min 🔒</span>
+                        </div>
+                        <div
+                          :class="[
+                            'flex items-center justify-between',
+                            themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500'
+                          ]"
+                        >
+                          <span>Taxa serviço (10%)</span>
+                          <span>-- % 🔒</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    :class="[
+                      'rounded-xl border p-4 space-y-2 text-xs',
+                      themeStore.isDark
+                        ? 'border-indigo-500/20 bg-indigo-500/5'
+                        : 'border-indigo-200 bg-indigo-50/60'
+                    ]"
+                  >
+                    <p
+                      :class="[
+                        'text-[11px] uppercase tracking-widest font-semibold flex items-center gap-1.5',
+                        themeStore.isDark ? 'text-indigo-300' : 'text-indigo-700'
+                      ]"
+                    >
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                      Estratégia de escalabilidade (back-end)
+                    </p>
+                    <p
+                      :class="[
+                        'leading-relaxed',
+                        themeStore.isDark ? 'text-zinc-300' : 'text-zinc-600'
+                      ]"
+                    >
+                      Pensando em evitar retrabalho: vamos criar uma tabela genérica <code class="font-mono px-1.5 py-0.5 rounded border bg-black/20 border-zinc-700/60">restaurant_marketplace_integrations</code>
+                      (provider varchar + JSON credentials + enabled + webhook secret). Assim iFood, Rappi e futuros provedores
+                      cabem no mesmo schema sem precisar de migration a cada novo parceiro. Entrega própria fica em tabela separada
+                      <code class="font-mono px-1.5 py-0.5 rounded border bg-black/20 border-zinc-700/60">restaurant_delivery_settings</code> (FK para restaurant).
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <aside class="space-y-4 xl:space-y-5">
-              <div class="rounded-2xl border bg-zinc-900/50 border-zinc-800 p-5 space-y-3 shadow-xl">
-                <div class="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-zinc-500 font-semibold">
+            <aside class="space-y-4 xl:space-y-5 xl:sticky xl:top-24 self-start">
+              <div
+                :class="[
+                  'rounded-2xl border p-5 space-y-3 shadow-xl',
+                  themeStore.isDark
+                    ? 'bg-zinc-900/50 border-zinc-800'
+                    : 'bg-white border-zinc-200'
+                ]"
+              >
+                <div
+                  :class="[
+                    'flex items-center gap-2 text-xs uppercase tracking-[0.18em] font-semibold',
+                    themeStore.isDark ? 'text-zinc-500' : 'text-zinc-500'
+                  ]"
+                >
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
                   O que já temos vs o que falta
                 </div>
-                <ul class="space-y-2.5 text-xs">
+                <ul
+                  :class="[
+                    'space-y-2.5 text-xs',
+                    themeStore.isDark ? 'text-zinc-300' : 'text-zinc-600'
+                  ]"
+                >
                   <li class="flex items-start gap-2">
-                    <span class="text-emerald-300 mt-0.5 shrink-0">✓</span>
-                    <span class="text-zinc-300"><strong>Nome do restaurante</strong> — disponível via token do usuário.</span>
+                    <span
+                      :class="[
+                        'mt-0.5 shrink-0 font-bold',
+                        themeStore.isDark ? 'text-emerald-300' : 'text-emerald-600'
+                      ]"
+                    >✓</span>
+                    <span><strong>Nome do restaurante</strong> — disponível via token do usuário.</span>
                   </li>
                   <li class="flex items-start gap-2">
-                    <span class="text-amber-300 mt-0.5 shrink-0">◯</span>
-                    <span class="text-zinc-300"><strong>CNPJ</strong> — campo existe na model mas não tem endpoint GET/PUT público.</span>
+                    <span
+                      :class="[
+                        'mt-0.5 shrink-0 font-bold',
+                        themeStore.isDark ? 'text-amber-300' : 'text-amber-600'
+                      ]"
+                    >◯</span>
+                    <span><strong>CNPJ</strong> — campo existe na model mas não tem endpoint GET/PUT público.</span>
                   </li>
                   <li class="flex items-start gap-2">
-                    <span class="text-rose-300 mt-0.5 shrink-0">✕</span>
-                    <span class="text-zinc-300"><strong>Fuso / Moeda / Idioma</strong> — campos não existem na model Restaurant.</span>
+                    <span
+                      :class="[
+                        'mt-0.5 shrink-0 font-bold',
+                        themeStore.isDark ? 'text-rose-300' : 'text-rose-600'
+                      ]"
+                    >✕</span>
+                    <span><strong>Fuso / Moeda / Idioma</strong> — campos não existem na model Restaurant.</span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span
+                      :class="[
+                        'mt-0.5 shrink-0 font-bold',
+                        themeStore.isDark ? 'text-amber-300' : 'text-amber-600'
+                      ]"
+                    >◯</span>
+                    <span><strong>iFood</strong> — UI mockada + plano de migration genérica para múltiplos providers.</span>
                   </li>
                 </ul>
               </div>
@@ -1421,134 +1923,396 @@ onMounted(async () => {
         <section v-else-if="activeSectionId === 'notifications'" class="space-y-6">
           <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div class="xl:col-span-2 space-y-6">
-              <div class="rounded-2xl border bg-zinc-900/50 border-zinc-800 shadow-xl overflow-hidden">
-                <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-zinc-800/80">
+
+              <!-- Card A: Canais de notificação -->
+              <div :class="['rounded-2xl border shadow-xl overflow-hidden', themeStore.isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-zinc-200 shadow-zinc-900/5']">
+                <div :class="['p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b', themeStore.isDark ? 'border-zinc-800/80' : 'border-zinc-200/80']">
                   <div class="flex items-start gap-3 flex-1">
-                    <div class="w-10 h-10 rounded-xl bg-zinc-800/60 border-zinc-700/60 text-zinc-300 flex items-center justify-center flex-shrink-0">
+                    <div :class="['w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0', themeStore.isDark ? 'bg-zinc-800/60 border border-zinc-700/60 text-zinc-300' : 'bg-zinc-100 border border-zinc-200 text-zinc-600']">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
                       </svg>
                     </div>
                     <div class="space-y-0.5 flex-1">
-                      <h2 class="text-base sm:text-lg font-semibold text-white tracking-tight">Canais de notificação</h2>
-                      <p class="text-xs sm:text-sm text-zinc-400 leading-relaxed max-w-2xl">Escolha onde receber os alertas do sistema — pedidos, estoque, pagamentos e muito mais.</p>
+                      <h2 :class="['text-base sm:text-lg font-semibold tracking-tight', themeStore.isDark ? 'text-white' : 'text-zinc-900']">Canais de notificação</h2>
+                      <p :class="['text-xs sm:text-sm leading-relaxed max-w-2xl', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']">Escolha onde receber os alertas do sistema. Cada tipo de evento abaixo pode ser ligado/desligado por canal individualmente.</p>
                     </div>
                   </div>
                 </div>
-                <div class="p-5 sm:p-6 space-y-5">
-                  <div class="flex items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-zinc-900/70 border border-zinc-800/80">
+                <div class="p-5 sm:p-6 space-y-4 sm:space-y-5">
+                  <!-- Email -->
+                  <div :class="['flex items-start sm:items-center justify-between gap-4 p-4 rounded-xl border', themeStore.isDark ? 'bg-zinc-900/70 border-zinc-800/80' : 'bg-zinc-50 border-zinc-200/80']">
                     <div class="flex items-start gap-3">
-                      <div class="w-10 h-10 rounded-lg bg-indigo-500/10 border-indigo-500/20 text-indigo-300 flex items-center justify-center shrink-0">
+                      <div :class="['w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border', themeStore.isDark ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-300' : 'bg-indigo-50 border-indigo-100 text-indigo-600']">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                         </svg>
                       </div>
-                      <div>
-                        <p class="text-sm font-semibold text-white">Email</p>
-                        <p class="text-xs text-zinc-400 mt-0.5">Notificações por email (ex: fatura fechada, falha no pagamento).</p>
+                      <div class="space-y-0.5 min-w-0">
+                        <p :class="['text-sm font-semibold', themeStore.isDark ? 'text-white' : 'text-zinc-900']">Email</p>
+                        <p :class="['text-xs mt-0.5', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']">Faturamento, relatórios semanais e alertas de segurança.</p>
                       </div>
                     </div>
-                    <span class="text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-md bg-zinc-800/70 border border-zinc-700/60 text-zinc-400 shrink-0">🔒 Sem backend</span>
+                    <span :class="['text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-md shrink-0 border', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-500']">🔒 Sem backend</span>
                   </div>
 
-                  <div class="flex items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-zinc-900/70 border border-zinc-800/80">
+                  <!-- Push navegador -->
+                  <div :class="['flex items-start sm:items-center justify-between gap-4 p-4 rounded-xl border', themeStore.isDark ? 'bg-zinc-900/70 border-zinc-800/80' : 'bg-zinc-50 border-zinc-200/80']">
                     <div class="flex items-start gap-3">
-                      <div class="w-10 h-10 rounded-lg bg-zinc-800/60 border-zinc-700/60 text-zinc-300 flex items-center justify-center shrink-0">
+                      <div :class="['w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border', themeStore.isDark ? 'bg-zinc-800/60 border-zinc-700/60 text-zinc-300' : 'bg-zinc-100 border-zinc-200 text-zinc-600']">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
                         </svg>
                       </div>
-                      <div>
-                        <p class="text-sm font-semibold text-white">Push no navegador</p>
-                        <p class="text-xs text-zinc-400 mt-0.5">Alertas instantâneos (ex: novo pedido, estoque baixo).</p>
+                      <div class="space-y-0.5 min-w-0">
+                        <p :class="['text-sm font-semibold', themeStore.isDark ? 'text-white' : 'text-zinc-900']">Push no navegador</p>
+                        <p :class="['text-xs mt-0.5', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']">Alertas instantâneos — novos pedidos, estoque, status em tempo real.</p>
                       </div>
                     </div>
-                    <span class="text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-md bg-zinc-800/70 border border-zinc-700/60 text-zinc-400 shrink-0">🔒 Sem backend</span>
+                    <span :class="['text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-md shrink-0 border', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-500']">🔒 Sem backend</span>
                   </div>
 
-                  <div class="flex items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-zinc-900/70 border border-zinc-800/80">
+                  <!-- WhatsApp -->
+                  <div :class="['flex items-start sm:items-center justify-between gap-4 p-4 rounded-xl border', themeStore.isDark ? 'bg-zinc-900/70 border-zinc-800/80' : 'bg-zinc-50 border-zinc-200/80']">
                     <div class="flex items-start gap-3">
-                      <div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 flex items-center justify-center shrink-0">
+                      <div :class="['w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border', themeStore.isDark ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300' : 'bg-emerald-50 border-emerald-100 text-emerald-600']">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
                         </svg>
                       </div>
-                      <div>
-                        <p class="text-sm font-semibold text-white">WhatsApp (opcional)</p>
-                        <p class="text-xs text-zinc-400 mt-0.5">Alertas urgentes via WhatsApp Business.</p>
+                      <div class="space-y-0.5 min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <p :class="['text-sm font-semibold', themeStore.isDark ? 'text-white' : 'text-zinc-900']">WhatsApp (opcional)</p>
+                          <span :class="['text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border', themeStore.isDark ? 'bg-amber-500/10 border-amber-500/20 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-700']">Plano pago</span>
+                        </div>
+                        <p :class="['text-xs mt-0.5', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']">Alertas urgentes via WhatsApp Business — pedidos e incidentes críticos.</p>
                       </div>
                     </div>
-                    <span class="text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-md bg-zinc-800/70 border border-zinc-700/60 text-zinc-400 shrink-0">🔒 Sem backend</span>
+                    <span :class="['text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-md shrink-0 border', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-500']">🔒 Sem backend</span>
                   </div>
                 </div>
               </div>
 
-              <div class="rounded-2xl border bg-zinc-900/50 border-zinc-800 shadow-xl overflow-hidden">
-                <div class="p-5 sm:p-6 border-b border-zinc-800/80">
-                  <div class="flex items-start gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-zinc-800/60 border-zinc-700/60 text-zinc-300 flex items-center justify-center flex-shrink-0">
+              <!-- Card B: Tabela Preferências por tipo de evento -->
+              <div :class="['rounded-2xl border shadow-xl overflow-hidden', themeStore.isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-zinc-200 shadow-zinc-900/5']">
+                <div :class="['p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b', themeStore.isDark ? 'border-zinc-800/80' : 'border-zinc-200/80']">
+                  <div class="flex items-start gap-3 flex-1">
+                    <div :class="['w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0', themeStore.isDark ? 'bg-zinc-800/60 border border-zinc-700/60 text-zinc-300' : 'bg-zinc-100 border border-zinc-200 text-zinc-600']">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
                       </svg>
                     </div>
                     <div class="space-y-0.5 flex-1">
-                      <h2 class="text-base sm:text-lg font-semibold text-white tracking-tight">Tipos de alerta</h2>
-                      <p class="text-xs sm:text-sm text-zinc-400 leading-relaxed max-w-2xl">Quais eventos você quer receber? Desmarque o que não for importante.</p>
+                      <h2 :class="['text-base sm:text-lg font-semibold tracking-tight', themeStore.isDark ? 'text-white' : 'text-zinc-900']">Preferências por tipo de evento</h2>
+                      <p :class="['text-xs sm:text-sm leading-relaxed max-w-2xl', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']">Para cada evento do sistema, escolha <strong>individualmente</strong> em qual canal quer receber. Linhas bloqueadas por cargo aparecem acinzentadas.</p>
                     </div>
                   </div>
                 </div>
-                <div class="p-5 sm:p-6 space-y-3">
-                  <div class="flex items-center justify-between gap-3 p-3 rounded-xl bg-zinc-900/50 border border-zinc-800/70">
-                    <div>
-                      <p class="text-sm font-semibold text-zinc-200">Novos pedidos</p>
-                      <p class="text-xs text-zinc-500">Quando um cliente fizer um novo pedido.</p>
+
+                <!-- Cabeçalho da tabela (desktop) -->
+                <div :class="['hidden md:grid grid-cols-12 gap-3 px-5 sm:px-6 py-3.5 text-[11px] font-bold uppercase tracking-[0.14em] border-b', themeStore.isDark ? 'bg-zinc-900/70 border-zinc-800/80 text-zinc-500' : 'bg-zinc-50 border-zinc-200/80 text-zinc-500']">
+                  <div class="col-span-4">Evento</div>
+                  <div class="col-span-5">Descrição</div>
+                  <div class="col-span-1 text-center">Email</div>
+                  <div class="col-span-2 text-center">Push navegador</div>
+                </div>
+
+                <!-- Linhas tabela -->
+                <div class="divide-y" :class="themeStore.isDark ? 'divide-zinc-800/60' : 'divide-zinc-200/60'">
+
+                  <!-- Linha 1: Novos pedidos -->
+                  <div :class="['px-5 sm:px-6 py-4 grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-3 items-start md:items-center transition-colors', themeStore.isDark ? 'hover:bg-zinc-900/50' : 'hover:bg-zinc-50']">
+                    <div class="md:col-span-4 flex items-start gap-2.5">
+                      <div :class="['w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 md:mt-0 border', themeStore.isDark ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-300' : 'bg-indigo-50 border-indigo-100 text-indigo-600']">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                        </svg>
+                      </div>
+                      <div class="md:hidden block w-full">
+                        <p :class="['text-sm font-semibold', themeStore.isDark ? 'text-white' : 'text-zinc-900']">Novos pedidos</p>
+                        <p :class="['text-xs mt-1', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']">Quando chegar um pedido novo ou vindo do iFood/Rappi.</p>
+                        <div class="mt-3 grid grid-cols-2 gap-3">
+                          <button type="button" :class="['w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase tracking-wider', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-500']">🔒 Email</button>
+                          <button type="button" :class="['w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase tracking-wider', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-500']">🔒 Push</button>
+                        </div>
+                      </div>
+                      <div class="hidden md:block">
+                        <p :class="['text-sm font-semibold', themeStore.isDark ? 'text-white' : 'text-zinc-900']">Novos pedidos</p>
+                      </div>
                     </div>
-                    <span class="text-[10px] font-bold uppercase px-2 py-1 rounded-md bg-zinc-800/70 border border-zinc-700/60 text-zinc-400">🔒</span>
+                    <div class="md:col-span-5 md:block">
+                      <p :class="['text-xs md:text-sm leading-relaxed', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']">Pedido novo criado manualmente ou sincronizado de marketplaces (iFood, Rappi).</p>
+                    </div>
+                    <!-- Toggle Email (desktop) -->
+                    <div class="md:col-span-1 hidden md:flex justify-center">
+                      <button type="button" :class="['w-full h-9 rounded-lg border flex items-center justify-center text-[10px] font-bold uppercase tracking-wider', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400 hover:bg-zinc-800' : 'bg-zinc-100 border-zinc-200 text-zinc-500 hover:bg-zinc-200']" title="Bloqueado — sem backend">
+                        🔒
+                      </button>
+                    </div>
+                    <!-- Toggle Push (desktop) -->
+                    <div class="md:col-span-2 hidden md:flex justify-center">
+                      <button type="button" :class="['w-full h-9 rounded-lg border flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-wider', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400 hover:bg-zinc-800' : 'bg-zinc-100 border-zinc-200 text-zinc-500 hover:bg-zinc-200']" title="Bloqueado — sem backend">
+                        🔒
+                      </button>
+                    </div>
                   </div>
-                  <div class="flex items-center justify-between gap-3 p-3 rounded-xl bg-zinc-900/50 border border-zinc-800/70">
-                    <div>
-                      <p class="text-sm font-semibold text-zinc-200">Estoque baixo</p>
-                      <p class="text-xs text-zinc-500">Quando um ingrediente atingir o ponto de reposição.</p>
+
+                  <!-- Linha 2: Status do pedido -->
+                  <div :class="['px-5 sm:px-6 py-4 grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-3 items-start md:items-center transition-colors', themeStore.isDark ? 'hover:bg-zinc-900/50' : 'hover:bg-zinc-50']">
+                    <div class="md:col-span-4 flex items-start gap-2.5">
+                      <div :class="['w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 md:mt-0 border', themeStore.isDark ? 'bg-violet-500/10 border-violet-500/20 text-violet-300' : 'bg-violet-50 border-violet-100 text-violet-600']">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                      </div>
+                      <div class="md:hidden block w-full">
+                        <p :class="['text-sm font-semibold', themeStore.isDark ? 'text-white' : 'text-zinc-900']">Status do pedido</p>
+                        <p :class="['text-xs mt-1', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']">Pedido confirmado, enviado, entregue ou cancelado.</p>
+                        <div class="mt-3 grid grid-cols-2 gap-3">
+                          <button type="button" :class="['w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase tracking-wider', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-500']">🔒 Email</button>
+                          <button type="button" :class="['w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase tracking-wider', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-500']">🔒 Push</button>
+                        </div>
+                      </div>
+                      <div class="hidden md:block">
+                        <p :class="['text-sm font-semibold', themeStore.isDark ? 'text-white' : 'text-zinc-900']">Status do pedido</p>
+                      </div>
                     </div>
-                    <span class="text-[10px] font-bold uppercase px-2 py-1 rounded-md bg-zinc-800/70 border border-zinc-700/60 text-zinc-400">🔒</span>
+                    <div class="md:col-span-5 md:block">
+                      <p :class="['text-xs md:text-sm leading-relaxed', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']">Confirmação, andamento da entrega, conclusão ou cancelamento de pedidos existentes.</p>
+                    </div>
+                    <div class="md:col-span-1 hidden md:flex justify-center">
+                      <button type="button" :class="['w-full h-9 rounded-lg border flex items-center justify-center text-[10px] font-bold uppercase tracking-wider', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400 hover:bg-zinc-800' : 'bg-zinc-100 border-zinc-200 text-zinc-500 hover:bg-zinc-200']">🔒</button>
+                    </div>
+                    <div class="md:col-span-2 hidden md:flex justify-center">
+                      <button type="button" :class="['w-full h-9 rounded-lg border flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-wider', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400 hover:bg-zinc-800' : 'bg-zinc-100 border-zinc-200 text-zinc-500 hover:bg-zinc-200']">🔒</button>
+                    </div>
                   </div>
-                  <div class="flex items-center justify-between gap-3 p-3 rounded-xl bg-zinc-900/50 border border-zinc-800/70">
-                    <div>
-                      <p class="text-sm font-semibold text-zinc-200">Faturamento</p>
-                      <p class="text-xs text-zinc-500">Fatura emitida, pagamento confirmado ou recusado.</p>
+
+                  <!-- Linha 3: Estoque baixo -->
+                  <div :class="['px-5 sm:px-6 py-4 grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-3 items-start md:items-center transition-colors', themeStore.isDark ? 'hover:bg-zinc-900/50' : 'hover:bg-zinc-50']">
+                    <div class="md:col-span-4 flex items-start gap-2.5">
+                      <div :class="['w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 md:mt-0 border', themeStore.isDark ? 'bg-amber-500/10 border-amber-500/20 text-amber-300' : 'bg-amber-50 border-amber-100 text-amber-600']">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                        </svg>
+                      </div>
+                      <div class="md:hidden block w-full">
+                        <p :class="['text-sm font-semibold', themeStore.isDark ? 'text-white' : 'text-zinc-900']">Estoque baixo</p>
+                        <p :class="['text-xs mt-1', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']">Ingrediente atingiu ponto de reposição.</p>
+                        <div class="mt-3 grid grid-cols-2 gap-3">
+                          <button type="button" :class="['w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase tracking-wider', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-500']">🔒 Email</button>
+                          <button type="button" :class="['w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase tracking-wider', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-500']">🔒 Push</button>
+                        </div>
+                      </div>
+                      <div class="hidden md:block">
+                        <p :class="['text-sm font-semibold', themeStore.isDark ? 'text-white' : 'text-zinc-900']">Estoque baixo</p>
+                      </div>
                     </div>
-                    <span class="text-[10px] font-bold uppercase px-2 py-1 rounded-md bg-zinc-800/70 border border-zinc-700/60 text-zinc-400">🔒</span>
+                    <div class="md:col-span-5 md:block">
+                      <p :class="['text-xs md:text-sm leading-relaxed', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']">Quando um ingrediente ou produto atingir o ponto de reposição configurado.</p>
+                    </div>
+                    <div class="md:col-span-1 hidden md:flex justify-center">
+                      <button type="button" :class="['w-full h-9 rounded-lg border flex items-center justify-center text-[10px] font-bold uppercase tracking-wider', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400 hover:bg-zinc-800' : 'bg-zinc-100 border-zinc-200 text-zinc-500 hover:bg-zinc-200']">🔒</button>
+                    </div>
+                    <div class="md:col-span-2 hidden md:flex justify-center">
+                      <button type="button" :class="['w-full h-9 rounded-lg border flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-wider', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400 hover:bg-zinc-800' : 'bg-zinc-100 border-zinc-200 text-zinc-500 hover:bg-zinc-200']">🔒</button>
+                    </div>
                   </div>
-                  <div class="flex items-center justify-between gap-3 p-3 rounded-xl bg-zinc-900/50 border border-zinc-800/70">
-                    <div>
-                      <p class="text-sm font-semibold text-zinc-200">Segurança</p>
-                      <p class="text-xs text-zinc-500">Login em dispositivos novos, troca de senha, chave de API alterada.</p>
+
+                  <!-- Linha 4: Validade de produto -->
+                  <div :class="['px-5 sm:px-6 py-4 grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-3 items-start md:items-center transition-colors', themeStore.isDark ? 'hover:bg-zinc-900/50' : 'hover:bg-zinc-50']">
+                    <div class="md:col-span-4 flex items-start gap-2.5">
+                      <div :class="['w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 md:mt-0 border', themeStore.isDark ? 'bg-rose-500/10 border-rose-500/20 text-rose-300' : 'bg-rose-50 border-rose-100 text-rose-600']">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                      </div>
+                      <div class="md:hidden block w-full">
+                        <p :class="['text-sm font-semibold', themeStore.isDark ? 'text-white' : 'text-zinc-900']">Validade de produto</p>
+                        <p :class="['text-xs mt-1', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']">Produto perto de vencer ou vencido.</p>
+                        <div class="mt-3 grid grid-cols-2 gap-3">
+                          <button type="button" :class="['w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase tracking-wider', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-500']">🔒 Email</button>
+                          <button type="button" :class="['w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase tracking-wider', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-500']">🔒 Push</button>
+                        </div>
+                      </div>
+                      <div class="hidden md:block">
+                        <p :class="['text-sm font-semibold', themeStore.isDark ? 'text-white' : 'text-zinc-900']">Validade de produto</p>
+                      </div>
                     </div>
-                    <span class="text-[10px] font-bold uppercase px-2 py-1 rounded-md bg-zinc-800/70 border border-zinc-700/60 text-zinc-400">🔒</span>
+                    <div class="md:col-span-5 md:block">
+                      <p :class="['text-xs md:text-sm leading-relaxed', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']">Lote próximo da data de validade (7 dias) ou já vencido — evita perda de estoque.</p>
+                    </div>
+                    <div class="md:col-span-1 hidden md:flex justify-center">
+                      <button type="button" :class="['w-full h-9 rounded-lg border flex items-center justify-center text-[10px] font-bold uppercase tracking-wider', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400 hover:bg-zinc-800' : 'bg-zinc-100 border-zinc-200 text-zinc-500 hover:bg-zinc-200']">🔒</button>
+                    </div>
+                    <div class="md:col-span-2 hidden md:flex justify-center">
+                      <button type="button" :class="['w-full h-9 rounded-lg border flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-wider', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400 hover:bg-zinc-800' : 'bg-zinc-100 border-zinc-200 text-zinc-500 hover:bg-zinc-200']">🔒</button>
+                    </div>
+                  </div>
+
+                  <!-- Linha 5: Faturamento -->
+                  <div :class="['px-5 sm:px-6 py-4 grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-3 items-start md:items-center transition-colors opacity-95', themeStore.isDark ? 'hover:bg-zinc-900/50' : 'hover:bg-zinc-50']">
+                    <div class="md:col-span-4 flex items-start gap-2.5">
+                      <div :class="['w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 md:mt-0 border', themeStore.isDark ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300' : 'bg-emerald-50 border-emerald-100 text-emerald-600']">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                        </svg>
+                      </div>
+                      <div class="md:hidden block w-full">
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <p :class="['text-sm font-semibold', themeStore.isDark ? 'text-white' : 'text-zinc-900']">Faturamento</p>
+                          <span :class="['text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border', themeStore.isDark ? 'bg-amber-500/10 border-amber-500/20 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-700']">Gerente/Dono</span>
+                        </div>
+                        <p :class="['text-xs mt-1', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']">Fatura, pagamentos, estornos. Cargo hierárquico.</p>
+                        <div class="mt-3 grid grid-cols-2 gap-3">
+                          <button type="button" :class="['w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase tracking-wider', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-500']">🔒 Email</button>
+                          <button type="button" :class="['w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase tracking-wider', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-500']">🔒 Push</button>
+                        </div>
+                      </div>
+                      <div class="hidden md:block space-y-1">
+                        <div class="flex items-center gap-2">
+                          <p :class="['text-sm font-semibold', themeStore.isDark ? 'text-white' : 'text-zinc-900']">Faturamento</p>
+                          <span :class="['text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border', themeStore.isDark ? 'bg-amber-500/10 border-amber-500/20 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-700']">Hierárquico</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="md:col-span-5 md:block">
+                      <p :class="['text-xs md:text-sm leading-relaxed', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']">Fatura emitida, pagamento confirmado, estorno ou falha. <strong>Visível só para Gerente e Dono.</strong> Atendentes não veem nem recebem.</p>
+                    </div>
+                    <div class="md:col-span-1 hidden md:flex justify-center">
+                      <button type="button" :class="['w-full h-9 rounded-lg border flex items-center justify-center text-[10px] font-bold uppercase tracking-wider', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400 hover:bg-zinc-800' : 'bg-zinc-100 border-zinc-200 text-zinc-500 hover:bg-zinc-200']">🔒</button>
+                    </div>
+                    <div class="md:col-span-2 hidden md:flex justify-center">
+                      <button type="button" :class="['w-full h-9 rounded-lg border flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-wider', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400 hover:bg-zinc-800' : 'bg-zinc-100 border-zinc-200 text-zinc-500 hover:bg-zinc-200']">🔒</button>
+                    </div>
+                  </div>
+
+                  <!-- Linha 6: Segurança -->
+                  <div :class="['px-5 sm:px-6 py-4 grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-3 items-start md:items-center transition-colors', themeStore.isDark ? 'hover:bg-zinc-900/50' : 'hover:bg-zinc-50']">
+                    <div class="md:col-span-4 flex items-start gap-2.5">
+                      <div :class="['w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 md:mt-0 border', themeStore.isDark ? 'bg-red-500/10 border-red-500/20 text-red-300' : 'bg-red-50 border-red-100 text-red-600']">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                        </svg>
+                      </div>
+                      <div class="md:hidden block w-full">
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <p :class="['text-sm font-semibold', themeStore.isDark ? 'text-white' : 'text-zinc-900']">Segurança</p>
+                          <span :class="['text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border', themeStore.isDark ? 'bg-amber-500/10 border-amber-500/20 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-700']">Por usuário</span>
+                        </div>
+                        <p :class="['text-xs mt-1', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']">Login novo, senha alterada, chave API.</p>
+                        <div class="mt-3 grid grid-cols-2 gap-3">
+                          <button type="button" :class="['w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase tracking-wider', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-500']">🔒 Email</button>
+                          <button type="button" :class="['w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-[11px] font-bold uppercase tracking-wider', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-500']">🔒 Push</button>
+                        </div>
+                      </div>
+                      <div class="hidden md:block space-y-1">
+                        <div class="flex items-center gap-2">
+                          <p :class="['text-sm font-semibold', themeStore.isDark ? 'text-white' : 'text-zinc-900']">Segurança</p>
+                          <span :class="['text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border', themeStore.isDark ? 'bg-amber-500/10 border-amber-500/20 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-700']">Por usuário</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="md:col-span-5 md:block">
+                      <p :class="['text-xs md:text-sm leading-relaxed', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']">Login em dispositivo novo, troca de senha, chave de API alterada, 2FA. <strong>Cada usuário vê só os seus eventos.</strong></p>
+                    </div>
+                    <div class="md:col-span-1 hidden md:flex justify-center">
+                      <button type="button" :class="['w-full h-9 rounded-lg border flex items-center justify-center text-[10px] font-bold uppercase tracking-wider', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400 hover:bg-zinc-800' : 'bg-zinc-100 border-zinc-200 text-zinc-500 hover:bg-zinc-200']">🔒</button>
+                    </div>
+                    <div class="md:col-span-2 hidden md:flex justify-center">
+                      <button type="button" :class="['w-full h-9 rounded-lg border flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-wider', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400 hover:bg-zinc-800' : 'bg-zinc-100 border-zinc-200 text-zinc-500 hover:bg-zinc-200']">🔒</button>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Aside direito: hierarquia + roadmap -->
+            <aside class="space-y-4 xl:space-y-5 h-fit">
+
+              <!-- Card: Hierarquia de cargos -->
+              <div :class="['rounded-2xl border p-5 space-y-3.5 shadow-xl', themeStore.isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-zinc-200 shadow-zinc-900/5']">
+                <div :class="['flex items-center gap-2 text-xs uppercase tracking-[0.18em] font-semibold', themeStore.isDark ? 'text-zinc-500' : 'text-zinc-500']">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                  </svg>
+                  Hierarquia de cargos
+                </div>
+                <div :class="['text-xs leading-relaxed space-y-2.5', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']">
+                  <p>Quando o backend existir, as permissões vão seguir essa regra:</p>
+                  <div class="space-y-2 pt-1">
+                    <!-- Dono -->
+                    <div :class="['flex items-start gap-2.5 p-2.5 rounded-lg border', themeStore.isDark ? 'bg-zinc-900/70 border-zinc-800' : 'bg-zinc-50 border-zinc-200']">
+                      <div :class="['w-6 h-6 rounded-md flex items-center justify-center shrink-0 mt-0.5 border', themeStore.isDark ? 'bg-amber-500/10 border-amber-500/20 text-amber-300' : 'bg-amber-50 border-amber-100 text-amber-600']">
+                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/>
+                        </svg>
+                      </div>
+                      <div class="min-w-0">
+                        <p :class="['text-[11px] font-bold uppercase tracking-wider', themeStore.isDark ? 'text-amber-300' : 'text-amber-700']">Dono</p>
+                        <p :class="['text-[11px]', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']">Tudo. Faturamento, segurança, tokens, pagamentos.</p>
+                      </div>
+                    </div>
+                    <!-- Gerente -->
+                    <div :class="['flex items-start gap-2.5 p-2.5 rounded-lg border', themeStore.isDark ? 'bg-zinc-900/70 border-zinc-800' : 'bg-zinc-50 border-zinc-200']">
+                      <div :class="['w-6 h-6 rounded-md flex items-center justify-center shrink-0 mt-0.5 border', themeStore.isDark ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-300' : 'bg-indigo-50 border-indigo-100 text-indigo-600']">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                        </svg>
+                      </div>
+                      <div class="min-w-0">
+                        <p :class="['text-[11px] font-bold uppercase tracking-wider', themeStore.isDark ? 'text-indigo-300' : 'text-indigo-700']">Gerente</p>
+                        <p :class="['text-[11px]', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']">Pedidos, estoque, notificações. Faturamento só leitura.</p>
+                      </div>
+                    </div>
+                    <!-- Atendente -->
+                    <div :class="['flex items-start gap-2.5 p-2.5 rounded-lg border', themeStore.isDark ? 'bg-zinc-900/70 border-zinc-800' : 'bg-zinc-50 border-zinc-200']">
+                      <div :class="['w-6 h-6 rounded-md flex items-center justify-center shrink-0 mt-0.5 border', themeStore.isDark ? 'bg-zinc-800/60 border-zinc-700/60 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-500']">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                      </div>
+                      <div class="min-w-0">
+                        <p :class="['text-[11px] font-bold uppercase tracking-wider', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-600']">Atendente</p>
+                        <p :class="['text-[11px]', themeStore.isDark ? 'text-zinc-500' : 'text-zinc-400']">Só pedidos (receber/marcar pronto). Nada de estoque ou $.</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <aside class="space-y-4 xl:space-y-5 h-fit">
-              <div class="rounded-2xl border bg-zinc-900/50 border-zinc-800 p-5 space-y-3 shadow-xl">
-                <div class="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-zinc-500 font-semibold">
+              <!-- Card: Roadmap backend -->
+              <div :class="['rounded-2xl border p-5 space-y-3.5 shadow-xl', themeStore.isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-zinc-200 shadow-zinc-900/5']">
+                <div :class="['flex items-center gap-2 text-xs uppercase tracking-[0.18em] font-semibold', themeStore.isDark ? 'text-zinc-500' : 'text-zinc-500']">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                   </svg>
-                  Discussão pendente
+                  Roadmap backend
                 </div>
-                <div class="text-xs text-zinc-400 leading-relaxed space-y-2">
-                  <p>Hoje não temos <strong>NENHUM</strong> endpoint ou tabela de notificações.</p>
-                  <p>Pontos pra gente alinhar:</p>
-                  <ul class="list-disc list-inside space-y-1 text-zinc-300">
-                    <li>Notificações vão ser <em>por usuário</em> ou <em>por restaurante</em> (todos gerentes recebem)?</li>
-                    <li>Vamos usar provider tipo <strong>Firebase Cloud Messaging</strong> pra push?</li>
-                    <li>WhatsApp Business API tem custo — vai ser feature de plano pago?</li>
-                    <li>Quem define as preferências: cada usuário ou o dono/gerente do restaurante?</li>
+                <div :class="['text-xs leading-relaxed space-y-2', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']">
+                  <ul class="space-y-1.5">
+                    <li class="flex items-start gap-2">
+                      <span :class="['mt-0.5 w-1.5 h-1.5 rounded-full shrink-0', themeStore.isDark ? 'bg-zinc-600' : 'bg-zinc-300']"></span>
+                      <span>Tabela <code :class="['px-1.5 py-0.5 rounded text-[10px] border', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700 text-zinc-300' : 'bg-zinc-100 border-zinc-200 text-zinc-700']">notification_preferences</code> (UserId, EventType, EmailOn, PushOn)</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                      <span :class="['mt-0.5 w-1.5 h-1.5 rounded-full shrink-0', themeStore.isDark ? 'bg-zinc-600' : 'bg-zinc-300']"></span>
+                      <span>Service + Policies pra validar hierarquia (atendente não pode desligar pedido novo)</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                      <span :class="['mt-0.5 w-1.5 h-1.5 rounded-full shrink-0', themeStore.isDark ? 'bg-zinc-600' : 'bg-zinc-300']"></span>
+                      <span>Provider Push (Firebase Cloud Messaging) + serviço de email (Resend/SendGrid)</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                      <span :class="['mt-0.5 w-1.5 h-1.5 rounded-full shrink-0', themeStore.isDark ? 'bg-zinc-600' : 'bg-zinc-300']"></span>
+                      <span>WhatsApp Business API — feature premium (Plano Pro ou Empresarial)</span>
+                    </li>
                   </ul>
                 </div>
               </div>
+
             </aside>
           </div>
         </section>
