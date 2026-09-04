@@ -120,6 +120,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IDevAuthService, DevAuthService>();
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<ITmpAuthorizationService, TmpAuthorizationService>();
 
         services.AddScoped<IImportOrchestrator, ImportOrchestrator>();
         services.AddScoped<IFileImporter, CsvProductImporter>();
