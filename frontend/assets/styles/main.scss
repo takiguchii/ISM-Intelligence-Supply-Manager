@@ -1,13 +1,20 @@
 @import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap");
 
 :root {
-  color-scheme: dark;
   --ism-bg: #050816;
   --ism-panel: rgba(16, 24, 43, 0.76);
   --ism-aqua: #54f3d0;
   --ism-ember: #ff8c42;
   --ism-text: #e8edf8;
   --ism-mist: #9eb0d1;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+html.light {
+  color-scheme: light;
 }
 
 html,
@@ -18,12 +25,23 @@ body,
 
 body {
   margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+}
+
+html.dark body {
   background:
     radial-gradient(circle at top left, rgba(84, 243, 208, 0.12), transparent 24rem),
     radial-gradient(circle at bottom right, rgba(255, 140, 66, 0.14), transparent 22rem),
     linear-gradient(135deg, #030512 0%, #071022 48%, #0b1426 100%);
   color: var(--ism-text);
-  font-family: "Space Grotesk", sans-serif;
+}
+
+html.light body {
+  background:
+    radial-gradient(circle at top left, rgba(99, 102, 241, 0.08), transparent 24rem),
+    radial-gradient(circle at bottom right, rgba(129, 140, 248, 0.08), transparent 22rem),
+    linear-gradient(135deg, #fafafa 0%, #ffffff 48%, #f4f4f5 100%);
+  color: #18181b;
 }
 
 .hero-grid {
@@ -32,6 +50,12 @@ body {
     linear-gradient(90deg, rgba(84, 243, 208, 0.04) 1px, transparent 1px);
   background-size: 4rem 4rem;
   mask-image: radial-gradient(circle at center, black 55%, transparent 92%);
+}
+
+html.light .hero-grid {
+  background-image:
+    linear-gradient(rgba(99, 102, 241, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99, 102, 241, 0.06) 1px, transparent 1px);
 }
 
 .hero-glow {
@@ -50,11 +74,19 @@ body {
   animation: float-left 8s ease-in-out infinite;
 }
 
+html.light .hero-glow-left {
+  background: rgba(99, 102, 241, 0.28);
+}
+
 .hero-glow-right {
   right: -8rem;
   bottom: 10%;
   background: rgba(255, 140, 66, 0.28);
   animation: float-right 10s ease-in-out infinite;
+}
+
+html.light .hero-glow-right {
+  background: rgba(129, 140, 248, 0.22);
 }
 
 .pulse-orb {
@@ -67,6 +99,14 @@ body {
     0 0 30px rgba(84, 243, 208, 0.4),
     inset 0 0 18px rgba(255, 255, 255, 0.3);
   animation: pulse 3s ease-in-out infinite;
+}
+
+html.light .pulse-orb {
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.95), rgba(99, 102, 241, 0.75) 35%, rgba(99, 102, 241, 0.1) 70%);
+  box-shadow:
+    0 0 30px rgba(99, 102, 241, 0.35),
+    inset 0 0 18px rgba(255, 255, 255, 0.35);
 }
 
 @keyframes pulse {

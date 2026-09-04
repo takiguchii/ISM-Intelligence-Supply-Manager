@@ -3,11 +3,13 @@ import { ref, onMounted } from "vue";
 import AppSidebar from "~/components/layout/AppSidebar.vue";
 import AppLoader from "~/components/base/AppLoader.vue";
 import { useAuthStore } from "~/stores/auth";
+import { useThemeStore } from "~/stores/theme";
 
 definePageMeta({ layout: false });
 
 const config = useRuntimeConfig();
 const authStore = useAuthStore();
+const themeStore = useThemeStore();
 const router = useRouter();
 
 const isLoading = ref(true);
@@ -172,25 +174,57 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col">
+  <div
+    :class="[
+      'min-h-screen flex flex-col font-sans transition-colors duration-200',
+      themeStore.isDark
+        ? 'bg-zinc-950 text-zinc-100 selection:bg-zinc-800 selection:text-white'
+        : 'bg-zinc-50 text-zinc-900 selection:bg-indigo-100 selection:text-indigo-900'
+    ]"
+  >
 
     <AppLoader :visible="isLoading" />
 
     <!-- HEADER -->
 
-    <header class="h-16 border-b border-zinc-800 bg-zinc-900 px-4 sm:px-6 flex items-center justify-between">
+    <header
+      :class="[
+        'h-16 border-b px-4 sm:px-6 flex items-center justify-between',
+        themeStore.isDark
+          ? 'border-zinc-800 bg-zinc-900'
+          : 'border-zinc-200 bg-white shadow-sm'
+      ]"
+    >
       <div class="flex items-center gap-4">
 
-        <button @click="isSidebarOpen = !isSidebarOpen" class="p-2 rounded-lg hover:bg-zinc-800">
+        <button
+          @click="isSidebarOpen = !isSidebarOpen"
+          :class="[
+            'p-2 rounded-lg transition-colors',
+            themeStore.isDark ? 'hover:bg-zinc-800 text-zinc-100' : 'hover:bg-zinc-100 text-zinc-900'
+          ]"
+        >
           ☰
         </button>
 
         <div class="flex items-center gap-3">
-          <span class="font-bold text-lg">
+          <span
+            :class="[
+              'font-bold text-lg',
+              themeStore.isDark ? 'text-white' : 'text-zinc-900'
+            ]"
+          >
             ISM
           </span>
 
-          <span class="hidden sm:block text-xs text-zinc-500 border-l border-zinc-700 pl-3">
+          <span
+            :class="[
+              'hidden sm:block text-xs border-l pl-3',
+              themeStore.isDark
+                ? 'text-zinc-500 border-zinc-700'
+                : 'text-zinc-500 border-zinc-200'
+            ]"
+          >
             {{ config.public.appName }}
           </span>
         </div>
@@ -199,12 +233,25 @@ onMounted(async () => {
 
       <div class="flex items-center gap-4">
 
-        <span class="hidden md:block text-xs text-zinc-400">
+        <span
+          :class="[
+            'hidden md:block text-xs',
+            themeStore.isDark ? 'text-zinc-400' : 'text-zinc-600'
+          ]"
+        >
           {{ authStore.currentUser?.name }}
           ({{ authStore.currentUser?.role }})
         </span>
 
-        <button @click="handleLogout" class="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm">
+        <button
+          @click="handleLogout"
+          :class="[
+            'px-4 py-2 rounded-lg text-sm transition-colors',
+            themeStore.isDark
+              ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-100'
+              : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-900 border border-zinc-200'
+          ]"
+        >
           Sair
         </button>
 
@@ -221,11 +268,21 @@ onMounted(async () => {
 
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 class="text-3xl font-bold">
+          <h1
+            :class="[
+              'text-3xl font-bold',
+              themeStore.isDark ? 'text-white' : 'text-zinc-900'
+            ]"
+          >
             Estoque
           </h1>
 
-          <p class="text-zinc-400 text-sm mt-1">
+          <p
+            :class="[
+              'text-sm mt-1',
+              themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500'
+            ]"
+          >
             Gerencie os produtos e quantidades do estoque.
           </p>
         </div>
@@ -238,22 +295,45 @@ onMounted(async () => {
 
       <!-- ERRO -->
 
-      <div v-if="errorMessage" class="mb-5 p-4 rounded-xl bg-red-950/50 border border-red-900 text-red-300">
+      <div v-if="errorMessage" class="mb-5 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-500 dark:text-red-300">
         {{ errorMessage }}
       </div>
 
       <!-- TABELA -->
 
-      <div class="overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-900">
+      <div
+        :class="[
+          'overflow-x-auto rounded-2xl border',
+          themeStore.isDark
+            ? 'border-zinc-800 bg-zinc-900'
+            : 'border-zinc-200 bg-white shadow-sm'
+        ]"
+      >
 
-        <div v-if="isLoadingProducts" class="p-10 text-center text-zinc-400">
+        <div
+          v-if="isLoadingProducts"
+          :class="[
+            'p-10 text-center',
+            themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500'
+          ]"
+        >
           Carregando produtos...
         </div>
 
         <table v-else class="w-full text-sm">
 
-          <thead class="border-b border-zinc-800">
-            <tr class="text-left text-zinc-400">
+          <thead
+            :class="[
+              'border-b',
+              themeStore.isDark ? 'border-zinc-800' : 'border-zinc-200'
+            ]"
+          >
+            <tr
+              :class="[
+                'text-left',
+                themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500'
+              ]"
+            >
 
               <th class="px-6 py-4">
                 Produto
@@ -288,33 +368,57 @@ onMounted(async () => {
 
           <tbody>
 
-            <tr v-for="product in products" :key="product.id" class="border-b border-zinc-800 hover:bg-zinc-800/40">
+            <tr
+              v-for="product in products"
+              :key="product.id"
+              :class="[
+                'border-b transition-colors',
+                themeStore.isDark
+                  ? 'border-zinc-800 hover:bg-zinc-800/40'
+                  : 'border-zinc-200 hover:bg-zinc-50'
+              ]"
+            >
 
-              <td class="px-6 py-4 font-medium">
+              <td
+                class="px-6 py-4 font-medium"
+                :class="themeStore.isDark ? 'text-zinc-100' : 'text-zinc-900'"
+              >
                 {{ product.name }}
               </td>
 
-              <td class="px-6 py-4 text-zinc-400">
+              <td
+                class="px-6 py-4"
+                :class="themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500'"
+              >
                 {{ product.unit }}
               </td>
 
-              <td class="px-6 py-4">
+              <td
+                class="px-6 py-4"
+                :class="themeStore.isDark ? 'text-zinc-100' : 'text-zinc-900'"
+              >
                 {{ product.currentQuantity }}
               </td>
 
-              <td class="px-6 py-4 text-zinc-400">
+              <td
+                class="px-6 py-4"
+                :class="themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500'"
+              >
                 {{ product.minimumQuantity }}
               </td>
 
-              <td class="px-6 py-4">
+              <td
+                class="px-6 py-4"
+                :class="themeStore.isDark ? 'text-zinc-100' : 'text-zinc-900'"
+              >
                 R$ {{ Number(product.averageCost).toFixed(2) }}
               </td>
 
               <td class="px-6 py-4">
 
                 <span class="px-2 py-1 rounded-full text-xs" :class="isLowStock(product)
-                    ? 'bg-red-950 text-red-300'
-                    : 'bg-emerald-950 text-emerald-300'
+                    ? 'dark:bg-red-950 dark:text-red-300 bg-red-500/10 text-red-600'
+                    : 'dark:bg-emerald-950 dark:text-emerald-300 bg-emerald-500/10 text-emerald-700'
                   ">
                   {{ isLowStock(product) ? "Baixo" : "Normal" }}
                 </span>
@@ -323,7 +427,10 @@ onMounted(async () => {
 
               <td class="px-6 py-4">
 
-                <button @click="openDeleteModal(product)" class="text-red-400 hover:text-red-300">
+                <button
+                  @click="openDeleteModal(product)"
+                  class="dark:text-red-400 dark:hover:text-red-300 text-red-600 hover:text-red-700"
+                >
                   Excluir
                 </button>
 
@@ -333,7 +440,13 @@ onMounted(async () => {
 
             <tr v-if="products.length === 0">
 
-              <td colspan="7" class="px-6 py-10 text-center text-zinc-500">
+              <td
+                colspan="7"
+                :class="[
+                  'px-6 py-10 text-center',
+                  themeStore.isDark ? 'text-zinc-500' : 'text-zinc-400'
+                ]"
+              >
                 Nenhum produto cadastrado.
               </td>
 
@@ -351,15 +464,35 @@ onMounted(async () => {
 
     <div v-if="showForm" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
 
-      <div class="w-full max-w-lg rounded-2xl bg-zinc-900 border border-zinc-800 p-6">
+      <div
+        :class="[
+          'w-full max-w-lg rounded-2xl border p-6',
+          themeStore.isDark
+            ? 'bg-zinc-900 border-zinc-800'
+            : 'bg-white border-zinc-200 shadow-xl'
+        ]"
+      >
 
         <div class="flex justify-between mb-6">
 
-          <h2 class="text-xl font-bold">
+          <h2
+            :class="[
+              'text-xl font-bold',
+              themeStore.isDark ? 'text-white' : 'text-zinc-900'
+            ]"
+          >
             Novo produto
           </h2>
 
-          <button @click="showForm = false" class="text-zinc-400 hover:text-white">
+          <button
+            @click="showForm = false"
+            :class="[
+              'transition-colors',
+              themeStore.isDark
+                ? 'text-zinc-400 hover:text-white'
+                : 'text-zinc-500 hover:text-zinc-900'
+            ]"
+          >
             ✕
           </button>
 
@@ -367,22 +500,63 @@ onMounted(async () => {
 
         <form @submit.prevent="createProduct" class="space-y-4">
 
-          <input v-model="form.name" required placeholder="Nome" class="input" />
+          <input v-model="form.name" required placeholder="Nome"
+            :class="[
+              'w-full px-4 py-3 rounded-xl outline-none transition-colors',
+              themeStore.isDark
+                ? 'bg-zinc-950 border border-zinc-800 text-white placeholder:text-zinc-500 focus:border-emerald-500'
+                : 'bg-zinc-50 border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500'
+            ]"
+          />
 
-          <input v-model="form.unit" required placeholder="Unidade" class="input" />
+          <input v-model="form.unit" required placeholder="Unidade"
+            :class="[
+              'w-full px-4 py-3 rounded-xl outline-none transition-colors',
+              themeStore.isDark
+                ? 'bg-zinc-950 border border-zinc-800 text-white placeholder:text-zinc-500 focus:border-emerald-500'
+                : 'bg-zinc-50 border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500'
+            ]"
+          />
 
           <input v-model.number="form.currentQuantity" type="number" min="0" required placeholder="Quantidade atual"
-            class="input" />
+            :class="[
+              'w-full px-4 py-3 rounded-xl outline-none transition-colors',
+              themeStore.isDark
+                ? 'bg-zinc-950 border border-zinc-800 text-white placeholder:text-zinc-500 focus:border-emerald-500'
+                : 'bg-zinc-50 border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500'
+            ]"
+          />
 
           <input v-model.number="form.minimumQuantity" type="number" min="0" required placeholder="Quantidade mínima"
-            class="input" />
+            :class="[
+              'w-full px-4 py-3 rounded-xl outline-none transition-colors',
+              themeStore.isDark
+                ? 'bg-zinc-950 border border-zinc-800 text-white placeholder:text-zinc-500 focus:border-emerald-500'
+                : 'bg-zinc-50 border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500'
+            ]"
+          />
 
           <input v-model.number="form.averageCost" type="number" min="0" step="0.01" required placeholder="Custo médio"
-            class="input" />
+            :class="[
+              'w-full px-4 py-3 rounded-xl outline-none transition-colors',
+              themeStore.isDark
+                ? 'bg-zinc-950 border border-zinc-800 text-white placeholder:text-zinc-500 focus:border-emerald-500'
+                : 'bg-zinc-50 border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500'
+            ]"
+          />
 
           <div class="flex justify-end gap-3 pt-3">
 
-            <button type="button" @click="showForm = false" class="px-4 py-2 rounded-lg bg-zinc-800">
+            <button
+              type="button"
+              @click="showForm = false"
+              :class="[
+                'px-4 py-2 rounded-lg transition-colors',
+                themeStore.isDark
+                  ? 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700'
+                  : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200 border border-zinc-200'
+              ]"
+            >
               Cancelar
             </button>
 
@@ -404,10 +578,17 @@ onMounted(async () => {
     <div v-if="showDeleteModal"
       class="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-md px-4"
       @click.self="closeDeleteModal">
-      <div class="w-full max-w-md rounded-2xl border border-zinc-700/80 bg-zinc-900 p-6 shadow-2xl shadow-black/50">
+      <div
+        :class="[
+          'w-full max-w-md rounded-2xl border p-6 shadow-2xl',
+          themeStore.isDark
+            ? 'border-zinc-700/80 bg-zinc-900 shadow-black/50'
+            : 'border-zinc-200 bg-white shadow-zinc-900/10'
+        ]"
+      >
         <!-- ÍCONE + TÍTULO -->
         <div class="flex items-start gap-4">
-          <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-500/10 text-red-400">
+          <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-500/10 text-red-500 dark:text-red-400">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
               stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round"
@@ -416,25 +597,46 @@ onMounted(async () => {
           </div>
 
           <div class="flex-1">
-            <h2 class="text-lg font-semibold text-white">
+            <h2
+              :class="[
+                'text-lg font-semibold',
+                themeStore.isDark ? 'text-white' : 'text-zinc-900'
+              ]"
+            >
               Excluir produto?
             </h2>
 
-            <p class="mt-2 text-sm leading-relaxed text-zinc-400">
+            <p
+              :class="[
+                'mt-2 text-sm leading-relaxed',
+                themeStore.isDark ? 'text-zinc-400' : 'text-zinc-600'
+              ]"
+            >
               Tem certeza que deseja excluir
-              <strong class="font-semibold text-white">
+              <strong :class="themeStore.isDark ? 'font-semibold text-white' : 'font-semibold text-zinc-900'">
                 {{ productToDelete?.name }}
               </strong>?
             </p>
 
-            <p class="mt-1 text-xs text-zinc-500">
+            <p
+              :class="[
+                'mt-1 text-xs',
+                themeStore.isDark ? 'text-zinc-500' : 'text-zinc-500'
+              ]"
+            >
               Essa ação não poderá ser desfeita.
             </p>
           </div>
 
           <!-- FECHAR -->
           <button @click="closeDeleteModal" :disabled="isDeleting"
-            class="text-zinc-500 transition hover:text-white disabled:opacity-50">
+            :class="[
+              'transition disabled:opacity-50',
+              themeStore.isDark
+                ? 'text-zinc-500 hover:text-white'
+                : 'text-zinc-400 hover:text-zinc-700'
+            ]"
+          >
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
               stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -445,7 +647,13 @@ onMounted(async () => {
         <!-- BOTÕES -->
         <div class="mt-7 flex justify-end gap-3">
           <button @click="closeDeleteModal" :disabled="isDeleting"
-            class="rounded-xl bg-zinc-800 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-50">
+            :class="[
+              'rounded-xl px-4 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50',
+              themeStore.isDark
+                ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white'
+                : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200 border border-zinc-200'
+            ]"
+          >
             Cancelar
           </button>
 
@@ -474,7 +682,14 @@ onMounted(async () => {
 
     <!-- FOOTER -->
 
-    <footer class="border-t border-zinc-800 bg-zinc-950 py-5 text-center text-xs text-zinc-500">
+    <footer
+      :class="[
+        'border-t py-5 text-center text-xs',
+        themeStore.isDark
+          ? 'border-zinc-800 bg-zinc-950 text-zinc-500'
+          : 'border-zinc-200 bg-white text-zinc-500'
+      ]"
+    >
       © 2026 ISM — Intelligence Supply Manager.
       Todos os direitos reservados.
     </footer>
@@ -483,9 +698,6 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.input {
-  @apply w-full px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white outline-none focus:border-emerald-500;
-}
 
 .modal-enter-active,
 .modal-leave-active {
