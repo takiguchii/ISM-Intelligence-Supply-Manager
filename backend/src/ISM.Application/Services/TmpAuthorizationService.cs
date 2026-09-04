@@ -60,7 +60,7 @@ public sealed class TmpAuthorizationService : ITmpAuthorizationService
         CancellationToken cancellationToken = default)
     {
         var list = await _repository.ListByRestaurantAsync(restaurantId, cancellationToken);
-        return list.Select(MapToDto).ToList();
+        return list.Select(e => MapToDto(e)).ToList();
     }
 
     public async Task<bool> RevokeAsync(
