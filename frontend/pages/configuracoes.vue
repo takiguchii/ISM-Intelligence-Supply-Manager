@@ -841,7 +841,7 @@ onMounted(async () => {
             <div class="xl:col-span-2 rounded-2xl border bg-zinc-900/50 border-zinc-800 shadow-xl overflow-hidden">
               <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-zinc-800/80">
                 <div class="flex items-start gap-3 flex-1">
-                  <div class="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 flex items-center justify-center flex-shrink-0">
+                  <div class="w-10 h-10 rounded-xl bg-indigo-500/15 border-indigo-500/30 text-indigo-300 flex items-center justify-center flex-shrink-0">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
                     </svg>
@@ -857,7 +857,7 @@ onMounted(async () => {
                   <div class="space-y-2">
                     <label class="flex items-center gap-2 text-xs uppercase tracking-widest text-zinc-400 font-semibold">
                       Nome fantasia
-                      <span class="text-[10px] font-bold tracking-normal normal-case px-1.5 py-0.5 rounded-md bg-cyan-500/10 border border-cyan-500/20 text-cyan-300">Lido do banco</span>
+                      <span class="text-[10px] font-bold tracking-normal normal-case px-1.5 py-0.5 rounded-md bg-indigo-500/10 border-indigo-500/20 text-indigo-300">Lido do banco</span>
                     </label>
                     <input
                       :value="authStore.currentUser?.restaurantName || ''"
@@ -972,7 +972,7 @@ onMounted(async () => {
               <div class="rounded-2xl border bg-zinc-900/50 border-zinc-800 shadow-xl overflow-hidden">
                 <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-zinc-800/80">
                   <div class="flex items-start gap-3 flex-1">
-                    <div class="w-10 h-10 rounded-xl bg-violet-500/15 border border-violet-500/30 text-violet-300 flex items-center justify-center flex-shrink-0">
+                    <div class="w-10 h-10 rounded-xl bg-zinc-800/60 border-zinc-700/60 text-zinc-300 flex items-center justify-center flex-shrink-0">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
                       </svg>
@@ -986,7 +986,7 @@ onMounted(async () => {
                 <div class="p-5 sm:p-6 space-y-5">
                   <div class="flex items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-zinc-900/70 border border-zinc-800/80">
                     <div class="flex items-start gap-3">
-                      <div class="w-10 h-10 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-300 flex items-center justify-center shrink-0">
+                      <div class="w-10 h-10 rounded-lg bg-indigo-500/10 border-indigo-500/20 text-indigo-300 flex items-center justify-center shrink-0">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                         </svg>
@@ -1001,7 +1001,7 @@ onMounted(async () => {
 
                   <div class="flex items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-zinc-900/70 border border-zinc-800/80">
                     <div class="flex items-start gap-3">
-                      <div class="w-10 h-10 rounded-lg bg-pink-500/10 border border-pink-500/20 text-pink-300 flex items-center justify-center shrink-0">
+                      <div class="w-10 h-10 rounded-lg bg-zinc-800/60 border-zinc-700/60 text-zinc-300 flex items-center justify-center shrink-0">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
                         </svg>
@@ -1034,7 +1034,7 @@ onMounted(async () => {
               <div class="rounded-2xl border bg-zinc-900/50 border-zinc-800 shadow-xl overflow-hidden">
                 <div class="p-5 sm:p-6 border-b border-zinc-800/80">
                   <div class="flex items-start gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-violet-500/15 border border-violet-500/30 text-violet-300 flex items-center justify-center flex-shrink-0">
+                    <div class="w-10 h-10 rounded-xl bg-zinc-800/60 border-zinc-700/60 text-zinc-300 flex items-center justify-center flex-shrink-0">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
                       </svg>
@@ -1247,7 +1247,7 @@ onMounted(async () => {
         <section v-else-if="activeSectionId === 'billing'" class="space-y-6">
           <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div class="xl:col-span-2 space-y-6">
-              <div class="rounded-2xl border bg-gradient-to-br from-indigo-500/15 via-zinc-900/30 to-violet-500/10 border-indigo-500/30 shadow-xl overflow-hidden">
+              <div class="rounded-2xl border bg-zinc-900/50 border-zinc-800 shadow-xl overflow-hidden">
                 <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5">
                   <div class="flex items-start gap-3 flex-1">
                     <div class="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 flex items-center justify-center flex-shrink-0">
@@ -1337,7 +1337,7 @@ onMounted(async () => {
               <div class="rounded-2xl border bg-zinc-900/50 border-zinc-800 shadow-xl overflow-hidden">
                 <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-zinc-800/80">
                   <div class="flex items-start gap-3 flex-1">
-                    <div class="w-10 h-10 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 flex items-center justify-center flex-shrink-0">
+                    <div class="w-10 h-10 rounded-xl bg-rose-500/10 border-rose-500/20 text-rose-300 flex items-center justify-center flex-shrink-0">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
                       </svg>
@@ -1368,7 +1368,7 @@ onMounted(async () => {
               <div class="rounded-2xl border bg-zinc-900/50 border-zinc-800 shadow-xl overflow-hidden">
                 <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-zinc-800/80">
                   <div class="flex items-start gap-3 flex-1">
-                    <div class="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 flex items-center justify-center flex-shrink-0">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-500/15 border-indigo-500/30 text-indigo-300 flex items-center justify-center flex-shrink-0">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                       </svg>
