@@ -43,6 +43,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IRestaurantRepository, RestaurantRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IImportAuditRepository, ImportAuditRepository>();
+        services.AddScoped<ITmpAuthorizationRepository, TmpAuthorizationRepository>();
 
         return services;
     }
