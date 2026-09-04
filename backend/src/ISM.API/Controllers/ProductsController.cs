@@ -26,6 +26,18 @@ public sealed class ProductsController : ControllerBase
         return Ok(products);
     }
 
+    [HttpGet("paged")]
+    [ProducesResponseType(typeof(PagedResult<ProductResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PagedResult<ProductResponse>>> GetPaged(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? search = null,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _productService.GetPagedAsync(pageNumber, pageSize, search, cancellationToken);
+        return Ok(result);
+    }
+
     [HttpGet("{id:int}")]
     [ProducesResponseType(typeof(ProductResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

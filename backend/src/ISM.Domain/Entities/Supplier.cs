@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ISM.Domain.Entities;
 
-public sealed class Fornecedor : BaseEntity
+public sealed class Supplier : BaseEntity
 {
     [Key]
     public int Id { get; set; }

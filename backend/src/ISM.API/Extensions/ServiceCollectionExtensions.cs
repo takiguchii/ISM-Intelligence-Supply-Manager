@@ -7,6 +7,7 @@ using ISM.Application.Options;
 using ISM.Application.Security;
 using ISM.Application.Services;
 using ISM.Application.Services.DataImport;
+using ISM.Application.Services.DataImport.Readers;
 using ISM.Infrastructure.Data.Options;
 using ISM.Infrastructure.DependencyInjection;
 using ISM.Infrastructure.Services;
@@ -98,21 +99,47 @@ public static class ServiceCollectionExtensions
             .AddPolicy(IsmPolicies.RestaurantAnyUser, policy =>
                 policy.RequireRole(IsmRoles.Admin, IsmRoles.Manager, IsmRoles.Chef, IsmRoles.Waiter));
 
+        var rawCorsOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+            ?? configuration["Cors:AllowedOrigins"]?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            ?? configuration["CORS_ALLOWED_ORIGINS"]?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            ?? ["http://localhost:3000", "http://frontend:3000"];
+
+        var allowedOriginSet = new HashSet<string>(rawCorsOrigins, StringComparer.OrdinalIgnoreCase);
+
         services.AddCors(options =>
         {
             options.AddPolicy("AllowFrontend", policy =>
             {
-                policy.WithOrigins("http://localhost:3000", "http://frontend:3000")
-                    .AllowAnyHeader()
-                    .AllowAnyMethod()
-                    .AllowCredentials();
+                policy.SetIsOriginAllowed(origin =>
+                {
+                    if (string.IsNullOrWhiteSpace(origin))
+                        return false;
+
+                    if (allowedOriginSet.Contains(origin))
+                        return true;
+
+                    if (Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+                    {
+                        if (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+                            uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
+                            uri.Host.Equals("frontend", StringComparison.OrdinalIgnoreCase))
+                        {
+                            return true;
+                        }
+                    }
+
+                    return false;
+                })
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
             });
         });
 
         services.AddScoped<ICurrentUser, CurrentUserApi>();
         services.AddScoped<IPlanEnforcer, PlanEnforcer>();
         services.AddInfrastructure(databaseOptions);
-        services.AddScoped<IFornecedorService, FornecedorService>();
+        services.AddScoped<ISupplierService, SupplierService>();
         services.AddScoped<IProductService, ProductService>();
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IDishService, DishService>();
@@ -123,7 +150,27 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IImportOrchestrator, ImportOrchestrator>();
         services.AddScoped<IFileImporter, CsvProductImporter>();
-        services.AddScoped<IFileImporter, CsvFornecedorImporter>();
+        services.AddScoped<IFileImporter, CsvSupplierImporter>();
+
+        // Categorias reconhecidas na análise de planilhas (dry-run / confirmação).
+        // Para uma nova categoria: implemente IImportCategoryProfile e registre aqui.
+        services.AddScoped<IImportCategoryProfile, StockCategoryProfile>();
+        services.AddScoped<IImportCategoryProfile, SuppliersCategoryProfile>();
+        services.AddScoped<IImportCategoryProfile, FinanceCategoryProfile>();
+        services.AddScoped<ICsvStructureAnalyzer, CsvStructureAnalyzer>();
+
+        // Leitores de formato (CSV, XLSX, XML NF-e, SpreadsheetML, JSON) + resolver
+        services.AddScoped<IImportFileReader, CsvImportFileReader>();
+        services.AddScoped<IImportFileReader, XlsxImportFileReader>();
+        services.AddScoped<IImportFileReader, NFeXmlImportFileReader>();
+        services.AddScoped<IImportFileReader, SpreadSheetMlImportFileReader>();
+        services.AddScoped<IImportFileReader, JsonWebhookImportFileReader>();
+        services.AddScoped<IImportFileReaderResolver, ImportFileReaderResolver>();
+
+        // Importação por foto/PDF escaneado (visão computacional)
+        services.Configure<PhotoImportOptions>(configuration.GetSection(PhotoImportOptions.SectionName));
+        services.AddHttpClient<IPhotoImportExtractor, LlmVisionPhotoExtractor>();
+        services.AddScoped<IPhotoImportService, PhotoImportService>();
 
         return services;
     }

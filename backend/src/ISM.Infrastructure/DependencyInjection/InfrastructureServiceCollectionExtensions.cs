@@ -36,7 +36,7 @@ public static class InfrastructureServiceCollectionExtensions
                 });
         });
 
-        services.AddScoped<IFornecedorRepository, FornecedorRepository>();
+        services.AddScoped<ISupplierRepository, SupplierRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IDishRepository, DishRepository>();

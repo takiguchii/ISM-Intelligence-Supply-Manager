@@ -22,7 +22,102 @@ namespace ISM.Infrastructure.Data.Migrations
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
-            modelBuilder.Entity("ISM.Domain.Entities.Fornecedor", b =>
+            modelBuilder.Entity("ISM.Domain.Entities.Plan", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<int>("MaxCategories")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaxDishes")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaxProducts")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaxUsers")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("MonthlyPrice")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("plans", (string)null);
+                });
+
+            modelBuilder.Entity("ISM.Domain.Entities.Restaurant", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CNPJ")
+                        .IsRequired()
+                        .HasMaxLength(14)
+                        .HasColumnType("varchar(14)");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsPlanActive")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
+
+                    b.Property<int?>("PlanId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("TrialEndAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CNPJ")
+                        .IsUnique();
+
+                    b.HasIndex("PlanId");
+
+                    b.ToTable("restaurants", (string)null);
+                });
+
+            modelBuilder.Entity("ISM.Domain.Entities.Supplier", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -71,102 +166,7 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.HasIndex("RestaurantId", "Name")
                         .IsUnique();
 
-                    b.ToTable("fornecedores", (string)null);
-                });
-
-            modelBuilder.Entity("ISM.Domain.Entities.Plano", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("Ativo")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Descricao")
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
-
-                    b.Property<int>("MaxCategorias")
-                        .HasColumnType("int");
-
-                    b.Property<int>("MaxPratos")
-                        .HasColumnType("int");
-
-                    b.Property<int>("MaxProdutos")
-                        .HasColumnType("int");
-
-                    b.Property<int>("MaxUsuarios")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
-
-                    b.Property<decimal>("PrecoMensal")
-                        .HasColumnType("decimal(10,2)");
-
-                    b.Property<DateTime?>("UpdatedAtUtc")
-                        .HasColumnType("datetime(6)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Nome")
-                        .IsUnique();
-
-                    b.ToTable("planos", (string)null);
-                });
-
-            modelBuilder.Entity("ISM.Domain.Entities.Restaurant", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("CNPJ")
-                        .IsRequired()
-                        .HasMaxLength(14)
-                        .HasColumnType("varchar(14)");
-
-                    b.Property<DateTime>("Created")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("varchar(120)");
-
-                    b.Property<bool>("PlanoAtivo")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<int?>("PlanoId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("TrialEndAtUtc")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime?>("UpdatedAtUtc")
-                        .HasColumnType("datetime(6)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CNPJ")
-                        .IsUnique();
-
-                    b.HasIndex("PlanoId");
-
-                    b.ToTable("restaurants", (string)null);
+                    b.ToTable("suppliers", (string)null);
                 });
 
             modelBuilder.Entity("ISM.Domain.Entities.User", b =>
@@ -434,7 +434,7 @@ namespace ISM.Infrastructure.Data.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("dishing_ingredients", (string)null);
+                    b.ToTable("dish_ingredients", (string)null);
                 });
 
             modelBuilder.Entity("ISM.Domain.Modules.Stock.Entities.Product", b =>
@@ -484,7 +484,17 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.ToTable("products", (string)null);
                 });
 
-            modelBuilder.Entity("ISM.Domain.Entities.Fornecedor", b =>
+            modelBuilder.Entity("ISM.Domain.Entities.Restaurant", b =>
+                {
+                    b.HasOne("ISM.Domain.Entities.Plan", "Plan")
+                        .WithMany("Restaurants")
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Plan");
+                });
+
+            modelBuilder.Entity("ISM.Domain.Entities.Supplier", b =>
                 {
                     b.HasOne("ISM.Domain.Entities.Restaurant", "Restaurant")
                         .WithMany()
@@ -493,16 +503,6 @@ namespace ISM.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Restaurant");
-                });
-
-            modelBuilder.Entity("ISM.Domain.Entities.Restaurant", b =>
-                {
-                    b.HasOne("ISM.Domain.Entities.Plano", "Plano")
-                        .WithMany("Restaurantes")
-                        .HasForeignKey("PlanoId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Plano");
                 });
 
             modelBuilder.Entity("ISM.Domain.Entities.User", b =>
@@ -597,9 +597,9 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.Navigation("Restaurant");
                 });
 
-            modelBuilder.Entity("ISM.Domain.Entities.Plano", b =>
+            modelBuilder.Entity("ISM.Domain.Entities.Plan", b =>
                 {
-                    b.Navigation("Restaurantes");
+                    b.Navigation("Restaurants");
                 });
 
             modelBuilder.Entity("ISM.Domain.Entities.Restaurant", b =>

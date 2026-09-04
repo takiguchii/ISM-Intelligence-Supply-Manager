@@ -29,7 +29,7 @@ public sealed class RestaurantService : IRestaurantService
         return restaurants.Select(MapToDto).ToList();
     }
 
-    public async Task<RestaurantDto> CreateRestaurantAsync(RestaurantDto dto, int? planoId = null, CancellationToken cancellationToken = default)
+    public async Task<RestaurantDto> CreateRestaurantAsync(RestaurantDto dto, int? planId = null, CancellationToken cancellationToken = default)
     {
         var now = DateTime.UtcNow;
         var restaurant = new Restaurant
@@ -38,8 +38,8 @@ public sealed class RestaurantService : IRestaurantService
             CNPJ = dto.CNPJ,
             Created = now,
             CreatedAtUtc = now,
-            PlanoId = planoId ?? 1,
-            PlanoAtivo = true,
+            PlanId = planId ?? 1,
+            IsPlanActive = true,
             TrialEndAtUtc = now.AddDays(14)
         };
 

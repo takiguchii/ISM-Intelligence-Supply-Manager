@@ -20,6 +20,46 @@ public sealed class ImportController : ControllerBase
         _currentUser = currentUser;
     }
 
+    /// <summary>Dry-run: analisa a estrutura da planilha e gera confirmações por categoria (estoque, fornecedores, finanças...) sem gravar nada.</summary>
+    [HttpPost("preview")]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
+    [RequestSizeLimit(50 * 1024 * 1024)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> PreviewImport(IFormFile file, CancellationToken ct = default)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest("Arquivo não enviado.");
+
+        using var stream = file.OpenReadStream();
+        var preview = await _orchestrator.PreviewFileAsync(stream, file.ContentType, file.FileName, ct);
+        return Ok(preview);
+    }
+
+    /// <summary>Dry-run: extrai a tabela de uma foto/PDF escaneado (visão computacional) e gera confirmações por categoria.</summary>
+    [HttpPost("photo-preview")]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
+    [RequestSizeLimit(20 * 1024 * 1024)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> PreviewPhotoImport(IFormFile file, CancellationToken ct = default)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest("Arquivo não enviado.");
+
+        var contentType = string.IsNullOrWhiteSpace(file.ContentType) ? "image/jpeg" : file.ContentType;
+        using var stream = file.OpenReadStream();
+        try
+        {
+            var preview = await _orchestrator.PreviewPhotoAsync(stream, contentType, file.FileName, ct);
+            return Ok(preview);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
     [HttpPost("stock/products")]
     [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
     [RequestSizeLimit(50 * 1024 * 1024)]
@@ -54,12 +94,12 @@ public sealed class ImportController : ControllerBase
         return Ok(result);
     }
 
-    [HttpPost("fornecedores")]
+    [HttpPost("suppliers")]
     [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
     [RequestSizeLimit(50 * 1024 * 1024)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> ImportFornecedoresCsv(
+    public async Task<IActionResult> ImportSuppliersCsv(
         IFormFile file,
         [FromQuery] UpsertStrategy strategy = UpsertStrategy.MergeByNameAndRestaurant,
         [FromQuery(Name = "restaurantId")] int? restaurantIdQuery = null,
@@ -79,9 +119,9 @@ public sealed class ImportController : ControllerBase
                 RestaurantId: restaurantId,
                 UserId: _currentUser.UserId,
                 DataSourceType: DataSourceType.Csv,
-                TargetEntity: TargetImportEntity.Fornecedor,
+                TargetEntity: TargetImportEntity.Supplier,
                 UpsertStrategy: strategy,
-                DataSourceName: $"Upload CSV fornecedores - {file.FileName}",
+                DataSourceName: $"Upload CSV suppliers - {file.FileName}",
                 OriginalFileName: file.FileName),
             ct);
 
