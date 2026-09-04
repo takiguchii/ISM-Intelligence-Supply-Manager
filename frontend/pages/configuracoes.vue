@@ -254,6 +254,200 @@ function formatLatency(ms: number | null | undefined) {
   return `${(ms / 1000).toFixed(2)} s`;
 }
 
+interface TmpAuthorizationDto {
+  id: number;
+  restaurantId: number;
+  name: string;
+  scope: string;
+  description?: string | null;
+  createdByUserId?: number | null;
+  createdByUserName?: string | null;
+  revokedByUserId?: number | null;
+  revokedByUserName?: string | null;
+  createdAtUtc: string;
+  updatedAtUtc?: string | null;
+  expiresAtUtc: string;
+  autoRotateAtUtc?: string | null;
+  revokedAtUtc?: string | null;
+  lastUsedAtUtc?: string | null;
+  isActive: boolean;
+  plainTokenPreview?: string | null;
+}
+
+interface CreateTmpAuthorizationRequest {
+  name: string;
+  scope: string;
+  description?: string | null;
+  validityHours: number;
+  autoRotateHours?: number | null;
+}
+
+interface CreateTmpAuthorizationResult {
+  token: TmpAuthorizationDto;
+  plainToken: string;
+}
+
+type TokenComputedStatus = "active" | "expired" | "revoked" | "rotating-soon";
+
+const tmpTokens = ref<TmpAuthorizationDto[]>([]);
+const tmpTokensLoading = ref(false);
+const tmpTokensError = ref<string | null>(null);
+
+const createTokenOpen = ref(false);
+const createTokenSubmitting = ref(false);
+const createTokenForm = ref<CreateTmpAuthorizationRequest>({
+  name: "",
+  scope: "read",
+  description: null,
+  validityHours: 720,
+  autoRotateHours: null
+});
+
+const lastCreatedModal = ref<{ visible: boolean; plainToken: string; tokenId: number; name: string }>({
+  visible: false,
+  plainToken: "",
+  tokenId: 0,
+  name: ""
+});
+const lastCreatedCopied = ref(false);
+
+function computeTokenStatus(t: TmpAuthorizationDto): TokenComputedStatus {
+  if (t.revokedAtUtc) return "revoked";
+  const now = Date.now();
+  const exp = new Date(t.expiresAtUtc).getTime();
+  if (exp < now) return "expired";
+  if (t.autoRotateAtUtc) {
+    const rot = new Date(t.autoRotateAtUtc).getTime();
+    const hours = (rot - now) / 3_600_000;
+    if (hours > 0 && hours <= 24) return "rotating-soon";
+  }
+  return t.isActive ? "active" : "revoked";
+}
+function formatDateUtc(v: string | null | undefined) {
+  if (!v) return "—";
+  try {
+    const d = new Date(v);
+    return d.toLocaleString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "America/Sao_Paulo"
+    });
+  } catch {
+    return "—";
+  }
+}
+function relativeHours(h: number | null | undefined) {
+  if (h == null) return "—";
+  if (h < 24) return `${h}h`;
+  const days = Math.round(h / 24);
+  return `${days}d`;
+}
+
+async function loadTmpTokens() {
+  if (!isRestaurantUser.value && !isSuperAdmin.value) return;
+  tmpTokensLoading.value = true;
+  tmpTokensError.value = null;
+  try {
+    const { apiClientWithAuth } = await import("~/services/api/client");
+    const list = (await apiClientWithAuth<TmpAuthorizationDto[]>("/api/tmp-authorizations", {
+      method: "GET"
+    })) as TmpAuthorizationDto[];
+    tmpTokens.value = list || [];
+  } catch (err: any) {
+    tmpTokensError.value =
+      err?.data?.title ?? err?.data?.message ?? err?.message ?? "Não foi possível carregar os tokens.";
+  } finally {
+    tmpTokensLoading.value = false;
+  }
+}
+
+async function handleCreateToken() {
+  if (!createTokenForm.value.name.trim()) return;
+  createTokenSubmitting.value = true;
+  tmpTokensError.value = null;
+  try {
+    const payload: CreateTmpAuthorizationRequest = {
+      name: createTokenForm.value.name.trim(),
+      scope: createTokenForm.value.scope || "read",
+      description: createTokenForm.value.description?.trim() || null,
+      validityHours: Math.max(1, createTokenForm.value.validityHours || 720),
+      autoRotateHours:
+        createTokenForm.value.autoRotateHours && createTokenForm.value.autoRotateHours > 0
+          ? createTokenForm.value.autoRotateHours
+          : null
+    };
+    const { apiClientWithAuth } = await import("~/services/api/client");
+    const res = (await apiClientWithAuth<CreateTmpAuthorizationResult>("/api/tmp-authorizations", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    })) as CreateTmpAuthorizationResult;
+
+    lastCreatedModal.value = {
+      visible: true,
+      plainToken: res.plainToken,
+      tokenId: res.token.id,
+      name: res.token.name
+    };
+    lastCreatedCopied.value = false;
+
+    createTokenOpen.value = false;
+    createTokenForm.value = {
+      name: "",
+      scope: "read",
+      description: null,
+      validityHours: 720,
+      autoRotateHours: null
+    };
+    await loadTmpTokens();
+  } catch (err: any) {
+    tmpTokensError.value =
+      err?.data?.title ?? err?.data?.message ?? err?.message ?? "Erro ao criar token.";
+  } finally {
+    createTokenSubmitting.value = false;
+  }
+}
+
+async function handleRotateToken(id: number) {
+  tmpTokensError.value = null;
+  try {
+    const { apiClientWithAuth } = await import("~/services/api/client");
+    await apiClientWithAuth<TmpAuthorizationDto>(`/api/tmp-authorizations/${id}/rotate`, {
+      method: "POST"
+    });
+    await loadTmpTokens();
+  } catch (err: any) {
+    tmpTokensError.value =
+      err?.data?.title ?? err?.data?.message ?? err?.message ?? "Erro ao rotacionar token.";
+  }
+}
+
+async function handleRevokeToken(id: number) {
+  tmpTokensError.value = null;
+  try {
+    const { apiClientWithAuth } = await import("~/services/api/client");
+    await apiClientWithAuth(`/api/tmp-authorizations/${id}`, {
+      method: "DELETE"
+    });
+    await loadTmpTokens();
+  } catch (err: any) {
+    tmpTokensError.value =
+      err?.data?.title ?? err?.data?.message ?? err?.message ?? "Erro ao revogar token.";
+  }
+}
+
+async function copyPlainToken() {
+  try {
+    await navigator.clipboard.writeText(lastCreatedModal.value.plainToken);
+    lastCreatedCopied.value = true;
+    setTimeout(() => (lastCreatedCopied.value = false), 2500);
+  } catch {
+    lastCreatedCopied.value = false;
+  }
+}
+
 watch(targetRestaurantId, async (newId, oldId) => {
   if (!isSuperAdmin.value) return;
   if (newId && newId !== oldId && !isLoading.value) {
@@ -307,6 +501,7 @@ onMounted(async () => {
     targetRestaurantId.value = authStore.currentUser?.restaurantId ?? null;
   }
   await loadAiConfig();
+  await loadTmpTokens();
   const min = 900;
   const wait = Math.max(0, min - (Date.now() - start));
   setTimeout(() => (isLoading.value = false), wait);
@@ -2438,6 +2633,292 @@ onMounted(async () => {
                   <p class="text-xs text-zinc-500 mt-4">Histórico de sessões não está implementado no AuthService (grep: 0 métodos de sessão ativa).</p>
                 </div>
               </div>
+
+              <div :class="['rounded-2xl border shadow-xl overflow-hidden', themeStore.isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-zinc-200 shadow-zinc-900/5']">
+                <div :class="['p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b', themeStore.isDark ? 'border-zinc-800/80' : 'border-zinc-200']">
+                  <div class="flex items-start gap-3 flex-1">
+                    <div :class="['w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border', themeStore.isDark ? 'bg-violet-500/15 border-violet-500/30 text-violet-300' : 'bg-violet-50 border-violet-200 text-violet-700']">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                      </svg>
+                    </div>
+                    <div class="space-y-0.5 flex-1">
+                      <h2 :class="['text-base sm:text-lg font-semibold tracking-tight', themeStore.isDark ? 'text-white' : 'text-zinc-900']">Tokens de autorização temporários</h2>
+                      <p :class="['text-xs sm:text-sm leading-relaxed max-w-2xl', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-600']">Credenciais de curta duração para integrações externas e automações. Tokens são hashados (SHA-256) e só aparecem em texto puro UMA VEZ no momento da criação.</p>
+                    </div>
+                    <button
+                      v-if="!createTokenOpen"
+                      @click="createTokenOpen = true; tmpTokensError = null;"
+                      :class="['inline-flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold shrink-0 transition-colors', themeStore.isDark ? 'bg-indigo-500/20 text-indigo-200 hover:bg-indigo-500/30 border border-indigo-500/30' : 'bg-indigo-600 text-white hover:bg-indigo-700 border border-indigo-600 shadow-sm']"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                      </svg>
+                      Criar token
+                    </button>
+                    <button
+                      v-else
+                      @click="createTokenOpen = false;"
+                      :class="['inline-flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold shrink-0 transition-colors border', themeStore.isDark ? 'text-zinc-300 hover:text-white bg-zinc-800/60 border-zinc-700 hover:bg-zinc-800' : 'text-zinc-700 hover:text-zinc-900 bg-zinc-100 border-zinc-200 hover:bg-zinc-200']"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+
+                <div v-if="createTokenOpen" :class="['p-5 sm:p-6 border-b', themeStore.isDark ? 'border-zinc-800/80 bg-zinc-900/30' : 'border-zinc-200 bg-zinc-50']">
+                  <div :class="['rounded-xl border p-4 sm:p-5 space-y-4 border-dashed', themeStore.isDark ? 'bg-zinc-900/50 border-zinc-700/70' : 'bg-white border-zinc-300']">
+                    <div :class="['flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] font-semibold', themeStore.isDark ? 'text-zinc-500' : 'text-zinc-500']">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                      </svg>
+                      Nova credencial
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div class="md:col-span-2 space-y-2">
+                        <label :class="['text-xs uppercase tracking-widest font-semibold', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']">Nome do token <span class="text-rose-400">*</span></label>
+                        <input
+                          v-model="createTokenForm.name"
+                          type="text"
+                          maxlength="64"
+                          placeholder="Ex.: Integração iFood Webhook, ERP Leitor Nota"
+                          :class="['w-full rounded-xl px-3.5 py-3 text-sm border font-medium transition-colors outline-none focus:ring-2', themeStore.isDark ? 'bg-zinc-900/40 border-zinc-700/50 text-white placeholder:text-zinc-600 focus:border-indigo-500/50 focus:ring-indigo-500/20' : 'bg-white border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-500 focus:ring-indigo-500/20']"
+                        />
+                      </div>
+                      <div class="md:col-span-2 space-y-2">
+                        <label :class="['text-xs uppercase tracking-widest font-semibold', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']">Descrição (opcional)</label>
+                        <input
+                          v-model="createTokenForm.description!"
+                          type="text"
+                          maxlength="200"
+                          placeholder="Motivo / dono / integração que vai consumir"
+                          :class="['w-full rounded-xl px-3.5 py-3 text-sm border transition-colors outline-none focus:ring-2', themeStore.isDark ? 'bg-zinc-900/40 border-zinc-700/50 text-white placeholder:text-zinc-600 focus:border-indigo-500/50 focus:ring-indigo-500/20' : 'bg-white border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-500 focus:ring-indigo-500/20']"
+                        />
+                      </div>
+                      <div class="space-y-2">
+                        <label :class="['text-xs uppercase tracking-widest font-semibold', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']">Escopo</label>
+                        <select
+                          v-model="createTokenForm.scope"
+                          :class="['w-full rounded-xl px-3.5 py-3 text-sm border font-medium transition-colors outline-none focus:ring-2', themeStore.isDark ? 'bg-zinc-900/40 border-zinc-700/50 text-white focus:border-indigo-500/50 focus:ring-indigo-500/20' : 'bg-white border-zinc-200 text-zinc-900 focus:border-indigo-500 focus:ring-indigo-500/20']"
+                        >
+                          <option value="read">Apenas leitura (read)</option>
+                          <option value="write">Leitura + escrita (write)</option>
+                          <option value="admin">Completo (admin) — perigoso</option>
+                        </select>
+                      </div>
+                      <div class="space-y-2">
+                        <label :class="['text-xs uppercase tracking-widest font-semibold', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']">Validade (horas)</label>
+                        <input
+                          v-model.number="createTokenForm.validityHours"
+                          type="number"
+                          min="1"
+                          step="1"
+                          :class="['w-full rounded-xl px-3.5 py-3 text-sm border font-mono transition-colors outline-none focus:ring-2', themeStore.isDark ? 'bg-zinc-900/40 border-zinc-700/50 text-white focus:border-indigo-500/50 focus:ring-indigo-500/20' : 'bg-white border-zinc-200 text-zinc-900 focus:border-indigo-500 focus:ring-indigo-500/20']"
+                        />
+                        <p :class="['text-[11px] mt-1', themeStore.isDark ? 'text-zinc-500' : 'text-zinc-500']">Padrão 720h (30 dias). Máximo 2160h (90d) recomendado.</p>
+                      </div>
+                      <div class="space-y-2 md:col-span-2">
+                        <label :class="['text-xs uppercase tracking-widest font-semibold', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']">Auto-rotação (horas, opcional)</label>
+                        <input
+                          v-model.number="createTokenForm.autoRotateHours"
+                          type="number"
+                          min="1"
+                          step="1"
+                          placeholder="Deixe vazio para não rotacionar automaticamente"
+                          :class="['w-full rounded-xl px-3.5 py-3 text-sm border font-mono transition-colors outline-none focus:ring-2', themeStore.isDark ? 'bg-zinc-900/40 border-zinc-700/50 text-white placeholder:text-zinc-600 focus:border-indigo-500/50 focus:ring-indigo-500/20' : 'bg-white border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-500 focus:ring-indigo-500/20']"
+                        />
+                        <p :class="['text-[11px] mt-1', themeStore.isDark ? 'text-zinc-500' : 'text-zinc-500']">Quando definido, o backend emite um novo token com mesmo escopo/permissões antes de expirar.</p>
+                      </div>
+                    </div>
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
+                      <div :class="['text-[11px] flex items-start gap-2 max-w-xl', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-600']">
+                        <span class="mt-0.5 shrink-0">⚠️</span>
+                        Após criar, o token aparece UMA VEZ. Anote-o imediatamente — não temos como recuperar o valor em texto puro depois (só o hash SHA-256 é salvo).
+                      </div>
+                      <div class="flex items-center gap-2 sm:justify-end">
+                        <button
+                          @click="createTokenOpen = false;"
+                          :class="['inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold border transition-colors', themeStore.isDark ? 'text-zinc-300 hover:text-white bg-zinc-800/60 border-zinc-700 hover:bg-zinc-800' : 'text-zinc-700 hover:text-zinc-900 bg-zinc-100 border-zinc-200 hover:bg-zinc-200']"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          @click="handleCreateToken"
+                          :disabled="createTokenSubmitting || !createTokenForm.name.trim()"
+                          :class="['inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold border transition-colors disabled:opacity-60 disabled:cursor-not-allowed', themeStore.isDark ? 'bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/30 border-emerald-500/30' : 'bg-emerald-600 text-white hover:bg-emerald-700 border-emerald-600 shadow-sm']"
+                        >
+                          <svg v-if="!createTokenSubmitting" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                          </svg>
+                          <svg v-else class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                          </svg>
+                          {{ createTokenSubmitting ? 'Criando…' : 'Gerar token' }}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="p-5 sm:p-6">
+                  <div v-if="tmpTokensError" :class="['mb-4 rounded-xl border p-3.5 flex items-start gap-3', themeStore.isDark ? 'border-rose-500/30 bg-rose-500/10 text-rose-200' : 'border-rose-200 bg-rose-50 text-rose-800']">
+                    <svg class="w-4.5 h-4.5 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                    <p class="text-xs leading-relaxed">{{ tmpTokensError }}</p>
+                  </div>
+
+                  <div v-if="tmpTokensLoading" :class="['rounded-xl border p-8 sm:p-10 text-center space-y-3', themeStore.isDark ? 'border-zinc-800/70 bg-zinc-900/40' : 'border-zinc-200 bg-zinc-50']">
+                    <svg class="w-7 h-7 animate-spin mx-auto text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <p :class="['text-sm', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-600']">Carregando tokens…</p>
+                  </div>
+
+                  <div v-else-if="tmpTokens.length === 0 && !createTokenOpen" :class="['rounded-xl border p-8 sm:p-10 text-center space-y-3', themeStore.isDark ? 'border-zinc-800/70 bg-zinc-900/30' : 'border-zinc-200 bg-zinc-50']">
+                    <div :class="['mx-auto w-14 h-14 rounded-2xl border flex items-center justify-center shrink-0', themeStore.isDark ? 'bg-zinc-800/80 border-zinc-700/60 text-zinc-400' : 'bg-white border-zinc-200 text-zinc-500']">
+                      <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                      </svg>
+                    </div>
+                    <div class="space-y-1.5">
+                      <h3 :class="['text-base font-semibold', themeStore.isDark ? 'text-zinc-100' : 'text-zinc-900']">Nenhum token criado ainda</h3>
+                      <p :class="['text-xs sm:text-sm max-w-xl mx-auto leading-relaxed', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-600']">Crie o primeiro token para usar em webhooks, automações e integrações com ERPs, iFood, Rappi, ou qualquer parceiro que precise chamar a API do ISM com escopo limitado.</p>
+                    </div>
+                    <button
+                      @click="createTokenOpen = true;"
+                      :class="['inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors border', themeStore.isDark ? 'bg-indigo-500/20 text-indigo-200 hover:bg-indigo-500/30 border-indigo-500/30' : 'bg-indigo-600 text-white hover:bg-indigo-700 border-indigo-600 shadow-sm']"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                      </svg>
+                      Criar primeiro token
+                    </button>
+                  </div>
+
+                  <div v-else-if="tmpTokens.length > 0" class="rounded-xl overflow-hidden border" :class="themeStore.isDark ? 'border-zinc-800 bg-zinc-900/30' : 'border-zinc-200 bg-white'">
+                    <div class="overflow-x-auto">
+                      <table class="w-full text-sm">
+                        <thead>
+                          <tr :class="themeStore.isDark ? 'bg-zinc-900/70 text-zinc-400' : 'bg-zinc-50 text-zinc-500'">
+                            <th class="text-left px-4 py-3 font-semibold text-[11px] uppercase tracking-widest">Nome</th>
+                            <th class="text-left px-4 py-3 font-semibold text-[11px] uppercase tracking-widest">Escopo</th>
+                            <th class="text-left px-4 py-3 font-semibold text-[11px] uppercase tracking-widest hidden lg:table-cell">Criado por</th>
+                            <th class="text-left px-4 py-3 font-semibold text-[11px] uppercase tracking-widest hidden sm:table-cell">Expira em</th>
+                            <th class="text-left px-4 py-3 font-semibold text-[11px] uppercase tracking-widest hidden xl:table-cell">Último uso</th>
+                            <th class="text-left px-4 py-3 font-semibold text-[11px] uppercase tracking-widest">Status</th>
+                            <th class="text-right px-4 py-3 font-semibold text-[11px] uppercase tracking-widest">Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody :class="themeStore.isDark ? 'divide-y divide-zinc-800/70 text-zinc-200' : 'divide-y divide-zinc-200 text-zinc-700'">
+                          <tr v-for="t in tmpTokens" :key="t.id" :class="themeStore.isDark ? 'hover:bg-zinc-900/60' : 'hover:bg-zinc-50'">
+                            <td class="px-4 py-3.5">
+                              <div class="flex flex-col">
+                                <p class="font-semibold" :class="themeStore.isDark ? 'text-zinc-100' : 'text-zinc-900'">{{ t.name }}</p>
+                                <p v-if="t.description" :class="['text-[11px] mt-0.5 max-w-xs truncate', themeStore.isDark ? 'text-zinc-500' : 'text-zinc-500']">{{ t.description }}</p>
+                              </div>
+                            </td>
+                            <td class="px-4 py-3.5">
+                              <span :class="[
+                                'inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold tracking-wide border',
+                                t.scope === 'admin'
+                                  ? (themeStore.isDark ? 'bg-rose-500/10 text-rose-300 border-rose-500/20' : 'bg-rose-50 text-rose-700 border-rose-200')
+                                  : t.scope === 'write'
+                                  ? (themeStore.isDark ? 'bg-amber-500/10 text-amber-300 border-amber-500/20' : 'bg-amber-50 text-amber-800 border-amber-200')
+                                  : (themeStore.isDark ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : 'bg-emerald-50 text-emerald-700 border-emerald-200')
+                              ]">
+                                {{ t.scope.toUpperCase() }}
+                              </span>
+                            </td>
+                            <td class="px-4 py-3.5 hidden lg:table-cell">
+                              <p class="text-xs">{{ t.createdByUserName || '—' }}</p>
+                              <p :class="['text-[11px]', themeStore.isDark ? 'text-zinc-500' : 'text-zinc-500']">{{ formatDateUtc(t.createdAtUtc) }}</p>
+                            </td>
+                            <td class="px-4 py-3.5 hidden sm:table-cell">
+                              <p class="text-xs">{{ formatDateUtc(t.expiresAtUtc) }}</p>
+                              <p v-if="t.autoRotateAtUtc" :class="['text-[11px] mt-0.5 flex items-center gap-1', themeStore.isDark ? 'text-violet-400' : 'text-violet-700']">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                                Rotação {{ formatDateUtc(t.autoRotateAtUtc) }}
+                              </p>
+                            </td>
+                            <td class="px-4 py-3.5 hidden xl:table-cell">
+                              <p class="text-xs">{{ t.lastUsedAtUtc ? formatDateUtc(t.lastUsedAtUtc) : 'Nunca usado' }}</p>
+                            </td>
+                            <td class="px-4 py-3.5">
+                              <span
+                                v-if="computeTokenStatus(t) === 'active'"
+                                :class="['inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border', themeStore.isDark ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : 'bg-emerald-50 text-emerald-700 border-emerald-200']"
+                              >
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                Ativo
+                              </span>
+                              <span
+                                v-else-if="computeTokenStatus(t) === 'rotating-soon'"
+                                :class="['inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border', themeStore.isDark ? 'bg-violet-500/10 text-violet-300 border-violet-500/20' : 'bg-violet-50 text-violet-700 border-violet-200']"
+                              >
+                                Rotação em 24h
+                              </span>
+                              <span
+                                v-else-if="computeTokenStatus(t) === 'expired'"
+                                :class="['inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border', themeStore.isDark ? 'bg-zinc-700/60 text-zinc-300 border-zinc-600/60' : 'bg-zinc-100 text-zinc-700 border-zinc-300']"
+                              >
+                                Expirado
+                              </span>
+                              <span
+                                v-else
+                                :class="['inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border', themeStore.isDark ? 'bg-rose-500/10 text-rose-300 border-rose-500/20' : 'bg-rose-50 text-rose-700 border-rose-200']"
+                              >
+                                Revogado
+                              </span>
+                            </td>
+                            <td class="px-4 py-3.5">
+                              <div class="flex items-center justify-end gap-2">
+                                <button
+                                  @click="handleRotateToken(t.id)"
+                                  :disabled="computeTokenStatus(t) === 'revoked'"
+                                  :class="['inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition-colors disabled:opacity-40 disabled:cursor-not-allowed', themeStore.isDark ? 'text-violet-300 hover:text-violet-200 border-violet-500/20 bg-violet-500/10 hover:bg-violet-500/20' : 'text-violet-700 hover:text-violet-900 border-violet-200 bg-violet-50 hover:bg-violet-100']"
+                                >
+                                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                  </svg>
+                                  Rotacionar
+                                </button>
+                                <button
+                                  @click="handleRevokeToken(t.id)"
+                                  :disabled="computeTokenStatus(t) === 'revoked' || computeTokenStatus(t) === 'expired'"
+                                  :class="['inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition-colors disabled:opacity-40 disabled:cursor-not-allowed', themeStore.isDark ? 'text-rose-300 hover:text-rose-200 border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20' : 'text-rose-700 hover:text-rose-900 border-rose-200 bg-rose-50 hover:bg-rose-100']"
+                                >
+                                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
+                                  </svg>
+                                  Revogar
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div :class="['px-4 py-3 flex items-center justify-between text-[11px] border-t', themeStore.isDark ? 'bg-zinc-950/40 border-t-zinc-800/70 text-zinc-500' : 'bg-zinc-50 border-t-zinc-200 text-zinc-500']">
+                      <span>
+                        <strong>{{ tmpTokens.length }}</strong> token{{ tmpTokens.length === 1 ? '' : 's' }} no total · SHA-256 hash · RNG criptográfico 48 chars
+                      </span>
+                      <button
+                        @click="loadTmpTokens"
+                        :class="['inline-flex items-center gap-1.5 font-semibold hover:underline underline-offset-4', themeStore.isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-600 hover:text-zinc-900']"
+                      >
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        Atualizar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
             </div>
 
             <aside class="space-y-4 xl:space-y-5 h-fit">
@@ -2453,6 +2934,21 @@ onMounted(async () => {
                   <li>Armazenar tokens de refresh em tabela (não só JWT stateless) para listar / encerrar sessões.</li>
                   <li>Hash de senha já usa BCrypt? Confirmar no Identity/UserManager.</li>
                   <li>Política de senha: força mínima, expiração, histórico?</li>
+                </ul>
+              </div>
+              <div :class="['rounded-2xl border p-5 space-y-3 shadow-xl', themeStore.isDark ? 'bg-zinc-900/50 border-zinc-800' : 'bg-white border-zinc-200 shadow-zinc-900/5']">
+                <div :class="['flex items-center gap-2 text-xs uppercase tracking-[0.18em] font-semibold', themeStore.isDark ? 'text-violet-300' : 'text-violet-700']">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                  </svg>
+                  API tokens temporários
+                </div>
+                <ul :class="['space-y-2 text-xs list-disc list-inside', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-600']">
+                  <li>Prefixo token: <code :class="['px-1.5 py-0.5 rounded text-[11px] border font-mono', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700 text-violet-200' : 'bg-zinc-100 border-zinc-200 text-violet-800']">ism_</code> + 48 chars aleatórios.</li>
+                  <li>NUNCA salvo em texto puro. Apenas hash SHA-256 no banco.</li>
+                  <li>Filtro de <em>tenant</em> automático (EF Core QueryFilter por RestaurantId).</li>
+                  <li>Validação anônima pronta em <code :class="['px-1.5 py-0.5 rounded text-[11px] border font-mono', themeStore.isDark ? 'bg-zinc-800/70 border-zinc-700 text-zinc-300' : 'bg-zinc-100 border-zinc-200 text-zinc-700']">POST /api/tmp-authorizations/validate</code>.</li>
+                  <li>Rotação gera um novo token (mesmo escopo) e revoga o anterior.</li>
                 </ul>
               </div>
             </aside>
@@ -2669,5 +3165,68 @@ onMounted(async () => {
         <a href="http://localhost:8080/swagger" target="_blank" class="hover:text-zinc-200">Swagger API</a>
       </div>
     </footer>
+
+    <div
+      v-if="lastCreatedModal.visible"
+      class="fixed inset-0 z-[100] flex items-end sm:items-center justify-center px-4 py-6 bg-black/70 backdrop-blur-sm"
+      @click.self="lastCreatedModal.visible = false"
+    >
+      <div class="w-full sm:max-w-xl rounded-2xl border border-amber-500/30 bg-zinc-950 shadow-2xl overflow-hidden">
+        <div class="p-5 sm:p-6 border-b border-zinc-800/80 bg-gradient-to-b from-amber-500/5 to-transparent">
+          <div class="flex items-start gap-3">
+            <div class="w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 flex items-center justify-center shrink-0">
+              <svg class="w-5.5 h-5.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+              </svg>
+            </div>
+            <div class="space-y-1 flex-1 min-w-0">
+              <p class="text-[11px] uppercase tracking-[0.18em] text-amber-300 font-semibold">Mostrado UMA VEZ · Salve imediatamente</p>
+              <h3 class="text-lg sm:text-xl font-bold text-white tracking-tight">Token criado: {{ lastCreatedModal.name }}</h3>
+              <p class="text-xs sm:text-sm text-zinc-400 leading-relaxed">
+                Este valor em texto puro <strong class="text-amber-200 font-semibold">nunca mais será exibido</strong>. Não tem como recuperar depois (só salvamos o hash SHA-256). Copie agora e guarde em local seguro.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="p-5 sm:p-6 space-y-4">
+          <div class="rounded-xl border border-dashed border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
+            <div class="flex items-center justify-between gap-3">
+              <p class="text-[11px] uppercase tracking-[0.18em] text-amber-300 font-semibold">Token completo · ID #{{ lastCreatedModal.tokenId }}</p>
+              <button
+                @click="copyPlainToken"
+                :class="[
+                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors',
+                  lastCreatedCopied
+                    ? 'bg-emerald-500/20 text-emerald-200 border-emerald-500/30'
+                    : 'bg-amber-500/15 text-amber-200 hover:bg-amber-500/25 border-amber-500/30'
+                ]"
+              >
+                <svg v-if="!lastCreatedCopied" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                </svg>
+                <svg v-else class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                {{ lastCreatedCopied ? 'Copiado!' : 'Copiar token' }}
+              </button>
+            </div>
+            <div class="rounded-lg bg-black/40 border border-zinc-800/80 p-3">
+              <code class="block text-[11px] sm:text-xs text-amber-100 font-mono break-all leading-relaxed select-all whitespace-pre-wrap">
+                {{ lastCreatedModal.plainToken }}
+              </code>
+            </div>
+          </div>
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 pt-1">
+            <button
+              @click="lastCreatedModal.visible = false"
+              class="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-zinc-100 bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 transition-colors w-full sm:w-auto"
+            >
+              Já salvei, fechar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
