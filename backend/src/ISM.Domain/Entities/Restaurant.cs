@@ -26,4 +26,8 @@ public sealed class Restaurant : BaseEntity
     public ICollection<Dish> Dishes { get; set; } = [];
     public ICollection<Product> Products { get; set; } = [];
     public ICollection<User> Users { get; set; } = [];
+
+    public string? PhotoImportApiKey { get; set; }
+    public string? PhotoImportModel { get; set; }
+    public string? PhotoImportApiEndpoint { get; set; }
 }

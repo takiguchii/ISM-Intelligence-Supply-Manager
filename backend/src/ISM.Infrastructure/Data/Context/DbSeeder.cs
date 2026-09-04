@@ -97,6 +97,13 @@ public static class DbSeeder
         await context.Restaurants.AddAsync(restaurant);
         await context.SaveChangesAsync(); // Salva para gerar o Id do Restaurante
 
+        var adminUser = await context.Users.FirstOrDefaultAsync(u => u.Email == "admin@ism.com.br");
+        if (adminUser != null && adminUser.RestaurantId == null)
+        {
+            adminUser.RestaurantId = restaurant.Id;
+            await context.SaveChangesAsync();
+        }
+
         // 2. Cadastra Fornecedores (vinculados ao restaurante recém-criado)
         var suppliers = new List<Supplier>
         {

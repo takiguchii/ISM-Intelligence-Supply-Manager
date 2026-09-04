@@ -23,6 +23,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddApiServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddHttpContextAccessor();
+        services.AddHttpClient();
 
         services.AddControllers();
         services.AddEndpointsApiExplorer();
@@ -148,6 +149,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IDevAuthService, DevAuthService>();
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<ITmpAuthorizationService, TmpAuthorizationService>();
+        services.AddScoped<IRestaurantAiConfigService, RestaurantAiConfigService>();
 
         services.AddScoped<IImportOrchestrator, ImportOrchestrator>();
         services.AddScoped<IFileImporter, CsvProductImporter>();
