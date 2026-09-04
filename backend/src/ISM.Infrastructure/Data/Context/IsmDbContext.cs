@@ -30,6 +30,7 @@ public sealed class IsmDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<ImportAudit> ImportAudits => Set<ImportAudit>();
     public DbSet<ImportErrorLog> ImportErrorLogs => Set<ImportErrorLog>();
+    public DbSet<TmpAuthorization> TmpAuthorizations => Set<TmpAuthorization>();
 
     internal int? CurrentUserRestaurantId =>
         _currentUser != null && !_currentUser.IsSuperAdmin
@@ -261,6 +262,46 @@ public sealed class IsmDbContext : DbContext
             builder.Property(e => e.CreatedAtUtc).HasColumnType("datetime(6)").IsRequired();
 
             builder.HasIndex(e => e.ImportId);
+        });
+
+        modelBuilder.Entity<TmpAuthorization>(builder =>
+        {
+            builder.ToTable("tmp_authorizations");
+            builder.HasKey(t => t.Id);
+            builder.Property(t => t.RestaurantId).IsRequired();
+            builder.Property(t => t.Name).HasMaxLength(120).IsRequired();
+            builder.Property(t => t.TokenHash).HasMaxLength(512).IsRequired();
+            builder.Property(t => t.Scope).HasMaxLength(80).IsRequired();
+            builder.Property(t => t.CreatedByUserId);
+            builder.Property(t => t.AutoRotateAtUtc).HasColumnType("datetime(6)");
+            builder.Property(t => t.ExpiresAtUtc).HasColumnType("datetime(6)").IsRequired();
+            builder.Property(t => t.RevokedAtUtc).HasColumnType("datetime(6)");
+            builder.Property(t => t.RevokedByUserId);
+            builder.Property(t => t.LastUsedAtUtc).HasColumnType("datetime(6)");
+            builder.Property(t => t.Description).HasMaxLength(500);
+            builder.Property(t => t.CreatedAtUtc).HasColumnType("datetime(6)").IsRequired();
+            builder.Property(t => t.UpdatedAtUtc).HasColumnType("datetime(6)");
+
+            builder.HasIndex(t => new { t.RestaurantId, t.TokenHash }).IsUnique();
+            builder.HasIndex(t => new { t.RestaurantId, t.ExpiresAtUtc });
+            builder.HasIndex(t => t.TokenHash).IsUnique();
+
+            builder.HasOne(t => t.Restaurant)
+                .WithMany()
+                .HasForeignKey(t => t.RestaurantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasOne(t => t.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(t => t.CreatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            builder.HasOne(t => t.RevokedByUser)
+                .WithMany()
+                .HasForeignKey(t => t.RevokedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            builder.ApplyTenantQueryFilter(this);
         });
     }
 }
