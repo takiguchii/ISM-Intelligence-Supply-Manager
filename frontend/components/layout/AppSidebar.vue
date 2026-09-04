@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watchEffect, computed } from "vue";
+import { ref, watchEffect, computed, onMounted as vueOnMounted, onBeforeUnmount as vueOnBeforeUnmount } from "vue";
 import { useAuthStore } from "~/stores/auth";
 import { useThemeStore } from "~/stores/theme";
 
@@ -14,6 +14,24 @@ const emit = defineEmits<{
 const authStore = useAuthStore();
 const themeStore = useThemeStore();
 const route = useRoute();
+
+const isDesktopView = ref(false);
+const closeButtonTitle = computed(() =>
+  isDesktopView.value ? "Minimizar menu lateral" : "Fechar menu lateral"
+);
+
+vueOnMounted(() => {
+  if (typeof window !== "undefined") {
+    isDesktopView.value = window.innerWidth >= 1024;
+    const updateView = () => {
+      isDesktopView.value = window.innerWidth >= 1024;
+    };
+    window.addEventListener("resize", updateView);
+    vueOnBeforeUnmount(() => {
+      window.removeEventListener("resize", updateView);
+    });
+  }
+});
 
 const menuItems = [
   { id: "dashboard", label: "Dashboard", icon: "dashboard", route: "/" },
@@ -138,11 +156,12 @@ const userInitials = computed(() => {
           <button
             @click="emit('close')"
             :class="[
-              'transition-colors p-1 rounded-lg lg:hidden',
+              'transition-colors p-1.5 rounded-lg',
               themeStore.isDark
                 ? 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'
                 : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100'
             ]"
+            :title="closeButtonTitle"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>

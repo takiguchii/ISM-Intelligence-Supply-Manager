@@ -22,10 +22,37 @@ const authStore = useAuthStore();
 const themeStore = useThemeStore();
 
 const isLoading = ref(true);
-const sidebarOpen = ref(true);
+
+const DESKTOP_BREAKPOINT = 1024;
+const sidebarOpen = ref(
+  typeof window !== "undefined" ? window.innerWidth >= DESKTOP_BREAKPOINT : true
+);
 function toggleSidebar(value?: boolean) {
   sidebarOpen.value = typeof value === "boolean" ? value : !sidebarOpen.value;
 }
+
+const handleResizeSidebar = () => {
+  if (typeof window === "undefined") return;
+  const isDesktop = window.innerWidth >= DESKTOP_BREAKPOINT;
+  if (isDesktop) {
+    if (!sidebarOpen.value) sidebarOpen.value = true;
+  } else {
+    if (sidebarOpen.value) sidebarOpen.value = false;
+  }
+};
+
+onMounted(() => {
+  if (typeof window !== "undefined") {
+    sidebarOpen.value = window.innerWidth >= DESKTOP_BREAKPOINT;
+    window.addEventListener("resize", handleResizeSidebar);
+  }
+});
+
+onBeforeUnmount(() => {
+  if (typeof window !== "undefined") {
+    window.removeEventListener("resize", handleResizeSidebar);
+  }
+});
 const isSuperAdmin = computed(() => authStore.currentUser?.role === "Admin" && !authStore.currentUser?.restaurantId);
 const isRestaurantUser = computed(() => !!authStore.currentUser?.restaurantId);
 
@@ -254,6 +281,94 @@ function formatLatency(ms: number | null | undefined) {
   return `${(ms / 1000).toFixed(2)} s`;
 }
 
+function formatCnpj(v: string | null | undefined): string {
+  if (!v) return "";
+  const digits = v.replace(/\D/g, "").slice(0, 14);
+  if (digits.length < 14) return digits;
+  return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
+}
+
+interface RestaurantProfileDto {
+  id: number;
+  name: string;
+  cnpj: string;
+}
+
+const generalProfile = ref<RestaurantProfileDto | null>(null);
+const generalLoading = ref(false);
+const generalSaving = ref(false);
+const generalError = ref<string | null>(null);
+const generalSaveSuccess = ref(false);
+const generalForm = ref({ name: "", cnpj: "" });
+
+async function loadGeneralProfile() {
+  const rid = activeAiRestaurantId.value;
+  if (!rid) {
+    generalProfile.value = null;
+    generalForm.value = { name: "", cnpj: "" };
+    return;
+  }
+  generalLoading.value = true;
+  generalError.value = null;
+  try {
+    const { apiClientWithAuth } = await import("~/services/api/client");
+    const dto = (await apiClientWithAuth<RestaurantProfileDto>(
+      isSuperAdmin.value
+        ? `/api/restaurants/${rid}/profile`
+        : "/api/me/restaurant/profile",
+      { method: "GET" }
+    )) as RestaurantProfileDto;
+    generalProfile.value = dto;
+    generalForm.value = {
+      name: dto.name || authStore.currentUser?.restaurantName || "",
+      cnpj: dto.cnpj || ""
+    };
+  } catch (err: any) {
+    generalError.value =
+      err?.data?.title ?? err?.data?.message ?? err?.message ?? "Não foi possível carregar os dados do restaurante.";
+    generalForm.value.name = authStore.currentUser?.restaurantName || "";
+  } finally {
+    generalLoading.value = false;
+  }
+}
+
+async function saveGeneralProfile() {
+  const rid = activeAiRestaurantId.value;
+  if (!rid) return;
+  generalSaving.value = true;
+  generalError.value = null;
+  generalSaveSuccess.value = false;
+  try {
+    const payload = {
+      id: rid,
+      name: generalForm.value.name.trim(),
+      cnpj: generalForm.value.cnpj.trim().replace(/[^0-9]/g, "")
+    };
+    if (!payload.name) throw new Error("Nome do restaurante é obrigatório.");
+    if (payload.cnpj && payload.cnpj.length !== 14) throw new Error("CNPJ deve conter 14 dígitos (apenas números).");
+    const { apiClientWithAuth } = await import("~/services/api/client");
+    await apiClientWithAuth(
+      isSuperAdmin.value ? `/api/restaurants/${rid}/profile` : "/api/me/restaurant/profile",
+      {
+        method: "PUT",
+        body: JSON.stringify(payload)
+      }
+    );
+    generalSaveSuccess.value = true;
+    setTimeout(() => (generalSaveSuccess.value = false), 3500);
+    await loadGeneralProfile();
+  } catch (err: any) {
+    const body = err?.data;
+    const flat =
+      typeof body === "string"
+        ? body
+        : body?.title ?? body?.message ?? err?.message ?? "Erro ao salvar perfil do restaurante.";
+    generalError.value = flat;
+  } finally {
+    generalSaving.value = false;
+  }
+}
+
 interface TmpAuthorizationDto {
   id: number;
   restaurantId: number;
@@ -456,6 +571,7 @@ watch(targetRestaurantId, async (newId, oldId) => {
     aiConfigError.value = null;
     aiConfigTestResult.value = null;
     await loadAiConfig();
+    await loadGeneralProfile();
   }
 });
 
@@ -469,6 +585,7 @@ watch(
       aiConfigError.value = null;
       aiConfigTestResult.value = null;
       await loadAiConfig();
+      await loadGeneralProfile();
     }
   },
   { flush: "post" }
@@ -501,6 +618,7 @@ onMounted(async () => {
     targetRestaurantId.value = authStore.currentUser?.restaurantId ?? null;
   }
   await loadAiConfig();
+  await loadGeneralProfile();
   await loadTmpTokens();
   const min = 900;
   const wait = Math.max(0, min - (Date.now() - start));
@@ -888,25 +1006,25 @@ onMounted(async () => {
 
         <!-- AI Section -->
         <section v-if="activeSectionId === 'ai'" class="space-y-6">
-          <div v-if="isSuperAdmin && restaurants.length > 0" class="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div v-if="isSuperAdmin && restaurants.length > 0" class="rounded-2xl border border-amber-500/20 dark:bg-amber-500/5 bg-amber-50 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div class="flex items-start gap-3">
-              <div class="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 flex items-center justify-center flex-shrink-0">
+              <div class="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 dark:text-amber-600 flex items-center justify-center flex-shrink-0">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
               </div>
               <div class="space-y-0.5">
-                <p class="text-sm font-semibold text-amber-100">Modo Super Admin</p>
-                <p class="text-xs sm:text-sm text-amber-200/80 leading-relaxed">
+                <p class="text-sm font-semibold dark:text-amber-100 text-amber-900">Modo Super Admin</p>
+                <p class="text-xs sm:text-sm dark:text-amber-200/80 text-amber-800 leading-relaxed">
                   Você está editando a configuração de outro restaurante. Use o menu ao lado (ou abaixo em mobile) para alternar o alvo.
                 </p>
               </div>
             </div>
             <label class="block sm:w-80 shrink-0 space-y-1.5">
-              <span class="text-[11px] uppercase tracking-widest text-amber-200/70 font-semibold">Restaurante alvo</span>
+              <span class="text-[11px] uppercase tracking-widest dark:text-amber-200/70 text-amber-800 font-semibold">Restaurante alvo</span>
               <select
                 v-model="targetRestaurantId"
-                class="w-full rounded-xl px-3.5 py-2.5 text-sm bg-zinc-900/80 border border-amber-400/30 text-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
+                class="w-full rounded-xl px-3.5 py-2.5 text-sm dark:bg-zinc-900/80 bg-white border border-amber-400/30 dark:text-amber-50 text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
               >
                 <option v-for="r in restaurants" :key="r.id" :value="r.id">{{ r.id }} · {{ r.name }}</option>
               </select>
@@ -914,17 +1032,17 @@ onMounted(async () => {
           </div>
 
           <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <div class="xl:col-span-2 rounded-2xl border bg-zinc-900/50 border-zinc-800 shadow-xl overflow-hidden">
-              <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-zinc-800/80">
+            <div class="xl:col-span-2 rounded-2xl border dark:bg-zinc-900/50 bg-white dark:border-zinc-800 border-zinc-200 shadow-xl overflow-hidden">
+              <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b dark:border-zinc-800/80 border-zinc-200">
                 <div class="flex items-start gap-3 flex-1">
-                  <div class="w-10 h-10 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 flex items-center justify-center flex-shrink-0">
+                  <div class="w-10 h-10 rounded-xl bg-indigo-500/15 border border-indigo-500/30 dark:text-indigo-300 text-indigo-600 flex items-center justify-center flex-shrink-0">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
                     </svg>
                   </div>
                   <div class="space-y-0.5 flex-1">
                     <div class="flex flex-wrap items-center gap-2">
-                      <h2 class="text-base sm:text-lg font-semibold text-white tracking-tight">
+                      <h2 class="text-base sm:text-lg font-semibold dark:text-white text-zinc-900 tracking-tight">
                         {{ isSuperAdmin ? 'Configuração de IA — Restaurante alvo' : 'Configuração de IA do Restaurante' }}
                       </h2>
                       <span
@@ -932,8 +1050,8 @@ onMounted(async () => {
                         class="text-[10px] sm:text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border"
                         :class="
                           aiConfig.hasCustomKey
-                            ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-                            : 'bg-zinc-800/70 text-zinc-400 border-zinc-700/60'
+                            ? 'bg-emerald-500/10 dark:text-emerald-300 text-emerald-700 border-emerald-500/30'
+                            : 'dark:bg-zinc-800/70 bg-zinc-100 dark:text-zinc-400 text-zinc-600 dark:border-zinc-700/60 border-zinc-300'
                         "
                       >
                         {{
@@ -945,7 +1063,7 @@ onMounted(async () => {
                         }}
                       </span>
                     </div>
-                    <p class="text-xs sm:text-sm text-zinc-400 leading-relaxed max-w-2xl">
+                    <p class="text-xs sm:text-sm dark:text-zinc-400 text-zinc-500 leading-relaxed max-w-2xl">
                       Configure sua chave de API de inteligência artificial para importar dados de foto/PDF via OCR com visão computacional.
                       <span v-if="!isSuperAdmin">Você paga apenas pela sua cota — nenhuma chave é compartilhada com outros restaurantes.</span>
                       <span v-else>Cada restaurante tem sua própria chave (nenhum compartilhamento).</span>
@@ -954,7 +1072,7 @@ onMounted(async () => {
                 </div>
               </div>
 
-              <div v-if="aiConfigLoading" class="p-6 flex items-center gap-3 text-sm text-zinc-400">
+              <div v-if="aiConfigLoading" class="p-6 flex items-center gap-3 text-sm dark:text-zinc-400 text-zinc-500">
                 <svg class="w-5 h-5 animate-spin text-indigo-400" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
@@ -962,7 +1080,7 @@ onMounted(async () => {
                 Carregando configuração…
               </div>
 
-              <div v-else-if="!activeAiRestaurantId" class="p-6 flex items-center gap-3 text-sm text-amber-300 rounded-xl bg-amber-500/5 border border-amber-500/20 m-5 sm:m-6">
+              <div v-else-if="!activeAiRestaurantId" class="p-6 flex items-center gap-3 text-sm dark:text-amber-300 text-amber-800 rounded-xl bg-amber-500/5 border border-amber-500/20 m-5 sm:m-6">
                 <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                 </svg>
@@ -970,25 +1088,25 @@ onMounted(async () => {
               </div>
 
               <div v-else class="p-5 sm:p-6 space-y-4 sm:space-y-5">
-                <div v-if="aiConfig && aiConfig.warnings && aiConfig.warnings.length > 0" class="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-1.5">
-                  <p class="text-xs uppercase tracking-widest text-amber-300 font-semibold">Avisos na configuração atual</p>
-                  <ul class="list-disc list-inside space-y-1 pl-1 text-xs sm:text-sm text-amber-200/90">
+                <div v-if="aiConfig && aiConfig.warnings && aiConfig.warnings.length > 0" class="rounded-xl border border-amber-500/20 dark:bg-amber-500/5 bg-amber-50 p-4 space-y-1.5">
+                  <p class="text-xs uppercase tracking-widest dark:text-amber-300 text-amber-800 font-semibold">Avisos na configuração atual</p>
+                  <ul class="list-disc list-inside space-y-1 pl-1 text-xs sm:text-sm dark:text-amber-200/90 text-amber-900">
                     <li v-for="(w, idx) in aiConfig.warnings" :key="idx">{{ w }}</li>
                   </ul>
                 </div>
 
                 <div class="space-y-3">
                   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <label class="text-xs uppercase tracking-widest text-zinc-400 font-semibold">
+                    <label class="text-xs uppercase tracking-widest dark:text-zinc-400 text-zinc-500 font-semibold">
                       Chave da API
                     </label>
-                    <div v-if="aiConfig?.hasCustomKey" class="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
+                    <div v-if="aiConfig?.hasCustomKey" class="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 dark:text-emerald-300 text-emerald-700">
                       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
                       </svg>
                       Chave salva · {{ aiConfig?.keyLast4Digits ? `•••• ${aiConfig.keyLast4Digits}` : 'definida' }}
                     </div>
-                    <div v-else class="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-zinc-800/70 border border-zinc-700/60 text-zinc-400">
+                    <div v-else class="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-lg dark:bg-zinc-800/70 bg-zinc-100 dark:border-zinc-700/60 border-zinc-300 dark:text-zinc-400 text-zinc-600">
                       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
                       </svg>
@@ -1001,7 +1119,7 @@ onMounted(async () => {
                       :type="aiShowApiKey ? 'text' : 'password'"
                       name="new-ai-api-key-not-password"
                       :placeholder="aiConfig?.hasCustomKey ? 'Deixe vazio para manter a chave atual, ou cole uma nova chave aqui…' : 'Cole sua chave de API do Google AI Studio (ex.: AIza…)'"
-                      class="w-full rounded-xl pl-4 pr-12 py-3.5 text-sm bg-zinc-900/80 border border-zinc-700/70 text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/50 font-mono tracking-tight"
+                      class="w-full rounded-xl pl-4 pr-12 py-3.5 text-sm dark:bg-zinc-900/80 bg-white dark:border-zinc-700/70 border-zinc-300 dark:text-zinc-100 text-zinc-900 placeholder:dark:text-zinc-500 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/50 font-mono tracking-tight"
                       autocomplete="new-password"
                       data-1p-ignore
                       data-lpignore="true"
@@ -1012,7 +1130,7 @@ onMounted(async () => {
                     <button
                       type="button"
                       @click="aiShowApiKey = !aiShowApiKey"
-                      class="absolute right-2.5 top-1/2 -translate-y-1/2 p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800/80 transition-colors"
+                      class="absolute right-2.5 top-1/2 -translate-y-1/2 p-2 rounded-lg dark:text-zinc-400 text-zinc-500 hover:dark:text-white hover:text-zinc-900 hover:dark:bg-zinc-800/80 hover:bg-zinc-100 transition-colors"
                       :title="aiShowApiKey ? 'Ocultar chave' : 'Mostrar chave'"
                     >
                       <svg v-if="!aiShowApiKey" class="w-4.5 h-4.5 w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1024,44 +1142,44 @@ onMounted(async () => {
                       </svg>
                     </button>
                   </div>
-                  <p class="text-xs text-zinc-500 leading-relaxed">
+                  <p class="text-xs dark:text-zinc-500 text-zinc-500 leading-relaxed">
                     Recomendado: obtenha gratuitamente em
-                    <a href="https://aistudio.google.com/apikey" target="_blank" class="underline text-indigo-300 hover:text-indigo-200 font-medium">Google AI Studio (Gemini gratuito)</a>.
+                    <a href="https://aistudio.google.com/apikey" target="_blank" class="underline dark:text-indigo-300 text-indigo-600 hover:dark:text-indigo-200 hover:text-indigo-700 font-medium">Google AI Studio (Gemini gratuito)</a>.
                     No momento, apenas o provedor Google Gemini é suportado.
                   </p>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-5">
                   <div class="lg:col-span-3 space-y-2">
-                    <label class="text-xs uppercase tracking-widest text-zinc-400 font-semibold">Modelo Gemini</label>
+                    <label class="text-xs uppercase tracking-widest dark:text-zinc-400 text-zinc-500 font-semibold">Modelo Gemini</label>
                     <select
                       v-model="aiModelPreset"
-                      class="w-full rounded-xl px-3.5 py-3.5 text-sm bg-zinc-900/80 border border-zinc-700/70 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/50"
+                      class="w-full rounded-xl px-3.5 py-3.5 text-sm dark:bg-zinc-900/80 bg-white dark:border-zinc-700/70 border-zinc-300 dark:text-zinc-100 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/50"
                     >
                       <option v-for="p in MODEL_PRESETS" :key="p.value" :value="p.value">
                         {{ p.label }}
                         <template v-if="p.tier && p.tier !== 'Custom'"> · {{ p.tier }}</template>
                       </option>
                     </select>
-                    <p class="text-xs text-zinc-500 leading-relaxed">
+                    <p class="text-xs dark:text-zinc-500 text-zinc-500 leading-relaxed">
                       Dicas:
                       <span v-for="(h, idx) in GEMINI_MODEL_HINTS" :key="idx">
-                        <code class="px-1 py-0.5 rounded bg-zinc-800/70 border border-zinc-700/60 text-zinc-300 text-[11px] font-mono mr-1">{{ h.split(" ")[0] }}</code>
+                        <code class="px-1 py-0.5 rounded dark:bg-zinc-800/70 bg-zinc-100 dark:border-zinc-700/60 border-zinc-200 dark:text-zinc-300 text-zinc-700 text-[11px] font-mono mr-1">{{ h.split(" ")[0] }}</code>
                       </span>
                     </p>
                   </div>
                   <div class="lg:col-span-2 space-y-2">
-                    <label class="text-xs uppercase tracking-widest text-zinc-400 font-semibold">Endpoint base (Google)</label>
+                    <label class="text-xs uppercase tracking-widest dark:text-zinc-400 text-zinc-500 font-semibold">Endpoint base (Google)</label>
                     <input
                       v-model="aiEndpoint"
                       placeholder="https://generativelanguage.googleapis.com/v1"
-                      class="w-full rounded-xl px-3.5 py-3.5 text-sm bg-zinc-800/40 border border-zinc-700/40 text-zinc-400 placeholder:text-zinc-600 focus:outline-none focus:ring-0 focus:border-zinc-700/40 font-mono opacity-90 cursor-not-allowed select-none"
+                      class="w-full rounded-xl px-3.5 py-3.5 text-sm dark:bg-zinc-800/40 bg-zinc-100 dark:border-zinc-700/40 border-zinc-200 dark:text-zinc-400 text-zinc-600 placeholder:dark:text-zinc-600 placeholder:text-zinc-400 focus:outline-none focus:ring-0 focus:border-zinc-700/40 font-mono opacity-90 cursor-not-allowed select-none"
                       maxlength="512"
                       readonly
                       disabled
                       title="Apenas o provedor Google Gemini é suportado nesta versão. Endereço bloqueado para edição."
                     />
-                    <p class="text-xs text-zinc-500 leading-relaxed">🔒 Trava de segurança: endpoint fixo no Google Gemini.</p>
+                    <p class="text-xs dark:text-zinc-500 text-zinc-500 leading-relaxed">🔒 Trava de segurança: endpoint fixo no Google Gemini.</p>
                   </div>
                 </div>
 
@@ -1071,7 +1189,7 @@ onMounted(async () => {
                       type="button"
                       :disabled="!aiCanSave"
                       @click="saveAiConfig()"
-                      class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white bg-indigo-500 hover:bg-indigo-400 disabled:bg-zinc-700/60 disabled:text-zinc-400 disabled:cursor-not-allowed border border-indigo-500/30 disabled:border-zinc-700/60 shadow-lg shadow-indigo-500/20 disabled:shadow-none transition-all"
+                      class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white bg-indigo-500 hover:bg-indigo-400 disabled:dark:bg-zinc-700/60 disabled:bg-zinc-200 disabled:dark:text-zinc-400 disabled:text-zinc-500 disabled:cursor-not-allowed border border-indigo-500/30 disabled:dark:border-zinc-700/60 disabled:border-zinc-200 shadow-lg shadow-indigo-500/20 disabled:shadow-none transition-all"
                     >
                       <svg v-if="aiConfigSaving" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -1086,7 +1204,7 @@ onMounted(async () => {
                       type="button"
                       :disabled="aiConfigTesting || !activeAiRestaurantId"
                       @click="testAiConfig()"
-                      class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-emerald-200 bg-emerald-500/10 hover:bg-emerald-500/15 disabled:bg-zinc-800/60 disabled:text-zinc-500 disabled:cursor-not-allowed border border-emerald-500/30 disabled:border-zinc-700/60 transition-all"
+                      class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold dark:text-emerald-200 text-emerald-800 bg-emerald-500/10 hover:bg-emerald-500/15 disabled:dark:bg-zinc-800/60 disabled:bg-zinc-100 disabled:dark:text-zinc-500 disabled:text-zinc-500 disabled:cursor-not-allowed border border-emerald-500/30 disabled:dark:border-zinc-700/60 disabled:border-zinc-200 transition-all"
                     >
                       <svg v-if="aiConfigTesting" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -1102,7 +1220,7 @@ onMounted(async () => {
                       type="button"
                       :disabled="aiConfigSaving"
                       @click="clearAiKey()"
-                      class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-rose-200 bg-rose-500/10 hover:bg-rose-500/15 disabled:bg-zinc-800/60 disabled:text-zinc-500 disabled:cursor-not-allowed border border-rose-500/30 disabled:border-zinc-700/60 transition-all"
+                      class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold dark:text-rose-200 text-rose-800 bg-rose-500/10 hover:bg-rose-500/15 disabled:dark:bg-zinc-800/60 disabled:bg-zinc-100 disabled:dark:text-zinc-500 disabled:text-zinc-500 disabled:cursor-not-allowed border border-rose-500/30 disabled:dark:border-zinc-700/60 disabled:border-zinc-200 transition-all"
                     >
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -1113,19 +1231,19 @@ onMounted(async () => {
                   <div class="flex-1 min-w-0"></div>
                 </div>
 
-                <div v-if="aiConfigSaveSuccess" role="status" class="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200 flex items-start gap-2.5">
+                <div v-if="aiConfigSaveSuccess" role="status" class="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm dark:text-emerald-200 text-emerald-800 flex items-start gap-2.5">
                   <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
                   <span>Configuração salva com sucesso!</span>
                 </div>
-                <div v-if="aiConfigError" role="alert" class="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200 flex items-start gap-2.5">
+                <div v-if="aiConfigError" role="alert" class="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm dark:text-rose-200 text-rose-800 flex items-start gap-2.5">
                   <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
                   <div class="space-y-1.5 flex-1">
                     <p class="font-semibold">Algo deu errado</p>
-                    <p class="text-rose-100/90 leading-relaxed whitespace-pre-wrap break-words">{{ aiConfigError }}</p>
+                    <p class="dark:text-rose-100/90 text-rose-900 leading-relaxed whitespace-pre-wrap break-words">{{ aiConfigError }}</p>
                   </div>
                 </div>
 
@@ -1134,8 +1252,8 @@ onMounted(async () => {
                   :class="[
                     'rounded-xl border px-4 py-3.5 text-sm flex items-start gap-3',
                     aiConfigTestResult.success
-                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
-                      : 'border-amber-500/30 bg-amber-500/10 text-amber-100'
+                      ? 'border-emerald-500/30 bg-emerald-500/10 dark:text-emerald-200 text-emerald-800'
+                      : 'border-amber-500/30 bg-amber-500/10 dark:text-amber-100 text-amber-900'
                   ]"
                 >
                   <svg v-if="aiConfigTestResult.success" class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1148,12 +1266,12 @@ onMounted(async () => {
                     <p class="font-semibold">
                       {{ aiConfigTestResult.success ? 'Conexão OK com o Google Gemini' : 'Falha na validação com o provedor' }}
                     </p>
-                    <ul class="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-1 text-xs text-emerald-50/90 *:break-all">
+                    <ul class="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-1 text-xs dark:text-emerald-50/90 text-emerald-900 *:break-all">
                       <li><span class="opacity-75">Modelo:</span> <code class="font-mono">{{ aiConfigTestResult.normalizedModel || '—' }}</code></li>
                       <li><span class="opacity-75">HTTP Provedor:</span> {{ aiConfigTestResult.httpStatusFromProvider ?? '—' }}</li>
                       <li><span class="opacity-75">Latência:</span> {{ formatLatency(aiConfigTestResult.latencyMs) || '—' }}</li>
                     </ul>
-                    <p v-if="!aiConfigTestResult.success && aiConfigTestResult.errorMessage" class="text-amber-50 leading-relaxed break-words">
+                    <p v-if="!aiConfigTestResult.success && aiConfigTestResult.errorMessage" class="dark:text-amber-50 text-amber-900 leading-relaxed break-words">
                       {{ aiConfigTestResult.errorMessage }}
                     </p>
                     <ul v-if="aiConfigTestResult.warnings && aiConfigTestResult.warnings.length > 0" class="list-disc list-inside space-y-0.5">
@@ -1165,60 +1283,60 @@ onMounted(async () => {
             </div>
 
             <aside class="space-y-4 xl:space-y-5">
-              <div class="rounded-2xl border bg-zinc-900/50 border-zinc-800 p-5 space-y-3 shadow-xl">
-                <div class="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-zinc-500 font-semibold">
+              <div class="rounded-2xl border dark:bg-zinc-900/50 bg-white dark:border-zinc-800 border-zinc-200 p-5 space-y-3 shadow-xl">
+                <div class="flex items-center gap-2 text-xs uppercase tracking-[0.18em] dark:text-zinc-500 text-zinc-500 font-semibold">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
                   Dicas rápidas
                 </div>
-                <ol class="space-y-3 text-sm text-zinc-300">
+                <ol class="space-y-3 text-sm dark:text-zinc-300 text-zinc-700">
                   <li class="flex gap-3">
-                    <span class="w-5 h-5 shrink-0 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[11px] font-bold flex items-center justify-center">1</span>
-                    <span>Crie sua chave gratuita no <a href="https://aistudio.google.com/apikey" target="_blank" class="underline text-indigo-300 hover:text-indigo-200 font-medium">Google AI Studio</a>.</span>
+                    <span class="w-5 h-5 shrink-0 rounded-full bg-indigo-500/20 dark:text-indigo-300 text-indigo-600 border border-indigo-500/30 text-[11px] font-bold flex items-center justify-center">1</span>
+                    <span>Crie sua chave gratuita no <a href="https://aistudio.google.com/apikey" target="_blank" class="underline dark:text-indigo-300 text-indigo-600 hover:dark:text-indigo-200 hover:text-indigo-700 font-medium">Google AI Studio</a>.</span>
                   </li>
                   <li class="flex gap-3">
-                    <span class="w-5 h-5 shrink-0 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[11px] font-bold flex items-center justify-center">2</span>
-                    <span>Cole aqui. Recomendamos o modelo <code class="px-1.5 py-0.5 rounded bg-zinc-800/70 border border-zinc-700/60 font-mono text-xs">gemini-3.5-flash-lite</code> (melhor free tier).</span>
+                    <span class="w-5 h-5 shrink-0 rounded-full bg-indigo-500/20 dark:text-indigo-300 text-indigo-600 border border-indigo-500/30 text-[11px] font-bold flex items-center justify-center">2</span>
+                    <span>Cole aqui. Recomendamos o modelo <code class="px-1.5 py-0.5 rounded dark:bg-zinc-800/70 bg-zinc-100 dark:border-zinc-700/60 border-zinc-200 font-mono text-xs dark:text-zinc-300 text-zinc-700">gemini-3.5-flash-lite</code> (melhor free tier).</span>
                   </li>
                   <li class="flex gap-3">
-                    <span class="w-5 h-5 shrink-0 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[11px] font-bold flex items-center justify-center">3</span>
+                    <span class="w-5 h-5 shrink-0 rounded-full bg-indigo-500/20 dark:text-indigo-300 text-indigo-600 border border-indigo-500/30 text-[11px] font-bold flex items-center justify-center">3</span>
                     <span>Clique em <strong>Salvar</strong> e depois em <strong>Testar conexão</strong> — não precisa enviar nenhuma foto.</span>
                   </li>
                 </ol>
               </div>
 
-              <div class="rounded-2xl border bg-zinc-900/50 border-zinc-800 p-5 space-y-3 shadow-xl">
-                <div class="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-zinc-500 font-semibold">
+              <div class="rounded-2xl border dark:bg-zinc-900/50 bg-white dark:border-zinc-800 border-zinc-200 p-5 space-y-3 shadow-xl">
+                <div class="flex items-center gap-2 text-xs uppercase tracking-[0.18em] dark:text-zinc-500 text-zinc-500 font-semibold">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
                   </svg>
                   Segurança & privacidade
                 </div>
-                <ul class="space-y-2 text-xs text-zinc-400">
+                <ul class="space-y-2 text-xs dark:text-zinc-400 text-zinc-600">
                   <li class="flex gap-2">
-                    <span class="text-emerald-300 mt-0.5">✓</span>
+                    <span class="dark:text-emerald-300 text-emerald-600 mt-0.5">✓</span>
                     <span>Chave gravada criptografada em banco, nunca exposta em APIs GET (apenas 4 últimos dígitos).</span>
                   </li>
                   <li class="flex gap-2">
-                    <span class="text-emerald-300 mt-0.5">✓</span>
+                    <span class="dark:text-emerald-300 text-emerald-600 mt-0.5">✓</span>
                     <span>Nenhuma chave compartilhada entre restaurantes.</span>
                   </li>
                   <li class="flex gap-2">
-                    <span class="text-emerald-300 mt-0.5">✓</span>
+                    <span class="dark:text-emerald-300 text-emerald-600 mt-0.5">✓</span>
                     <span>Cota e faturamento diretamente na sua conta Google (você controla limites).</span>
                   </li>
                 </ul>
               </div>
 
-              <nuxt-link to="/integracoes" class="block rounded-2xl border border-indigo-500/30 bg-gradient-to-br from-indigo-500/20 to-zinc-900/40 p-5 space-y-2 hover:from-indigo-500/30 transition-all">
-                <div class="flex items-center gap-2 text-sm font-semibold text-indigo-200">
+              <nuxt-link to="/integracoes" class="block rounded-2xl border border-indigo-500/30 bg-gradient-to-br from-indigo-500/20 dark:to-zinc-900/40 to-indigo-50 p-5 space-y-2 hover:from-indigo-500/30 transition-all">
+                <div class="flex items-center gap-2 text-sm font-semibold dark:text-indigo-200 text-indigo-700">
                   <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                   </svg>
                   Ir para Importação de dados
                 </div>
-                <p class="text-xs text-indigo-100/80">Tudo certo aqui? Volte para a tela de Integrações e importe uma foto do seu caderno de compras.</p>
+                <p class="text-xs dark:text-indigo-100/80 text-indigo-900/70">Tudo certo aqui? Volte para a tela de Integrações e importe uma foto do seu caderno de compras.</p>
               </nuxt-link>
             </aside>
           </div>
@@ -1291,13 +1409,13 @@ onMounted(async () => {
                         >Lido do banco</span>
                       </label>
                       <input
-                        :value="authStore.currentUser?.restaurantName || ''"
+                        :value="generalProfile?.name || generalForm.value.name || authStore.currentUser?.restaurantName || ''"
                         disabled
                         :class="[
                           'w-full rounded-xl px-3.5 py-3 text-sm border opacity-80 cursor-not-allowed',
                           themeStore.isDark
                             ? 'bg-zinc-900/60 border-zinc-700/70 text-zinc-300'
-                            : 'bg-zinc-100 border-zinc-200 text-zinc-600'
+                            : 'bg-zinc-100 border-zinc-200 text-zinc-700'
                         ]"
                         placeholder="Nome do restaurante"
                       />
@@ -1315,22 +1433,23 @@ onMounted(async () => {
                           :class="[
                             'text-[10px] font-bold tracking-normal normal-case px-1.5 py-0.5 rounded-md border',
                             themeStore.isDark
-                              ? 'bg-zinc-800/70 border-zinc-700/60 text-zinc-400'
-                              : 'bg-zinc-200 border-zinc-300 text-zinc-600'
+                              ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-300'
+                              : 'bg-indigo-50 border-indigo-200 text-indigo-600'
                           ]"
-                        >🔒 Sem backend</span>
+                        >Lido do banco</span>
                       </label>
                       <input
+                        :value="formatCnpj(generalProfile?.cnpj || generalForm.value.cnpj || '')"
                         disabled
                         :class="[
-                          'w-full rounded-xl px-3.5 py-3 text-sm cursor-not-allowed placeholder font-mono border',
+                          'w-full rounded-xl px-3.5 py-3 text-sm cursor-not-allowed font-mono border',
                           themeStore.isDark
-                            ? 'bg-zinc-900/40 border-zinc-700/50 text-zinc-500 placeholder:text-zinc-600'
-                            : 'bg-zinc-100 border-zinc-200 text-zinc-500 placeholder:text-zinc-400'
+                            ? 'bg-zinc-900/60 border-zinc-700/70 text-zinc-300 placeholder:text-zinc-600'
+                            : 'bg-zinc-100 border-zinc-200 text-zinc-700 placeholder:text-zinc-400'
                         ]"
                         placeholder="00.000.000/0001-00"
                       />
-                      <p :class="['text-xs', themeStore.isDark ? 'text-zinc-500' : 'text-zinc-400']">Campo existe na model mas não há endpoint de edição — vamos discutir.</p>
+                      <p :class="['text-xs', themeStore.isDark ? 'text-zinc-500' : 'text-zinc-400']">CNPJ cadastrado no perfil do restaurante (não editável aqui).</p>
                     </div>
                   </div>
 
@@ -2078,7 +2197,7 @@ onMounted(async () => {
                   </li>
                   <li class="flex items-start gap-2">
                     <span :class="themeStore.isDark ? 'text-emerald-300' : 'text-emerald-600'" class="mt-0.5 shrink-0">✓</span>
-                    <span><strong>Persistência local</strong> — salva em <code class="font-mono px-1.5 py-0.5 rounded border bg-zinc-800/50 border-zinc-700/50">localStorage</code> e re-aplica ao abrir.</span>
+                    <span><strong>Persistência local</strong> — salva em <code class="font-mono px-1.5 py-0.5 rounded border dark:bg-zinc-800/50 bg-zinc-100 dark:border-zinc-700/50 border-zinc-200 dark:text-zinc-300 text-zinc-700">localStorage</code> e re-aplica ao abrir.</span>
                   </li>
                   <li class="flex items-start gap-2">
                     <span :class="themeStore.isDark ? 'text-amber-300' : 'text-amber-600'" class="mt-0.5 shrink-0">◯</span>
@@ -2516,121 +2635,121 @@ onMounted(async () => {
         <section v-else-if="activeSectionId === 'security'" class="space-y-6">
           <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div class="xl:col-span-2 space-y-6">
-              <div class="rounded-2xl border bg-zinc-900/50 border-zinc-800 shadow-xl overflow-hidden">
-                <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-zinc-800/80">
+              <div class="rounded-2xl border dark:bg-zinc-900/50 bg-white dark:border-zinc-800 border-zinc-200 shadow-xl overflow-hidden">
+                <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b dark:border-zinc-800/80 border-zinc-200">
                   <div class="flex items-start gap-3 flex-1">
-                    <div class="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 flex items-center justify-center flex-shrink-0">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 dark:text-emerald-300 text-emerald-600 flex items-center justify-center flex-shrink-0">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
                       </svg>
                     </div>
                     <div class="space-y-0.5 flex-1">
-                      <h2 class="text-base sm:text-lg font-semibold text-white tracking-tight">Senha da conta</h2>
-                      <p class="text-xs sm:text-sm text-zinc-400 leading-relaxed max-w-2xl">Mantenha sua senha forte e atualizada para proteger o acesso.</p>
+                      <h2 class="text-base sm:text-lg font-semibold dark:text-white text-zinc-900 tracking-tight">Senha da conta</h2>
+                      <p class="text-xs sm:text-sm dark:text-zinc-400 text-zinc-500 leading-relaxed max-w-2xl">Mantenha sua senha forte e atualizada para proteger o acesso.</p>
                     </div>
                   </div>
                 </div>
                 <div class="p-5 sm:p-6 space-y-4 sm:space-y-5">
                   <div class="space-y-2">
-                    <label class="text-xs uppercase tracking-widest text-zinc-400 font-semibold">Senha atual</label>
+                    <label class="text-xs uppercase tracking-widest dark:text-zinc-400 text-zinc-500 font-semibold">Senha atual</label>
                     <input
                       disabled
                       type="password"
                       placeholder="••••••••"
-                      class="w-full rounded-xl px-3.5 py-3.5 text-sm bg-zinc-900/40 border border-zinc-700/50 text-zinc-500 cursor-not-allowed placeholder:text-zinc-600 font-mono"
+                      class="w-full rounded-xl px-3.5 py-3.5 text-sm dark:bg-zinc-900/40 bg-zinc-100 dark:border-zinc-700/50 border-zinc-200 dark:text-zinc-500 text-zinc-500 cursor-not-allowed placeholder:dark:text-zinc-600 placeholder:text-zinc-400 font-mono"
                     />
                   </div>
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="space-y-2">
-                      <label class="flex items-center gap-2 text-xs uppercase tracking-widest text-zinc-400 font-semibold">
+                      <label class="flex items-center gap-2 text-xs uppercase tracking-widest dark:text-zinc-400 text-zinc-500 font-semibold">
                         Nova senha
-                        <span class="text-[10px] font-bold tracking-normal normal-case px-1.5 py-0.5 rounded-md bg-zinc-800/70 border border-zinc-700/60 text-zinc-400">🔒 Sem backend</span>
+                        <span class="text-[10px] font-bold tracking-normal normal-case px-1.5 py-0.5 rounded-md dark:bg-zinc-800/70 bg-zinc-200 dark:border-zinc-700/60 border-zinc-300 dark:text-zinc-400 text-zinc-600">🔒 Sem backend</span>
                       </label>
-                      <input disabled type="password" placeholder="Mínimo 8 caracteres" class="w-full rounded-xl px-3.5 py-3.5 text-sm bg-zinc-900/40 border border-zinc-700/50 text-zinc-500 cursor-not-allowed placeholder:text-zinc-600" />
+                      <input disabled type="password" placeholder="Mínimo 8 caracteres" class="w-full rounded-xl px-3.5 py-3.5 text-sm dark:bg-zinc-900/40 bg-zinc-100 dark:border-zinc-700/50 border-zinc-200 dark:text-zinc-500 text-zinc-500 cursor-not-allowed placeholder:dark:text-zinc-600 placeholder:text-zinc-400" />
                     </div>
                     <div class="space-y-2">
-                      <label class="text-xs uppercase tracking-widest text-zinc-400 font-semibold">Confirmar nova senha</label>
-                      <input disabled type="password" placeholder="Repita a nova senha" class="w-full rounded-xl px-3.5 py-3.5 text-sm bg-zinc-900/40 border border-zinc-700/50 text-zinc-500 cursor-not-allowed placeholder:text-zinc-600" />
+                      <label class="text-xs uppercase tracking-widest dark:text-zinc-400 text-zinc-500 font-semibold">Confirmar nova senha</label>
+                      <input disabled type="password" placeholder="Repita a nova senha" class="w-full rounded-xl px-3.5 py-3.5 text-sm dark:bg-zinc-900/40 bg-zinc-100 dark:border-zinc-700/50 border-zinc-200 dark:text-zinc-500 text-zinc-500 cursor-not-allowed placeholder:dark:text-zinc-600 placeholder:text-zinc-400" />
                     </div>
                   </div>
                   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 pt-1">
-                    <button disabled class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-zinc-500 bg-zinc-800/50 border border-zinc-700/60 cursor-not-allowed">
+                    <button disabled class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold dark:text-zinc-500 text-zinc-500 dark:bg-zinc-800/50 bg-zinc-200 dark:border-zinc-700/60 border-zinc-300 cursor-not-allowed">
                       🔒 Atualizar senha
                     </button>
                   </div>
                 </div>
               </div>
 
-              <div class="rounded-2xl border bg-zinc-900/50 border-zinc-800 shadow-xl overflow-hidden">
-                <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-zinc-800/80">
+              <div class="rounded-2xl border dark:bg-zinc-900/50 bg-white dark:border-zinc-800 border-zinc-200 shadow-xl overflow-hidden">
+                <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b dark:border-zinc-800/80 border-zinc-200">
                   <div class="flex items-start gap-3 flex-1">
-                    <div class="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 flex items-center justify-center flex-shrink-0">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 dark:text-amber-300 text-amber-600 flex items-center justify-center flex-shrink-0">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
                       </svg>
                     </div>
                     <div class="space-y-0.5 flex-1">
-                      <h2 class="text-base sm:text-lg font-semibold text-white tracking-tight">Autenticação em dois fatores (2FA)</h2>
-                      <p class="text-xs sm:text-sm text-zinc-400 leading-relaxed max-w-2xl">Camada extra de segurança — além da senha, exige um código temporário.</p>
+                      <h2 class="text-base sm:text-lg font-semibold dark:text-white text-zinc-900 tracking-tight">Autenticação em dois fatores (2FA)</h2>
+                      <p class="text-xs sm:text-sm dark:text-zinc-400 text-zinc-500 leading-relaxed max-w-2xl">Camada extra de segurança — além da senha, exige um código temporário.</p>
                     </div>
-                    <span class="text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-md bg-zinc-800/70 border border-zinc-700/60 text-zinc-400 shrink-0">🔒 Sem backend</span>
+                    <span class="text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-md dark:bg-zinc-800/70 bg-zinc-200 dark:border-zinc-700/60 border-zinc-300 dark:text-zinc-400 text-zinc-600 shrink-0">🔒 Sem backend</span>
                   </div>
                 </div>
                 <div class="p-5 sm:p-6">
-                  <div class="rounded-xl border border-dashed border-zinc-700/70 bg-zinc-900/30 p-4 sm:p-5 space-y-3">
+                  <div class="rounded-xl border border-dashed dark:border-zinc-700/70 border-zinc-300 dark:bg-zinc-900/30 bg-zinc-50 p-4 sm:p-5 space-y-3">
                     <div class="flex items-center gap-2">
-                      <div class="w-9 h-9 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 flex items-center justify-center shrink-0">
+                      <div class="w-9 h-9 rounded-lg bg-rose-500/10 border border-rose-500/20 dark:text-rose-300 text-rose-600 flex items-center justify-center shrink-0">
                         <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                       </div>
                       <div>
-                        <p class="text-sm font-semibold text-zinc-200">2FA desativado</p>
-                        <p class="text-xs text-zinc-500 mt-0.5">Quando implementado, recomendamos ativar para todos os usuários.</p>
+                        <p class="text-sm font-semibold dark:text-zinc-200 text-zinc-800">2FA desativado</p>
+                        <p class="text-xs dark:text-zinc-500 text-zinc-500 mt-0.5">Quando implementado, recomendamos ativar para todos os usuários.</p>
                       </div>
                     </div>
-                    <div class="text-xs text-zinc-400 leading-relaxed">
+                    <div class="text-xs dark:text-zinc-400 text-zinc-600 leading-relaxed">
                       Métodos planejados: código via App (Google Authenticator, Authy) e fallback por SMS/WhatsApp.
                     </div>
-                    <button disabled class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-zinc-500 bg-zinc-800/50 border border-zinc-700/60 cursor-not-allowed w-full sm:w-auto">
+                    <button disabled class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold dark:text-zinc-500 text-zinc-500 dark:bg-zinc-800/50 bg-zinc-200 dark:border-zinc-700/60 border-zinc-300 cursor-not-allowed w-full sm:w-auto">
                       🔒 Configurar 2FA
                     </button>
                   </div>
                 </div>
               </div>
 
-              <div class="rounded-2xl border bg-zinc-900/50 border-zinc-800 shadow-xl overflow-hidden">
-                <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-zinc-800/80">
+              <div class="rounded-2xl border dark:bg-zinc-900/50 bg-white dark:border-zinc-800 border-zinc-200 shadow-xl overflow-hidden">
+                <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b dark:border-zinc-800/80 border-zinc-200">
                   <div class="flex items-start gap-3 flex-1">
-                    <div class="w-10 h-10 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 flex items-center justify-center flex-shrink-0">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-500/15 border border-indigo-500/30 dark:text-indigo-300 text-indigo-600 flex items-center justify-center flex-shrink-0">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                       </svg>
                     </div>
                     <div class="space-y-0.5 flex-1">
-                      <h2 class="text-base sm:text-lg font-semibold text-white tracking-tight">Sessões ativas</h2>
-                      <p class="text-xs sm:text-sm text-zinc-400 leading-relaxed max-w-2xl">Dispositivos logados recentemente — feche os que você não reconhece.</p>
+                      <h2 class="text-base sm:text-lg font-semibold dark:text-white text-zinc-900 tracking-tight">Sessões ativas</h2>
+                      <p class="text-xs sm:text-sm dark:text-zinc-400 text-zinc-500 leading-relaxed max-w-2xl">Dispositivos logados recentemente — feche os que você não reconhece.</p>
                     </div>
-                    <span class="text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-md bg-zinc-800/70 border border-zinc-700/60 text-zinc-400 shrink-0">🔒 Sem backend</span>
+                    <span class="text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-md dark:bg-zinc-800/70 bg-zinc-200 dark:border-zinc-700/60 border-zinc-300 dark:text-zinc-400 text-zinc-600 shrink-0">🔒 Sem backend</span>
                   </div>
                 </div>
                 <div class="p-5 sm:p-6">
-                  <div class="rounded-xl bg-zinc-900/50 border border-zinc-800/70 divide-y divide-zinc-800/60">
+                  <div class="rounded-xl dark:bg-zinc-900/50 bg-zinc-50 dark:border-zinc-800/70 border-zinc-200 divide-y dark:divide-zinc-800/60 divide-zinc-200">
                     <div class="flex items-start sm:items-center justify-between gap-3 p-4">
                       <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 flex items-center justify-center shrink-0">
+                        <div class="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/20 dark:text-indigo-300 text-indigo-600 flex items-center justify-center shrink-0">
                           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                           </svg>
                         </div>
                         <div>
-                          <p class="text-sm font-semibold text-zinc-200">Este dispositivo <span class="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 ml-1">Atual</span></p>
-                          <p class="text-xs text-zinc-500 mt-0.5">Navegador Desktop · entrando agora · IP local</p>
+                          <p class="text-sm font-semibold dark:text-zinc-200 text-zinc-800">Este dispositivo <span class="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 dark:text-emerald-300 text-emerald-700 ml-1">Atual</span></p>
+                          <p class="text-xs dark:text-zinc-500 text-zinc-500 mt-0.5">Navegador Desktop · entrando agora · IP local</p>
                         </div>
                       </div>
                     </div>
                   </div>
-                  <p class="text-xs text-zinc-500 mt-4">Histórico de sessões não está implementado no AuthService (grep: 0 métodos de sessão ativa).</p>
+                  <p class="text-xs dark:text-zinc-500 text-zinc-500 mt-4">Histórico de sessões não está implementado no AuthService (grep: 0 métodos de sessão ativa).</p>
                 </div>
               </div>
 
@@ -2922,15 +3041,15 @@ onMounted(async () => {
             </div>
 
             <aside class="space-y-4 xl:space-y-5 h-fit">
-              <div class="rounded-2xl border bg-zinc-900/50 border-zinc-800 p-5 space-y-3 shadow-xl">
-                <div class="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-zinc-500 font-semibold">
+              <div class="rounded-2xl border dark:bg-zinc-900/50 bg-white dark:border-zinc-800 border-zinc-200 p-5 space-y-3 shadow-xl">
+                <div class="flex items-center gap-2 text-xs uppercase tracking-[0.18em] dark:text-zinc-500 text-zinc-500 font-semibold">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
                   </svg>
                   Discussão pendente
                 </div>
-                <ul class="space-y-2 text-xs text-zinc-400 list-disc list-inside">
-                  <li><strong>AuthService</strong> não tem métodos <code class="px-1 py-0.5 rounded bg-zinc-800/70 border border-zinc-700/60 font-mono text-[11px]">ChangePassword</code>, <code class="px-1 py-0.5 rounded bg-zinc-800/70 border border-zinc-700/60 font-mono text-[11px]">ResetPassword</code> ou 2FA.</li>
+                <ul class="space-y-2 text-xs dark:text-zinc-400 text-zinc-600 list-disc list-inside">
+                  <li><strong>AuthService</strong> não tem métodos <code class="px-1 py-0.5 rounded dark:bg-zinc-800/70 bg-zinc-100 dark:border-zinc-700/60 border-zinc-200 font-mono text-[11px] dark:text-zinc-300 text-zinc-700">ChangePassword</code>, <code class="px-1 py-0.5 rounded dark:bg-zinc-800/70 bg-zinc-100 dark:border-zinc-700/60 border-zinc-200 font-mono text-[11px] dark:text-zinc-300 text-zinc-700">ResetPassword</code> ou 2FA.</li>
                   <li>Armazenar tokens de refresh em tabela (não só JWT stateless) para listar / encerrar sessões.</li>
                   <li>Hash de senha já usa BCrypt? Confirmar no Identity/UserManager.</li>
                   <li>Política de senha: força mínima, expiração, histórico?</li>
@@ -2959,151 +3078,151 @@ onMounted(async () => {
         <section v-else-if="activeSectionId === 'billing'" class="space-y-6">
           <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div class="xl:col-span-2 space-y-6">
-              <div class="rounded-2xl border bg-zinc-900/50 border-zinc-800 shadow-xl overflow-hidden">
+              <div class="rounded-2xl border dark:bg-zinc-900/50 bg-white dark:border-zinc-800 border-zinc-200 shadow-xl overflow-hidden">
                 <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5">
                   <div class="flex items-start gap-3 flex-1">
-                    <div class="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 flex items-center justify-center flex-shrink-0">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/40 dark:text-indigo-300 text-indigo-600 flex items-center justify-center flex-shrink-0">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
                       </svg>
                     </div>
                     <div class="space-y-1 flex-1">
-                      <p class="text-[11px] uppercase tracking-[0.18em] text-indigo-300 font-semibold">Plano atual</p>
-                      <h2 class="text-xl sm:text-2xl font-bold text-white tracking-tight">
+                      <p class="text-[11px] uppercase tracking-[0.18em] dark:text-indigo-300 text-indigo-700 font-semibold">Plano atual</p>
+                      <h2 class="text-xl sm:text-2xl font-bold dark:text-white text-zinc-900 tracking-tight">
                         Período de demonstração
                       </h2>
-                      <p class="text-xs sm:text-sm text-zinc-300 leading-relaxed max-w-xl">
+                      <p class="text-xs sm:text-sm dark:text-zinc-300 text-zinc-600 leading-relaxed max-w-xl">
                         O restaurante está no período trial (gratuita). Quando implementarmos o módulo de pagamentos, você escolherá um plano e cadastrará uma forma de pagamento.
                       </p>
                     </div>
                   </div>
                   <div class="shrink-0 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-center">
-                    <p class="text-[10px] uppercase tracking-widest text-emerald-300 font-semibold">Status</p>
-                    <p class="text-lg font-bold text-emerald-200 mt-0.5">Ativo (trial)</p>
+                    <p class="text-[10px] uppercase tracking-widest dark:text-emerald-300 text-emerald-700 font-semibold">Status</p>
+                    <p class="text-lg font-bold dark:text-emerald-200 text-emerald-800 mt-0.5">Ativo (trial)</p>
                   </div>
                 </div>
               </div>
 
-              <div class="rounded-2xl border bg-zinc-900/50 border-zinc-800 shadow-xl overflow-hidden">
-                <div class="p-5 sm:p-6 border-b border-zinc-800/80">
+              <div class="rounded-2xl border dark:bg-zinc-900/50 bg-white dark:border-zinc-800 border-zinc-200 shadow-xl overflow-hidden">
+                <div class="p-5 sm:p-6 border-b dark:border-zinc-800/80 border-zinc-200">
                   <div class="flex items-start justify-between gap-3">
-                    <h2 class="text-base sm:text-lg font-semibold text-white tracking-tight">Planos disponíveis</h2>
-                    <span class="text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-md bg-zinc-800/70 border border-zinc-700/60 text-zinc-400 shrink-0">🔒 Sem checkout</span>
+                    <h2 class="text-base sm:text-lg font-semibold dark:text-white text-zinc-900 tracking-tight">Planos disponíveis</h2>
+                    <span class="text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-md dark:bg-zinc-800/70 bg-zinc-200 dark:border-zinc-700/60 border-zinc-300 dark:text-zinc-400 text-zinc-600 shrink-0">🔒 Sem checkout</span>
                   </div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-zinc-800/80">
+                <div class="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x dark:divide-zinc-800/80 divide-zinc-200">
                   <div class="p-5 sm:p-6 space-y-3">
-                    <p class="text-xs uppercase tracking-widest text-zinc-500 font-semibold">Essencial</p>
+                    <p class="text-xs uppercase tracking-widest dark:text-zinc-500 text-zinc-500 font-semibold">Essencial</p>
                     <div class="flex items-baseline gap-1">
-                      <span class="text-3xl font-bold text-white">R$ 89</span>
-                      <span class="text-xs text-zinc-500">/mês</span>
+                      <span class="text-3xl font-bold dark:text-white text-zinc-900">R$ 89</span>
+                      <span class="text-xs dark:text-zinc-500 text-zinc-500">/mês</span>
                     </div>
-                    <ul class="space-y-1.5 text-xs text-zinc-300 pt-2">
+                    <ul class="space-y-1.5 text-xs dark:text-zinc-300 text-zinc-700 pt-2">
                       <li>✓ Até 2 usuários</li>
                       <li>✓ Importações ilimitadas</li>
                       <li>✓ Suporte por email</li>
-                      <li class="text-zinc-500">— Relatórios avançados</li>
-                      <li class="text-zinc-500">— API de integração</li>
+                      <li class="dark:text-zinc-500 text-zinc-400">— Relatórios avançados</li>
+                      <li class="dark:text-zinc-500 text-zinc-400">— API de integração</li>
                     </ul>
-                    <button disabled class="w-full mt-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-zinc-500 bg-zinc-800/50 border border-zinc-700/60 cursor-not-allowed">
+                    <button disabled class="w-full mt-3 rounded-xl px-3 py-2.5 text-sm font-semibold dark:text-zinc-500 text-zinc-500 dark:bg-zinc-800/50 bg-zinc-200 dark:border-zinc-700/60 border-zinc-300 cursor-not-allowed">
                       🔒 Escolher plano
                     </button>
                   </div>
                   <div class="p-5 sm:p-6 space-y-3 bg-gradient-to-b from-indigo-500/5 to-transparent relative">
-                    <div class="absolute top-3 right-3 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-indigo-500/20 border border-indigo-500/30 text-indigo-300">Popular</div>
-                    <p class="text-xs uppercase tracking-widest text-indigo-300 font-semibold">Profissional</p>
+                    <div class="absolute top-3 right-3 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-indigo-500/20 border border-indigo-500/30 dark:text-indigo-300 text-indigo-700">Popular</div>
+                    <p class="text-xs uppercase tracking-widest dark:text-indigo-300 text-indigo-700 font-semibold">Profissional</p>
                     <div class="flex items-baseline gap-1">
-                      <span class="text-3xl font-bold text-white">R$ 179</span>
-                      <span class="text-xs text-zinc-500">/mês</span>
+                      <span class="text-3xl font-bold dark:text-white text-zinc-900">R$ 179</span>
+                      <span class="text-xs dark:text-zinc-500 text-zinc-500">/mês</span>
                     </div>
-                    <ul class="space-y-1.5 text-xs text-zinc-200 pt-2">
+                    <ul class="space-y-1.5 text-xs dark:text-zinc-200 text-zinc-700 pt-2">
                       <li>✓ Até 10 usuários</li>
                       <li>✓ Importações ilimitadas</li>
                       <li>✓ Relatórios avançados</li>
                       <li>✓ Suporte prioritário</li>
                       <li>✓ API de integração</li>
                     </ul>
-                    <button disabled class="w-full mt-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-zinc-500 bg-zinc-800/50 border border-zinc-700/60 cursor-not-allowed">
+                    <button disabled class="w-full mt-3 rounded-xl px-3 py-2.5 text-sm font-semibold dark:text-zinc-500 text-zinc-500 dark:bg-zinc-800/50 bg-zinc-200 dark:border-zinc-700/60 border-zinc-300 cursor-not-allowed">
                       🔒 Escolher plano
                     </button>
                   </div>
                   <div class="p-5 sm:p-6 space-y-3">
-                    <p class="text-xs uppercase tracking-widest text-zinc-500 font-semibold">Empresarial</p>
+                    <p class="text-xs uppercase tracking-widest dark:text-zinc-500 text-zinc-500 font-semibold">Empresarial</p>
                     <div class="flex items-baseline gap-1">
-                      <span class="text-3xl font-bold text-white">Sob consulta</span>
+                      <span class="text-3xl font-bold dark:text-white text-zinc-900">Sob consulta</span>
                     </div>
-                    <ul class="space-y-1.5 text-xs text-zinc-300 pt-2">
+                    <ul class="space-y-1.5 text-xs dark:text-zinc-300 text-zinc-700 pt-2">
                       <li>✓ Usuários ilimitados</li>
                       <li>✓ Múltiplos restaurantes</li>
                       <li>✓ Onboarding dedicado</li>
                       <li>✓ Suporte 24/7</li>
                       <li>✓ SLA e contrato</li>
                     </ul>
-                    <button disabled class="w-full mt-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-zinc-500 bg-zinc-800/50 border border-zinc-700/60 cursor-not-allowed">
+                    <button disabled class="w-full mt-3 rounded-xl px-3 py-2.5 text-sm font-semibold dark:text-zinc-500 text-zinc-500 dark:bg-zinc-800/50 bg-zinc-200 dark:border-zinc-700/60 border-zinc-300 cursor-not-allowed">
                       🔒 Falar com vendas
                     </button>
                   </div>
                 </div>
               </div>
 
-              <div class="rounded-2xl border bg-zinc-900/50 border-zinc-800 shadow-xl overflow-hidden">
-                <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-zinc-800/80">
+              <div class="rounded-2xl border dark:bg-zinc-900/50 bg-white dark:border-zinc-800 border-zinc-200 shadow-xl overflow-hidden">
+                <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b dark:border-zinc-800/80 border-zinc-200">
                   <div class="flex items-start gap-3 flex-1">
-                    <div class="w-10 h-10 rounded-xl bg-rose-500/10 border-rose-500/20 text-rose-300 flex items-center justify-center flex-shrink-0">
+                    <div class="w-10 h-10 rounded-xl bg-rose-500/10 dark:border-rose-500/20 border-rose-200 dark:text-rose-300 text-rose-600 flex items-center justify-center flex-shrink-0">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
                       </svg>
                     </div>
                     <div class="space-y-0.5 flex-1">
-                      <h2 class="text-base sm:text-lg font-semibold text-white tracking-tight">Forma de pagamento</h2>
-                      <p class="text-xs sm:text-sm text-zinc-400 leading-relaxed max-w-2xl">Cartão de crédito recorrente. Alterne ou remova métodos a qualquer momento.</p>
+                      <h2 class="text-base sm:text-lg font-semibold dark:text-white text-zinc-900 tracking-tight">Forma de pagamento</h2>
+                      <p class="text-xs sm:text-sm dark:text-zinc-400 text-zinc-500 leading-relaxed max-w-2xl">Cartão de crédito recorrente. Alterne ou remova métodos a qualquer momento.</p>
                     </div>
-                    <span class="text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-md bg-zinc-800/70 border border-zinc-700/60 text-zinc-400 shrink-0">🔒 Sem backend</span>
+                    <span class="text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-md dark:bg-zinc-800/70 bg-zinc-200 dark:border-zinc-700/60 border-zinc-300 dark:text-zinc-400 text-zinc-600 shrink-0">🔒 Sem backend</span>
                   </div>
                 </div>
                 <div class="p-5 sm:p-6">
-                  <div class="rounded-xl border border-dashed border-zinc-700/70 bg-zinc-900/30 p-5 space-y-3">
+                  <div class="rounded-xl border border-dashed dark:border-zinc-700/70 border-zinc-300 dark:bg-zinc-900/30 bg-zinc-50 p-5 space-y-3">
                     <div class="flex items-center gap-3">
-                      <div class="w-12 h-8 rounded-md bg-zinc-800/80 border border-zinc-700/60 flex items-center justify-center text-zinc-500 text-[10px] font-bold tracking-widest shrink-0">CARD</div>
+                      <div class="w-12 h-8 rounded-md dark:bg-zinc-800/80 bg-zinc-200 dark:border-zinc-700/60 border-zinc-300 flex items-center justify-center dark:text-zinc-500 text-zinc-500 text-[10px] font-bold tracking-widest shrink-0">CARD</div>
                       <div>
-                        <p class="text-sm font-semibold text-zinc-400">Nenhum cartão cadastrado</p>
-                        <p class="text-xs text-zinc-500 mt-0.5">Quando sair do trial, será obrigatório cadastrar um cartão.</p>
+                        <p class="text-sm font-semibold dark:text-zinc-400 text-zinc-600">Nenhum cartão cadastrado</p>
+                        <p class="text-xs dark:text-zinc-500 text-zinc-500 mt-0.5">Quando sair do trial, será obrigatório cadastrar um cartão.</p>
                       </div>
                     </div>
-                    <button disabled class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-zinc-500 bg-zinc-800/50 border border-zinc-700/60 cursor-not-allowed">
+                    <button disabled class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold dark:text-zinc-500 text-zinc-500 dark:bg-zinc-800/50 bg-zinc-200 dark:border-zinc-700/60 border-zinc-300 cursor-not-allowed">
                       🔒 Cadastrar cartão
                     </button>
                   </div>
                 </div>
               </div>
 
-              <div class="rounded-2xl border bg-zinc-900/50 border-zinc-800 shadow-xl overflow-hidden">
-                <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-zinc-800/80">
+              <div class="rounded-2xl border dark:bg-zinc-900/50 bg-white dark:border-zinc-800 border-zinc-200 shadow-xl overflow-hidden">
+                <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b dark:border-zinc-800/80 border-zinc-200">
                   <div class="flex items-start gap-3 flex-1">
-                    <div class="w-10 h-10 rounded-xl bg-indigo-500/15 border-indigo-500/30 text-indigo-300 flex items-center justify-center flex-shrink-0">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-500/15 dark:border-indigo-500/30 border-indigo-200 dark:text-indigo-300 text-indigo-600 flex items-center justify-center flex-shrink-0">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                       </svg>
                     </div>
                     <div class="space-y-0.5 flex-1">
-                      <h2 class="text-base sm:text-lg font-semibold text-white tracking-tight">Histórico de faturas</h2>
-                      <p class="text-xs sm:text-sm text-zinc-400 leading-relaxed max-w-2xl">Visualize e baixe os comprovantes de pagamento.</p>
+                      <h2 class="text-base sm:text-lg font-semibold dark:text-white text-zinc-900 tracking-tight">Histórico de faturas</h2>
+                      <p class="text-xs sm:text-sm dark:text-zinc-400 text-zinc-500 leading-relaxed max-w-2xl">Visualize e baixe os comprovantes de pagamento.</p>
                     </div>
-                    <span class="text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-md bg-zinc-800/70 border border-zinc-700/60 text-zinc-400 shrink-0">🔒 Sem backend</span>
+                    <span class="text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-md dark:bg-zinc-800/70 bg-zinc-200 dark:border-zinc-700/60 border-zinc-300 dark:text-zinc-400 text-zinc-600 shrink-0">🔒 Sem backend</span>
                   </div>
                 </div>
                 <div class="p-5 sm:p-6">
-                  <div class="rounded-xl bg-zinc-900/50 border border-zinc-800/70 p-4 sm:p-5 text-center">
-                    <p class="text-sm text-zinc-300">Nenhuma fatura emitida</p>
-                    <p class="text-xs text-zinc-500 mt-1">Você ainda está no período trial — a primeira fatura será emitida ao final.</p>
+                  <div class="rounded-xl dark:bg-zinc-900/50 bg-zinc-50 dark:border-zinc-800/70 border-zinc-200 p-4 sm:p-5 text-center">
+                    <p class="text-sm dark:text-zinc-300 text-zinc-700">Nenhuma fatura emitida</p>
+                    <p class="text-xs dark:text-zinc-500 text-zinc-500 mt-1">Você ainda está no período trial — a primeira fatura será emitida ao final.</p>
                   </div>
                 </div>
               </div>
             </div>
 
             <aside class="space-y-4 xl:space-y-5 h-fit">
-              <div class="rounded-2xl border bg-zinc-900/50 border-zinc-800 p-5 space-y-3 shadow-xl">
-                <div class="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-zinc-500 font-semibold">
+              <div class="rounded-2xl border dark:bg-zinc-900/50 bg-white dark:border-zinc-800 border-zinc-200 p-5 space-y-3 shadow-xl">
+                <div class="flex items-center gap-2 text-xs uppercase tracking-[0.18em] dark:text-zinc-500 text-zinc-500 font-semibold">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
@@ -3111,27 +3230,27 @@ onMounted(async () => {
                 </div>
                 <ul class="space-y-2.5 text-xs">
                   <li class="flex items-start gap-2">
-                    <span class="text-emerald-300 mt-0.5 shrink-0">✓</span>
-                    <span class="text-zinc-300"><strong>Campos PlanoId, TrialEndAtUtc, IsPlanActive</strong> na model Restaurant.</span>
+                    <span class="dark:text-emerald-300 text-emerald-600 mt-0.5 shrink-0">✓</span>
+                    <span class="dark:text-zinc-300 text-zinc-700"><strong>Campos PlanoId, TrialEndAtUtc, IsPlanActive</strong> na model Restaurant.</span>
                   </li>
                   <li class="flex items-start gap-2">
-                    <span class="text-amber-300 mt-0.5 shrink-0">◯</span>
-                    <span class="text-zinc-300"><strong>Plano</strong> navigation property — existe mas não tem endpoints de listagem/contratação.</span>
+                    <span class="dark:text-amber-300 text-amber-600 mt-0.5 shrink-0">◯</span>
+                    <span class="dark:text-zinc-300 text-zinc-700"><strong>Plano</strong> navigation property — existe mas não tem endpoints de listagem/contratação.</span>
                   </li>
                   <li class="flex items-start gap-2">
-                    <span class="text-rose-300 mt-0.5 shrink-0">✕</span>
-                    <span class="text-zinc-300"><strong>Módulo pagamentos</strong> — sem gateway (Stripe/Asaas/Mercado Pago), sem invoices, sem webhooks.</span>
+                    <span class="dark:text-rose-300 text-rose-600 mt-0.5 shrink-0">✕</span>
+                    <span class="dark:text-zinc-300 text-zinc-700"><strong>Módulo pagamentos</strong> — sem gateway (Stripe/Asaas/Mercado Pago), sem invoices, sem webhooks.</span>
                   </li>
                 </ul>
               </div>
-              <div class="rounded-2xl border bg-zinc-900/50 border-zinc-800 p-5 space-y-3 shadow-xl">
-                <div class="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-zinc-500 font-semibold">
+              <div class="rounded-2xl border dark:bg-zinc-900/50 bg-white dark:border-zinc-800 border-zinc-200 p-5 space-y-3 shadow-xl">
+                <div class="flex items-center gap-2 text-xs uppercase tracking-[0.18em] dark:text-zinc-500 text-zinc-500 font-semibold">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
                   Discussão pendente
                 </div>
-                <ul class="space-y-2 text-xs text-zinc-400 list-disc list-inside">
+                <ul class="space-y-2 text-xs dark:text-zinc-400 text-zinc-600 list-disc list-inside">
                   <li>Qual gateway? <strong>Stripe</strong> (internacional) vs <strong>Asaas</strong> / <strong>Mercado Pago</strong> (BR com Pix e boleto).</li>
                   <li>Preços dos planos acima são só placeholder — vocês definirem os valores reais.</li>
                   <li>Renovação automática? Juros em atraso? Período de carência?</li>
@@ -3143,26 +3262,26 @@ onMounted(async () => {
         </section>
 
         <!-- Fallback genérico (não deve cair aqui) -->
-        <section v-else class="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-10 sm:p-16 text-center space-y-4">
-          <div class="mx-auto w-14 h-14 rounded-2xl bg-zinc-800/80 border border-zinc-700/60 flex items-center justify-center text-zinc-400">
+        <section v-else class="rounded-2xl border dark:border-zinc-800 border-zinc-200 dark:bg-zinc-900/40 bg-zinc-50 p-10 sm:p-16 text-center space-y-4">
+          <div class="mx-auto w-14 h-14 rounded-2xl dark:bg-zinc-800/80 bg-zinc-200 dark:border-zinc-700/60 border-zinc-300 flex items-center justify-center dark:text-zinc-400 text-zinc-500">
             <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
           </div>
-          <h3 class="text-lg sm:text-xl font-semibold text-white tracking-tight">Seção não encontrada</h3>
-          <p class="text-sm text-zinc-400 max-w-lg mx-auto leading-relaxed">
+          <h3 class="text-lg sm:text-xl font-semibold dark:text-white text-zinc-900 tracking-tight">Seção não encontrada</h3>
+          <p class="text-sm dark:text-zinc-400 text-zinc-600 max-w-lg mx-auto leading-relaxed">
             Tente selecionar uma opção no menu ao lado.
           </p>
         </section>
       </main>
     </div>
 
-    <footer class="border-t border-zinc-800/70 bg-zinc-950/80 px-4 sm:px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-zinc-500">
+    <footer class="border-t dark:border-zinc-800/70 border-zinc-200 dark:bg-zinc-950/80 bg-white/90 px-4 sm:px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-zinc-500">
       <p>© 2026 ISM — Intelligence Supply Manager. Todos os direitos reservados.</p>
       <div class="flex items-center gap-4">
-        <nuxt-link to="/" class="hover:text-zinc-200">Início</nuxt-link>
-        <nuxt-link to="/login" class="hover:text-zinc-200">Login</nuxt-link>
-        <a href="http://localhost:8080/swagger" target="_blank" class="hover:text-zinc-200">Swagger API</a>
+        <nuxt-link to="/" class="hover:dark:text-zinc-200 hover:text-zinc-900">Início</nuxt-link>
+        <nuxt-link to="/login" class="hover:dark:text-zinc-200 hover:text-zinc-900">Login</nuxt-link>
+        <a href="http://localhost:8080/swagger" target="_blank" class="hover:dark:text-zinc-200 hover:text-zinc-900">Swagger API</a>
       </div>
     </footer>
 
@@ -3171,19 +3290,19 @@ onMounted(async () => {
       class="fixed inset-0 z-[100] flex items-end sm:items-center justify-center px-4 py-6 bg-black/70 backdrop-blur-sm"
       @click.self="lastCreatedModal.visible = false"
     >
-      <div class="w-full sm:max-w-xl rounded-2xl border border-amber-500/30 bg-zinc-950 shadow-2xl overflow-hidden">
-        <div class="p-5 sm:p-6 border-b border-zinc-800/80 bg-gradient-to-b from-amber-500/5 to-transparent">
+      <div class="w-full sm:max-w-xl rounded-2xl border border-amber-500/30 dark:bg-zinc-950 bg-white shadow-2xl overflow-hidden">
+        <div class="p-5 sm:p-6 border-b dark:border-zinc-800/80 border-zinc-200 bg-gradient-to-b from-amber-500/5 to-transparent">
           <div class="flex items-start gap-3">
-            <div class="w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 flex items-center justify-center shrink-0">
+            <div class="w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-500/30 dark:text-amber-300 text-amber-600 flex items-center justify-center shrink-0">
               <svg class="w-5.5 h-5.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
               </svg>
             </div>
             <div class="space-y-1 flex-1 min-w-0">
-              <p class="text-[11px] uppercase tracking-[0.18em] text-amber-300 font-semibold">Mostrado UMA VEZ · Salve imediatamente</p>
-              <h3 class="text-lg sm:text-xl font-bold text-white tracking-tight">Token criado: {{ lastCreatedModal.name }}</h3>
-              <p class="text-xs sm:text-sm text-zinc-400 leading-relaxed">
-                Este valor em texto puro <strong class="text-amber-200 font-semibold">nunca mais será exibido</strong>. Não tem como recuperar depois (só salvamos o hash SHA-256). Copie agora e guarde em local seguro.
+              <p class="text-[11px] uppercase tracking-[0.18em] dark:text-amber-300 text-amber-700 font-semibold">Mostrado UMA VEZ · Salve imediatamente</p>
+              <h3 class="text-lg sm:text-xl font-bold dark:text-white text-zinc-900 tracking-tight">Token criado: {{ lastCreatedModal.name }}</h3>
+              <p class="text-xs sm:text-sm dark:text-zinc-400 text-zinc-600 leading-relaxed">
+                Este valor em texto puro <strong class="dark:text-amber-200 text-amber-700 font-semibold">nunca mais será exibido</strong>. Não tem como recuperar depois (só salvamos o hash SHA-256). Copie agora e guarde em local seguro.
               </p>
             </div>
           </div>
@@ -3191,14 +3310,14 @@ onMounted(async () => {
         <div class="p-5 sm:p-6 space-y-4">
           <div class="rounded-xl border border-dashed border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
             <div class="flex items-center justify-between gap-3">
-              <p class="text-[11px] uppercase tracking-[0.18em] text-amber-300 font-semibold">Token completo · ID #{{ lastCreatedModal.tokenId }}</p>
+              <p class="text-[11px] uppercase tracking-[0.18em] dark:text-amber-300 text-amber-700 font-semibold">Token completo · ID #{{ lastCreatedModal.tokenId }}</p>
               <button
                 @click="copyPlainToken"
                 :class="[
                   'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors',
                   lastCreatedCopied
-                    ? 'bg-emerald-500/20 text-emerald-200 border-emerald-500/30'
-                    : 'bg-amber-500/15 text-amber-200 hover:bg-amber-500/25 border-amber-500/30'
+                    ? 'bg-emerald-500/20 dark:text-emerald-200 text-emerald-800 border-emerald-500/30'
+                    : 'bg-amber-500/15 dark:text-amber-200 text-amber-800 hover:bg-amber-500/25 border-amber-500/30'
                 ]"
               >
                 <svg v-if="!lastCreatedCopied" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3210,8 +3329,8 @@ onMounted(async () => {
                 {{ lastCreatedCopied ? 'Copiado!' : 'Copiar token' }}
               </button>
             </div>
-            <div class="rounded-lg bg-black/40 border border-zinc-800/80 p-3">
-              <code class="block text-[11px] sm:text-xs text-amber-100 font-mono break-all leading-relaxed select-all whitespace-pre-wrap">
+            <div class="rounded-lg dark:bg-black/40 bg-amber-50 border dark:border-zinc-800/80 border-amber-200 p-3">
+              <code class="block text-[11px] sm:text-xs dark:text-amber-100 text-amber-900 font-mono break-all leading-relaxed select-all whitespace-pre-wrap">
                 {{ lastCreatedModal.plainToken }}
               </code>
             </div>
@@ -3219,7 +3338,7 @@ onMounted(async () => {
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 pt-1">
             <button
               @click="lastCreatedModal.visible = false"
-              class="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-zinc-100 bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 transition-colors w-full sm:w-auto"
+              class="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold dark:text-zinc-100 text-indigo-900 bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 transition-colors w-full sm:w-auto"
             >
               Já salvei, fechar
             </button>
