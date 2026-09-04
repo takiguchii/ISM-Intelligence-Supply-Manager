@@ -67,15 +67,15 @@ const handleLogin = async () => {
 
 <template>
   <main class="relative min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center overflow-hidden font-sans selection:bg-zinc-800 selection:text-white py-10 px-4">
-    <!-- Glow Background Effects -->
-    <div class="absolute -top-40 -left-40 w-96 h-96 bg-purple-600/15 rounded-full blur-3xl pointer-events-none"></div>
-    <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none"></div>
+    <!-- Glow Background Effects (Monocromático Premium) -->
+    <div class="absolute -top-40 -left-40 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-zinc-700/10 rounded-full blur-3xl pointer-events-none"></div>
 
     <section class="relative z-10 w-full max-w-md flex flex-col items-center">
       <!-- Title Header -->
       <div class="mb-6 text-center space-y-2">
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900/90 border border-zinc-800 text-xs font-mono text-zinc-300 shadow-md">
-          <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+          <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
           <span class="font-mono text-xs uppercase tracking-widest text-zinc-400">Autenticação</span>
         </div>
         <h1 class="text-3xl font-bold text-white tracking-tight">
