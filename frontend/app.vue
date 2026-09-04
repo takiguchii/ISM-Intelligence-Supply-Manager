@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { useAuthStore } from "~/stores/auth";
+import { useThemeStore } from "~/stores/theme";
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const themeStore = useThemeStore();
 
 const authReady = ref(false);
 
 onMounted(() => {
   authStore.initFromStorage();
+  themeStore.init();
   authReady.value = true;
 });
 
