@@ -12,12 +12,14 @@ import {
 } from "~/services/modules/importService";
 import AppSidebar from "~/components/layout/AppSidebar.vue";
 import AppLoader from "~/components/base/AppLoader.vue";
+import { useThemeStore } from "~/stores/theme";
 
 definePageMeta({ layout: false });
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const themeStore = useThemeStore();
 
 const isLoading = ref(true);
 const sidebarOpen = ref(true);
@@ -31,13 +33,13 @@ const targetRestaurantId = ref<number | null>(null);
 const restaurants = ref<Array<{ id: number; name: string }>>([]);
 
 const activeSectionId = ref<ConfigSectionId>("ai");
-type ConfigSectionId = "ai" | "general" | "notifications" | "security" | "billing";
+type ConfigSectionId = "ai" | "general" | "appearance" | "notifications" | "security" | "billing";
 
 const sections: Array<{
   id: ConfigSectionId;
   label: string;
   subtitle: string;
-  icon: "sparkles" | "sliders" | "bell" | "shield" | "credit";
+  icon: "sparkles" | "sliders" | "palette" | "bell" | "shield" | "credit";
   locked?: boolean;
 }> = [
   {
@@ -51,6 +53,12 @@ const sections: Array<{
     label: "Geral",
     subtitle: "Nome do restaurante, fuso, moeda, idioma",
     icon: "sliders"
+  },
+  {
+    id: "appearance",
+    label: "Aparência",
+    subtitle: "Tema claro, escuro e densidade visual",
+    icon: "palette"
   },
   {
     id: "notifications",
@@ -306,14 +314,33 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-zinc-800 selection:text-white">
+  <div
+    :class="[
+      'min-h-screen flex flex-col font-sans transition-colors duration-200',
+      themeStore.isDark
+        ? 'bg-zinc-950 text-zinc-100 selection:bg-zinc-800 selection:text-white'
+        : 'bg-zinc-50 text-zinc-900 selection:bg-indigo-100 selection:text-indigo-900'
+    ]"
+  >
     <AppLoader :visible="isLoading" />
 
-    <header class="h-16 border-b border-zinc-800/80 bg-zinc-900/60 backdrop-blur-xl sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between">
+    <header
+      :class="[
+        'h-16 border-b sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between backdrop-blur-xl',
+        themeStore.isDark
+          ? 'border-zinc-800/80 bg-zinc-900/60'
+          : 'border-zinc-200 bg-white/80 shadow-sm'
+      ]"
+    >
       <div class="flex items-center gap-4">
         <button
           @click="toggleSidebar()"
-          class="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-zinc-800/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-zinc-600"
+          :class="[
+            'p-2 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2',
+            themeStore.isDark
+              ? 'text-zinc-300 hover:text-white hover:bg-zinc-800/80 focus:ring-zinc-600'
+              : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 focus:ring-zinc-300'
+          ]"
           title="Abrir Menu Lateral"
         >
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -321,23 +348,63 @@ onMounted(async () => {
           </svg>
         </button>
         <div class="flex items-center gap-3">
-          <span class="font-bold text-lg text-white tracking-tight">ISM</span>
-          <span class="hidden sm:inline-block text-xs uppercase tracking-widest text-zinc-400 font-mono border-l border-zinc-700/60 pl-3">
+          <span
+            :class="[
+              'font-bold text-lg tracking-tight',
+              themeStore.isDark ? 'text-white' : 'text-zinc-900'
+            ]"
+          >ISM</span>
+          <span
+            :class="[
+              'hidden sm:inline-block text-xs uppercase tracking-widest font-mono border-l pl-3',
+              themeStore.isDark
+                ? 'text-zinc-400 border-zinc-700/60'
+                : 'text-zinc-500 border-zinc-200'
+            ]"
+          >
             Intelligence Supply
           </span>
         </div>
       </div>
 
       <nav class="hidden md:flex items-center gap-1">
-        <nuxt-link to="/" class="px-3 py-2 text-sm text-zinc-400 hover:text-white hover:bg-zinc-800/60 rounded-lg transition-colors">Início</nuxt-link>
-        <nuxt-link to="/integracoes" class="px-3 py-2 text-sm text-zinc-400 hover:text-white hover:bg-zinc-800/60 rounded-lg transition-colors">Integrações</nuxt-link>
-        <span class="px-3 py-2 text-sm text-white font-semibold bg-zinc-800/80 rounded-lg">Configurações</span>
+        <nuxt-link
+          to="/"
+          :class="[
+            'px-3 py-2 text-sm rounded-lg transition-colors',
+            themeStore.isDark
+              ? 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'
+              : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
+          ]"
+        >Início</nuxt-link>
+        <nuxt-link
+          to="/integracoes"
+          :class="[
+            'px-3 py-2 text-sm rounded-lg transition-colors',
+            themeStore.isDark
+              ? 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'
+              : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
+          ]"
+        >Integrações</nuxt-link>
+        <span
+          :class="[
+            'px-3 py-2 text-sm font-semibold rounded-lg',
+            themeStore.isDark
+              ? 'text-white bg-zinc-800/80'
+              : 'text-zinc-900 bg-zinc-200/80'
+          ]"
+        >Configurações</span>
       </nav>
 
       <div class="flex items-center gap-3">
         <button
           @click="authStore.logout()"
-          class="px-3 py-2 rounded-lg text-xs font-semibold tracking-wide uppercase text-zinc-300 hover:text-white hover:bg-zinc-800/60 border border-zinc-700/60 transition-all"
+          :class="[
+            'px-3 py-2 rounded-lg text-xs font-semibold tracking-wide uppercase border transition-all',
+            themeStore.isDark
+              ? 'text-zinc-300 hover:text-white hover:bg-zinc-800/60 border-zinc-700/60'
+              : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 border-zinc-300'
+          ]"
         >
           Sair
         </button>
@@ -353,32 +420,72 @@ onMounted(async () => {
       ]"
     >
       <!-- Sidebar de seções interna (navegação vertical estilo SaaS) -->
-      <aside class="hidden md:block w-72 shrink-0 border-r border-zinc-800/80 bg-zinc-950/60">
+      <aside
+        :class="[
+          'hidden md:block w-72 shrink-0 border-r',
+          themeStore.isDark
+            ? 'border-zinc-800/80 bg-zinc-950/60'
+            : 'border-zinc-200 bg-white/60'
+        ]"
+      >
         <div class="sticky top-16 p-6 space-y-6">
           <div class="space-y-1">
-            <div class="flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] font-semibold text-zinc-500">
+            <div
+              :class="[
+                'flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] font-semibold',
+                themeStore.isDark ? 'text-zinc-500' : 'text-zinc-500'
+              ]"
+            >
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
               </svg>
               Configurações
             </div>
-            <div v-if="isRestaurantUser" class="flex items-center gap-2 mt-3 p-3 rounded-xl bg-zinc-900/70 border border-zinc-800/70">
-              <div class="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 flex items-center justify-center shrink-0">
+            <div
+              v-if="isRestaurantUser"
+              :class="[
+                'flex items-center gap-2 mt-3 p-3 rounded-xl border',
+                themeStore.isDark
+                  ? 'bg-zinc-900/70 border-zinc-800/70'
+                  : 'bg-zinc-50 border-zinc-200'
+              ]"
+            >
+              <div class="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                 </svg>
               </div>
               <div class="min-w-0">
-                <p class="text-xs uppercase tracking-wider text-zinc-500 font-semibold">Restaurante</p>
-                <p class="text-sm font-semibold text-white truncate">{{ authStore.currentUser?.restaurantName || "Meu restaurante" }}</p>
+                <p
+                  :class="[
+                    'text-xs uppercase tracking-wider font-semibold',
+                    themeStore.isDark ? 'text-zinc-500' : 'text-zinc-500'
+                  ]"
+                >Restaurante</p>
+                <p
+                  :class="[
+                    'text-sm font-semibold truncate',
+                    themeStore.isDark ? 'text-white' : 'text-zinc-900'
+                  ]"
+                >{{ authStore.currentUser?.restaurantName || "Meu restaurante" }}</p>
               </div>
             </div>
             <div v-else-if="isSuperAdmin" class="mt-3 space-y-2">
-              <label class="text-[11px] uppercase tracking-widest text-zinc-500 font-semibold">Restaurante alvo</label>
+              <label
+                :class="[
+                  'text-[11px] uppercase tracking-widest font-semibold',
+                  themeStore.isDark ? 'text-zinc-500' : 'text-zinc-500'
+                ]"
+              >Restaurante alvo</label>
               <select
                 v-model="targetRestaurantId"
-                class="w-full rounded-xl px-3.5 py-2.5 text-sm bg-zinc-900/80 border border-zinc-700/70 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-amber-400/40 focus:border-amber-400/40"
+                :class="[
+                  'w-full rounded-xl px-3.5 py-2.5 text-sm border focus:outline-none focus:ring-2 focus:ring-amber-400/40 focus:border-amber-400/40',
+                  themeStore.isDark
+                    ? 'bg-zinc-900/80 border-zinc-700/70 text-zinc-100'
+                    : 'bg-white border-zinc-300 text-zinc-900 shadow-sm'
+                ]"
               >
                 <option v-for="r in restaurants" :key="r.id" :value="r.id">{{ r.id }} · {{ r.name }}</option>
               </select>
@@ -392,21 +499,37 @@ onMounted(async () => {
               @click="!s.locked && (activeSectionId = s.id)"
               :disabled="s.locked"
               :class="[
-                'w-full group rounded-xl text-left flex items-start gap-3 px-3 py-3 transition-all duration-200',
+                'w-full group rounded-xl text-left flex items-start gap-3 px-3 py-3 transition-all duration-200 border',
                 s.locked
-                  ? 'opacity-50 cursor-not-allowed hover:bg-transparent'
-                  : 'cursor-pointer hover:bg-zinc-900/70',
+                  ? 'opacity-50 cursor-not-allowed hover:bg-transparent border-transparent'
+                  : (
+                      themeStore.isDark
+                        ? 'cursor-pointer hover:bg-zinc-900/70 border-transparent'
+                        : 'cursor-pointer hover:bg-zinc-100 border-transparent'
+                    ),
                 activeSectionId === s.id
-                  ? 'bg-indigo-500/10 border border-indigo-500/30 shadow-inner'
-                  : 'border border-transparent'
+                  ? (
+                      themeStore.isDark
+                        ? 'bg-indigo-500/10 border-indigo-500/30 shadow-inner'
+                        : 'bg-indigo-50 border-indigo-200 shadow-sm'
+                    )
+                  : ''
               ]"
             >
               <div
                 :class="[
-                  'w-9 h-9 rounded-lg flex items-center justify-center shrink-0',
+                  'w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border',
                   activeSectionId === s.id
-                    ? 'bg-indigo-500/20 border border-indigo-500/30 text-indigo-300'
-                    : 'bg-zinc-900/80 border border-zinc-800/80 text-zinc-400 group-hover:text-zinc-200'
+                    ? (
+                        themeStore.isDark
+                          ? 'bg-indigo-500/20 border-indigo-500/30 text-indigo-300'
+                          : 'bg-indigo-100 border-indigo-200 text-indigo-700'
+                      )
+                    : (
+                        themeStore.isDark
+                          ? 'bg-zinc-900/80 border-zinc-800/80 text-zinc-400 group-hover:text-zinc-200'
+                          : 'bg-zinc-100 border-zinc-200 text-zinc-500 group-hover:text-zinc-700'
+                      )
                 ]"
               >
                 <svg v-if="s.icon === 'sparkles'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -414,6 +537,9 @@ onMounted(async () => {
                 </svg>
                 <svg v-else-if="s.icon === 'sliders'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                </svg>
+                <svg v-else-if="s.icon === 'palette'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
                 </svg>
                 <svg v-else-if="s.icon === 'bell'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
@@ -427,22 +553,59 @@ onMounted(async () => {
               </div>
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2">
-                  <p :class="['text-sm font-semibold', activeSectionId === s.id ? 'text-white' : 'text-zinc-200']">{{ s.label }}</p>
-                  <span v-if="s.locked" class="text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full bg-zinc-800/80 border border-zinc-700/60 text-zinc-400">Em breve</span>
+                  <p
+                    :class="[
+                      'text-sm font-semibold',
+                      activeSectionId === s.id
+                        ? (themeStore.isDark ? 'text-white' : 'text-zinc-900')
+                        : (themeStore.isDark ? 'text-zinc-200' : 'text-zinc-700')
+                    ]"
+                  >{{ s.label }}</p>
+                  <span
+                    v-if="s.locked"
+                    :class="[
+                      'text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full border',
+                      themeStore.isDark
+                        ? 'bg-zinc-800/80 border-zinc-700/60 text-zinc-400'
+                        : 'bg-zinc-200 border-zinc-300 text-zinc-600'
+                    ]"
+                  >Em breve</span>
                 </div>
-                <p class="text-xs text-zinc-500 mt-0.5 truncate">{{ s.subtitle }}</p>
+                <p
+                  :class="[
+                    'text-xs mt-0.5 truncate',
+                    themeStore.isDark ? 'text-zinc-500' : 'text-zinc-500'
+                  ]"
+                >{{ s.subtitle }}</p>
               </div>
             </button>
           </nav>
 
-          <div class="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4 space-y-2">
-            <p class="text-[11px] uppercase tracking-widest text-indigo-300 font-semibold flex items-center gap-1.5">
+          <div
+            :class="[
+              'rounded-xl border p-4 space-y-2',
+              themeStore.isDark
+                ? 'border-indigo-500/20 bg-indigo-500/5'
+                : 'border-indigo-200 bg-indigo-50/70'
+            ]"
+          >
+            <p
+              :class="[
+                'text-[11px] uppercase tracking-widest font-semibold flex items-center gap-1.5',
+                themeStore.isDark ? 'text-indigo-300' : 'text-indigo-700'
+              ]"
+            >
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
               </svg>
               Documentação
             </p>
-            <p class="text-xs text-zinc-300 leading-relaxed">Pegue sua chave gratuita no <a href="https://aistudio.google.com/apikey" target="_blank" class="underline text-indigo-300 hover:text-indigo-200 font-medium">Google AI Studio</a>.</p>
+            <p
+              :class="[
+                'text-xs leading-relaxed',
+                themeStore.isDark ? 'text-zinc-300' : 'text-zinc-600'
+              ]"
+            >Pegue sua chave gratuita no <a href="https://aistudio.google.com/apikey" target="_blank" :class="['underline font-medium', themeStore.isDark ? 'text-indigo-300 hover:text-indigo-200' : 'text-indigo-600 hover:text-indigo-700']">Google AI Studio</a>.</p>
           </div>
         </div>
       </aside>
@@ -450,24 +613,44 @@ onMounted(async () => {
       <!-- Conteúdo principal -->
       <main class="flex-1 min-w-0 px-4 sm:px-6 lg:px-10 py-8 space-y-8">
         <header class="space-y-1">
-          <div class="flex flex-wrap items-center gap-2 text-xs uppercase tracking-widest text-zinc-500 font-semibold">
-            <nuxt-link to="/" class="hover:text-zinc-300">Início</nuxt-link>
-            <span class="text-zinc-700">/</span>
-            <span class="text-zinc-300">Configurações</span>
-            <span class="text-zinc-700">/</span>
-            <span class="text-indigo-300">{{ sections.find((s) => s.id === activeSectionId)?.label }}</span>
+          <div
+            :class="[
+              'flex flex-wrap items-center gap-2 text-xs uppercase tracking-widest font-semibold',
+              themeStore.isDark ? 'text-zinc-500' : 'text-zinc-500'
+            ]"
+          >
+            <nuxt-link :class="themeStore.isDark ? 'hover:text-zinc-300' : 'hover:text-zinc-700'" to="/">Início</nuxt-link>
+            <span :class="themeStore.isDark ? 'text-zinc-700' : 'text-zinc-300'">/</span>
+            <span :class="themeStore.isDark ? 'text-zinc-300' : 'text-zinc-700'">Configurações</span>
+            <span :class="themeStore.isDark ? 'text-zinc-700' : 'text-zinc-300'">/</span>
+            <span :class="themeStore.isDark ? 'text-indigo-300' : 'text-indigo-600'">{{ sections.find((s) => s.id === activeSectionId)?.label }}</span>
           </div>
           <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
-              <h1 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+              <h1
+                :class="[
+                  'text-2xl sm:text-3xl font-bold tracking-tight',
+                  themeStore.isDark ? 'text-white' : 'text-zinc-900'
+                ]"
+              >
                 {{ sections.find((s) => s.id === activeSectionId)?.label }}
               </h1>
-              <p class="text-sm text-zinc-400 mt-1 max-w-2xl">{{ sections.find((s) => s.id === activeSectionId)?.subtitle }}</p>
+              <p
+                :class="[
+                  'text-sm mt-1 max-w-2xl',
+                  themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500'
+                ]"
+              >{{ sections.find((s) => s.id === activeSectionId)?.subtitle }}</p>
             </div>
-            <div v-if="activeSectionId === 'ai'" class="flex flex-wrap gap-2 md:hidden">
+            <div v-if="activeSectionId !== 'billing'" class="flex flex-wrap gap-2 md:hidden">
               <button
                 @click="toggleSidebar()"
-                class="px-3 py-2 rounded-lg border border-zinc-800 bg-zinc-900/60 text-xs font-semibold text-zinc-200"
+                :class="[
+                  'px-3 py-2 rounded-lg border text-xs font-semibold',
+                  themeStore.isDark
+                    ? 'border-zinc-800 bg-zinc-900/60 text-zinc-200'
+                    : 'border-zinc-300 bg-white text-zinc-700 shadow-sm'
+                ]"
               >
                 Menu de seções
               </button>
@@ -487,12 +670,23 @@ onMounted(async () => {
                 'px-3 py-2 rounded-xl text-sm font-semibold whitespace-nowrap border transition-all',
                 s.locked ? 'opacity-50 cursor-not-allowed' : '',
                 activeSectionId === s.id
-                  ? 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30'
-                  : 'bg-zinc-900/60 text-zinc-300 border-zinc-800 hover:bg-zinc-800/60'
+                  ? (
+                      themeStore.isDark
+                        ? 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30'
+                        : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                    )
+                  : (
+                      themeStore.isDark
+                        ? 'bg-zinc-900/60 text-zinc-300 border-zinc-800 hover:bg-zinc-800/60'
+                        : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50'
+                    )
               ]"
             >
               {{ s.label }}
-              <span v-if="s.locked" class="ml-2 text-[10px] text-zinc-500">(em breve)</span>
+              <span
+                v-if="s.locked"
+                :class="['ml-2 text-[10px]', themeStore.isDark ? 'text-zinc-500' : 'text-zinc-500']"
+              >(em breve)</span>
             </button>
           </div>
         </div>
@@ -960,6 +1154,264 @@ onMounted(async () => {
                     <span class="text-zinc-300"><strong>Fuso / Moeda / Idioma</strong> — campos não existem na model Restaurant.</span>
                   </li>
                 </ul>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <!-- Seção Aparência -->
+        <section v-else-if="activeSectionId === 'appearance'" class="space-y-6">
+          <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div class="xl:col-span-2 space-y-6">
+              <div
+                :class="[
+                  'rounded-2xl border shadow-xl overflow-hidden',
+                  themeStore.isDark
+                    ? 'bg-zinc-900/50 border-zinc-800'
+                    : 'bg-white border-zinc-200'
+                ]"
+              >
+                <div
+                  :class="[
+                    'p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b',
+                    themeStore.isDark ? 'border-zinc-800/80' : 'border-zinc-200'
+                  ]"
+                >
+                  <div class="flex items-start gap-3 flex-1">
+                    <div
+                      :class="[
+                        'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border',
+                        themeStore.isDark
+                          ? 'bg-indigo-500/15 border-indigo-500/30 text-indigo-300'
+                          : 'bg-indigo-50 border-indigo-200 text-indigo-600'
+                      ]"
+                    >
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
+                      </svg>
+                    </div>
+                    <div class="space-y-0.5 flex-1">
+                      <h2
+                        :class="[
+                          'text-base sm:text-lg font-semibold tracking-tight',
+                          themeStore.isDark ? 'text-white' : 'text-zinc-900'
+                        ]"
+                      >Tema da interface</h2>
+                      <p
+                        :class="[
+                          'text-xs sm:text-sm leading-relaxed max-w-2xl',
+                          themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500'
+                        ]"
+                      >
+                        Escolha entre modo escuro (padrão, recomendado para ambientes internos) ou modo claro
+                        (para ambientes externos ou preferência pessoal). A preferência é salva apenas neste navegador.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    @click="themeStore.toggle()"
+                    :class="[
+                      'inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold uppercase tracking-wider border transition-all shrink-0 self-start sm:self-auto',
+                      themeStore.isDark
+                        ? 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30 hover:bg-indigo-500/15'
+                        : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100'
+                    ]"
+                  >
+                    <svg v-if="themeStore.isDark" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                    </svg>
+                    <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                    </svg>
+                    {{ themeStore.isDark ? 'Usar modo claro' : 'Usar modo escuro' }}
+                  </button>
+                </div>
+                <div class="p-5 sm:p-6">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-5">
+                    <!-- Card: Modo Escuro -->
+                    <button
+                      type="button"
+                      @click="themeStore.set('dark')"
+                      :class="[
+                        'group relative rounded-2xl border p-4 sm:p-5 text-left transition-all',
+                        themeStore.isDark
+                          ? 'border-indigo-500/50 ring-2 ring-indigo-500/30 shadow-xl shadow-indigo-950/30'
+                          : 'border-zinc-800/60 hover:border-zinc-700/70'
+                      ]"
+                      style="background: linear-gradient(135deg, #09090b 0%, #18181b 60%, #27272a 100%);"
+                    >
+                      <div class="flex items-start justify-between gap-3 mb-4">
+                        <div
+                          :class="[
+                            'w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border',
+                            themeStore.isDark
+                              ? 'bg-indigo-500/20 border-indigo-500/30 text-indigo-300'
+                              : 'bg-zinc-800/60 border-zinc-700/60 text-zinc-400'
+                          ]"
+                        >
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                          </svg>
+                        </div>
+                        <span
+                          v-if="themeStore.isDark"
+                          class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 shrink-0"
+                        >
+                          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                          Ativo
+                        </span>
+                      </div>
+                      <h3 class="text-sm font-bold text-white mb-1">Modo escuro</h3>
+                      <p class="text-xs text-zinc-400 leading-relaxed">
+                        Tema padrão do ISM. Reduz cansaço visual em ambientes fechados e destaca a paleta premium Zinc + Índigo.
+                      </p>
+                      <div class="mt-4 rounded-xl bg-zinc-950/60 border border-zinc-800/70 p-3 space-y-2">
+                        <div class="h-2 w-16 rounded bg-indigo-500/50"></div>
+                        <div class="h-2 w-full rounded bg-zinc-800/80"></div>
+                        <div class="h-2 w-3/4 rounded bg-zinc-800/60"></div>
+                      </div>
+                    </button>
+
+                    <!-- Card: Modo Claro -->
+                    <button
+                      type="button"
+                      @click="themeStore.set('light')"
+                      :class="[
+                        'group relative rounded-2xl border p-4 sm:p-5 text-left transition-all',
+                        !themeStore.isDark
+                          ? 'border-indigo-300/80 ring-2 ring-indigo-200/60 shadow-xl shadow-indigo-100/40'
+                          : 'border-zinc-200 hover:border-zinc-300/70'
+                      ]"
+                      style="background: linear-gradient(135deg, #ffffff 0%, #fafafa 55%, #f4f4f5 100%);"
+                    >
+                      <div class="flex items-start justify-between gap-3 mb-4">
+                        <div
+                          :class="[
+                            'w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border',
+                            !themeStore.isDark
+                              ? 'bg-indigo-100 border-indigo-200 text-indigo-600'
+                              : 'bg-zinc-100 border-zinc-200 text-zinc-400'
+                          ]"
+                        >
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                          </svg>
+                        </div>
+                        <span
+                          v-if="!themeStore.isDark"
+                          class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 shrink-0"
+                        >
+                          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                          Ativo
+                        </span>
+                      </div>
+                      <h3 class="text-sm font-bold text-zinc-900 mb-1">Modo claro</h3>
+                      <p class="text-xs text-zinc-500 leading-relaxed">
+                        Ideal para ambientes externos, telas com brilho ou preferência pessoal. Alto contraste e leitura limpa.
+                      </p>
+                      <div class="mt-4 rounded-xl bg-white/70 border border-zinc-200 p-3 space-y-2">
+                        <div class="h-2 w-16 rounded bg-indigo-400"></div>
+                        <div class="h-2 w-full rounded bg-zinc-200"></div>
+                        <div class="h-2 w-3/4 rounded bg-zinc-100"></div>
+                      </div>
+                    </button>
+                  </div>
+
+                  <div
+                    :class="[
+                      'mt-5 rounded-xl border-dashed border p-4 space-y-1.5',
+                      themeStore.isDark
+                        ? 'border-zinc-700/80 bg-zinc-900/30'
+                        : 'border-zinc-300 bg-zinc-50/60'
+                    ]"
+                  >
+                    <p
+                      :class="[
+                        'text-[11px] uppercase tracking-widest font-semibold',
+                        themeStore.isDark ? 'text-zinc-500' : 'text-zinc-500'
+                      ]"
+                    >
+                      Próximas preferências visuais (escalabilidade)
+                    </p>
+                    <ul
+                      :class="[
+                        'list-disc list-inside text-xs space-y-1',
+                        themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500'
+                      ]"
+                    >
+                      <li>Densidade de interface (Confortável / Compacta) para grids do financeiro e estoque</li>
+                      <li>Redução de movimento — desativa animações em dispositivos mais lentos</li>
+                      <li>Escala de fonte global (90% / 100% / 115%)</li>
+                      <li>Contraste alto WCAG AA/AAA para acessibilidade</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <aside class="space-y-4 xl:space-y-5 xl:sticky xl:top-24 self-start">
+              <div
+                :class="[
+                  'rounded-2xl border p-5 space-y-3 shadow-xl',
+                  themeStore.isDark
+                    ? 'bg-zinc-900/50 border-zinc-800'
+                    : 'bg-white border-zinc-200'
+                ]"
+              >
+                <div
+                  :class="[
+                    'flex items-center gap-2 text-xs uppercase tracking-[0.18em] font-semibold',
+                    themeStore.isDark ? 'text-zinc-500' : 'text-zinc-500'
+                  ]"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  Como o tema é aplicado
+                </div>
+                <ul
+                  :class="[
+                    'space-y-2.5 text-xs',
+                    themeStore.isDark ? 'text-zinc-300' : 'text-zinc-600'
+                  ]"
+                >
+                  <li class="flex items-start gap-2">
+                    <span :class="themeStore.isDark ? 'text-emerald-300' : 'text-emerald-600'" class="mt-0.5 shrink-0">✓</span>
+                    <span><strong>Demonstração funcional</strong> — 6 telas principais já trocam cor de fundo, texto e bordas.</span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span :class="themeStore.isDark ? 'text-emerald-300' : 'text-emerald-600'" class="mt-0.5 shrink-0">✓</span>
+                    <span><strong>Persistência local</strong> — salva em <code class="font-mono px-1.5 py-0.5 rounded border bg-zinc-800/50 border-zinc-700/50">localStorage</code> e re-aplica ao abrir.</span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span :class="themeStore.isDark ? 'text-amber-300' : 'text-amber-600'" class="mt-0.5 shrink-0">◯</span>
+                    <span><strong>Telas restantes</strong> — dashboards financeiro/estoque/cardápio herdam tema em containers-base mas ainda podem precisar de polimento individual.</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div
+                :class="[
+                  'rounded-2xl border p-5 space-y-3',
+                  themeStore.isDark
+                    ? 'border-indigo-500/20 bg-indigo-500/5'
+                    : 'border-indigo-200 bg-indigo-50/60'
+                ]"
+              >
+                <p
+                  :class="[
+                    'text-[11px] uppercase tracking-widest font-semibold flex items-center gap-1.5',
+                    themeStore.isDark ? 'text-indigo-300' : 'text-indigo-700'
+                  ]"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                  </svg>
+                  Atalho
+                </p>
+                <p :class="['text-xs leading-relaxed', themeStore.isDark ? 'text-zinc-300' : 'text-zinc-600']">
+                  Você também pode alternar rapidamente usando o botão <strong>lua / sol</strong> no topo da <em>sidebar</em> lateral esquerda — economiza alguns cliques.
+                </p>
               </div>
             </aside>
           </div>
