@@ -11,6 +11,7 @@ public interface IProductRepository
         int pageNumber,
         int pageSize,
         string? search = null,
+        bool? isCritical = null,
         CancellationToken cancellationToken = default);
     Task<Product> AddAsync(Product product, CancellationToken cancellationToken = default);
     Task<Product> UpdateAsync(Product product, CancellationToken cancellationToken = default);

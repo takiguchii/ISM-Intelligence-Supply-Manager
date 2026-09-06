@@ -29,12 +29,20 @@ public sealed class ProductsController : ControllerBase
     [HttpGet("paged")]
     [ProducesResponseType(typeof(PagedResult<ProductResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<PagedResult<ProductResponse>>> GetPaged(
-        [FromQuery] int pageNumber = 1,
-        [FromQuery] int pageSize = 10,
+        [FromQuery] int? pageNumber = null,
+        [FromQuery] int? page = null,
+        [FromQuery] int? pageSize = null,
+        [FromQuery] int? limit = null,
         [FromQuery] string? search = null,
+        [FromQuery] bool? isCritical = null,
+        [FromQuery] bool? critico = null,
         CancellationToken cancellationToken = default)
     {
-        var result = await _productService.GetPagedAsync(pageNumber, pageSize, search, cancellationToken);
+        int finalPageNumber = pageNumber ?? page ?? 1;
+        int finalPageSize = pageSize ?? limit ?? 10;
+        bool? finalIsCritical = isCritical ?? critico;
+
+        var result = await _productService.GetPagedAsync(finalPageNumber, finalPageSize, search, finalIsCritical, cancellationToken);
         return Ok(result);
     }
 
