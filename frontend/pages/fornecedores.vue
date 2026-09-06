@@ -8,7 +8,7 @@ import {
   type SupplierResponse,
   type CreateSupplierRequest,
   type UpdateSupplierRequest
-} from "~/services/modules/supplierService";
+} from "~/services/modules/suppliers/supplierService";
 
 definePageMeta({ layout: false });
 

@@ -294,7 +294,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
-import { productService } from '~/services/modules/productService'
+import { productService } from '~/services/modules/stock/productService'
 
 // ==================== CONFIGURAÇÃO ====================
 const PAGE_SIZE = 6

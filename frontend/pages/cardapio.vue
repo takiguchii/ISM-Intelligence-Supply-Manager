@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import AppSidebar from '~/components/layout/AppSidebar.vue'
 import AppLoader from '~/components/base/AppLoader.vue'
 import { useAuthStore } from '~/stores/auth'
+import { menuService } from '~/services/modules/menu/menuService'
 
 definePageMeta({
   layout: false
@@ -264,14 +265,8 @@ const getDishCategoryName = (dish: Dish) => {
 */
 
 const fetchCategories = async () => {
-  const response = await $fetch(
-    `${API_BASE}/api/menu/categories`,
-    {
-      method: 'GET',
-      headers: getHeaders()
-    }
-  )
-
+  const restaurantId = getRestaurantId()
+  const response = await menuService.getCategories(restaurantId || undefined)
   categories.value = normalizeArrayResponse<Category>(response)
 }
 
@@ -287,18 +282,11 @@ const createCategory = async () => {
   errorMessage.value = ''
 
   try {
-    await $fetch(
-      `${API_BASE}/api/menu/categories`,
-      {
-        method: 'POST',
-        headers: getHeaders(),
-        body: {
-          name,
-          displayOrder: categoryForm.value.displayOrder,
-          isActive: categoryForm.value.isActive
-        }
-      }
-    )
+    await menuService.createCategory({
+      name,
+      displayOrder: categoryForm.value.displayOrder,
+      isActive: categoryForm.value.isActive
+    })
 
     successMessage.value = 'Categoria criada com sucesso.'
 
@@ -328,18 +316,11 @@ const updateCategory = async () => {
   errorMessage.value = ''
 
   try {
-    await $fetch(
-      `${API_BASE}/api/menu/categories/${editingCategoryId.value}`,
-      {
-        method: 'PUT',
-        headers: getHeaders(),
-        body: {
-          name,
-          displayOrder: categoryForm.value.displayOrder,
-          isActive: categoryForm.value.isActive
-        }
-      }
-    )
+    await menuService.updateCategory(editingCategoryId.value, {
+      name,
+      displayOrder: categoryForm.value.displayOrder,
+      isActive: categoryForm.value.isActive
+    })
 
     successMessage.value = 'Categoria atualizada com sucesso.'
 
@@ -366,13 +347,7 @@ const deleteCategory = async (category: Category) => {
   errorMessage.value = ''
 
   try {
-    await $fetch(
-      `${API_BASE}/api/menu/categories/${category.id}`,
-      {
-        method: 'DELETE',
-        headers: getHeaders()
-      }
-    )
+    await menuService.deleteCategory(category.id)
 
     if (selectedCategory.value === category.id) {
       selectedCategory.value = null
@@ -397,37 +372,8 @@ const deleteCategory = async (category: Category) => {
 */
 
 const fetchDishes = async () => {
-  const params = new URLSearchParams()
-
-  const restaurantId =
-    (authStore as any).restaurantId ||
-    (authStore as any).restaurant?.id ||
-    (authStore as any).user?.restaurantId
-
-  if (restaurantId) {
-    params.set(
-      'restaurantId',
-      String(restaurantId)
-    )
-  }
-
-  if (selectedCategory.value) {
-    params.set(
-      'categoryId',
-      String(selectedCategory.value)
-    )
-  }
-
-  const query = params.toString()
-
-  const response = await $fetch(
-    `${API_BASE}/api/menu/dishes${query ? `?${query}` : ''}`,
-    {
-      method: 'GET',
-      headers: getHeaders()
-    }
-  )
-
+  const restaurantId = getRestaurantId()
+  const response = await menuService.getDishes(restaurantId || undefined)
   dishes.value = normalizeArrayResponse<Dish>(response)
 }
 
@@ -451,38 +397,21 @@ const createDish = async () => {
   errorMessage.value = ''
 
   try {
-    await $fetch(
-      `${API_BASE}/api/menu/dishes`,
-      {
-        method: 'POST',
-        headers: getHeaders(),
-        body: {
-          name: dishForm.value.name.trim(),
-          description:
-            dishForm.value.description.trim() || null,
-          categoryId: dishForm.value.categoryId,
-          price: Number(dishForm.value.price),
-          cost: Number(dishForm.value.cost),
-          isActive: dishForm.value.isActive,
-          highlight: dishForm.value.highlight,
-          urlImage:
-            dishForm.value.urlImage.trim() || null,
-          displayOrder: Number(
-            dishForm.value.displayOrder
-          ),
-          ingredients: dishForm.value.ingredients.map(
-            ingredient => ({
-              productId: Number(
-                ingredient.productId
-              ),
-              quantity: Number(
-                ingredient.quantity
-              )
-            })
-          )
-        }
-      }
-    )
+    await menuService.createDish({
+      name: dishForm.value.name.trim(),
+      description: dishForm.value.description.trim() || undefined,
+      categoryId: dishForm.value.categoryId,
+      price: Number(dishForm.value.price),
+      cost: Number(dishForm.value.cost),
+      isActive: dishForm.value.isActive,
+      highlight: dishForm.value.highlight,
+      urlImage: dishForm.value.urlImage.trim() || undefined,
+      displayOrder: Number(dishForm.value.displayOrder),
+      ingredients: dishForm.value.ingredients.map(ingredient => ({
+        productId: Number(ingredient.productId),
+        quantity: Number(ingredient.quantity)
+      }))
+    })
 
     successMessage.value =
       'Prato criado com sucesso.'
@@ -521,38 +450,21 @@ const updateDish = async () => {
   errorMessage.value = ''
 
   try {
-    await $fetch(
-      `${API_BASE}/api/menu/dishes/${editingDishId.value}`,
-      {
-        method: 'PUT',
-        headers: getHeaders(),
-        body: {
-          name: dishForm.value.name.trim(),
-          description:
-            dishForm.value.description.trim() || null,
-          categoryId: dishForm.value.categoryId,
-          price: Number(dishForm.value.price),
-          cost: Number(dishForm.value.cost),
-          isActive: dishForm.value.isActive,
-          highlight: dishForm.value.highlight,
-          urlImage:
-            dishForm.value.urlImage.trim() || null,
-          displayOrder: Number(
-            dishForm.value.displayOrder
-          ),
-          ingredients: dishForm.value.ingredients.map(
-            ingredient => ({
-              productId: Number(
-                ingredient.productId
-              ),
-              quantity: Number(
-                ingredient.quantity
-              )
-            })
-          )
-        }
-      }
-    )
+    await menuService.updateDish(editingDishId.value, {
+      name: dishForm.value.name.trim(),
+      description: dishForm.value.description.trim() || undefined,
+      categoryId: dishForm.value.categoryId,
+      price: Number(dishForm.value.price),
+      cost: Number(dishForm.value.cost),
+      isActive: dishForm.value.isActive,
+      highlight: dishForm.value.highlight,
+      urlImage: dishForm.value.urlImage.trim() || undefined,
+      displayOrder: Number(dishForm.value.displayOrder),
+      ingredients: dishForm.value.ingredients.map(ingredient => ({
+        productId: Number(ingredient.productId),
+        quantity: Number(ingredient.quantity)
+      }))
+    })
 
     successMessage.value =
       'Prato atualizado com sucesso.'
@@ -580,13 +492,7 @@ const deleteDish = async (dish: Dish) => {
   errorMessage.value = ''
 
   try {
-    await $fetch(
-      `${API_BASE}/api/menu/dishes/${dish.id}`,
-      {
-        method: 'DELETE',
-        headers: getHeaders()
-      }
-    )
+    await menuService.deleteDish(dish.id)
 
     successMessage.value =
       'Prato excluído com sucesso.'

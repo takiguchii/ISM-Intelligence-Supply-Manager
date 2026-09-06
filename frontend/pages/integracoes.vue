@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import type { ImportAuditDto, ImportPreviewDto, ImportResultDto } from "~/services/modules/importService";
-import { importService } from "~/services/modules/importService";
+import type { ImportAuditDto, ImportPreviewDto, ImportResultDto } from "~/services/modules/import/importService";
+import { importService } from "~/services/modules/import/importService";
 import { useAuthStore } from "~/stores/auth";
 import AppSidebar from "~/components/layout/AppSidebar.vue";
 import AppLoader from "~/components/base/AppLoader.vue";

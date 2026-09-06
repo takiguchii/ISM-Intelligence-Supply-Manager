@@ -7,7 +7,7 @@ import {
   employeeService,
   EMPLOYEE_ROLES,
   type EmployeeResponse
-} from "~/services/modules/employeeService";
+} from "~/services/modules/employees/employeeService";
 
 definePageMeta({ layout: false });
 

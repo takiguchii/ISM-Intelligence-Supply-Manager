@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import type { AuthResponse, LoginRequest, RegisterRequest, User } from "~/types/auth";
-import { authService } from "~/services/modules/authService";
+import { authService } from "~/services/modules/auth/authService";
 import { isJwtExpired } from "~/utils/jwt";
 
 interface AuthState {
