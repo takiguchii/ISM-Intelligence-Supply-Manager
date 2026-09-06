@@ -50,6 +50,7 @@ public sealed class ProductService : IProductService
         int pageNumber = 1,
         int pageSize = 10,
         string? search = null,
+        bool? isCritical = null,
         CancellationToken cancellationToken = default)
     {
         if (pageNumber < 1) pageNumber = 1;
@@ -63,7 +64,7 @@ public sealed class ProductService : IProductService
         }
 
         var (items, totalCount) = await _productRepository.GetPagedAsync(
-            filterRestaurantId, pageNumber, pageSize, search, cancellationToken);
+            filterRestaurantId, pageNumber, pageSize, search, isCritical, cancellationToken);
 
         var responses = items.Select(Map).ToList();
         int totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);

@@ -130,10 +130,10 @@
               </tr>
 
               <tr v-else v-for="item in itensFiltrados" :key="item.id" class="hover:bg-gray-800/20 transition-colors group">
-                <td class="px-6 py-4 font-semibold text-gray-200">{{ item.nome }}</td>
-                <td class="px-6 py-4 text-gray-500">{{ item.unidade }}</td>
-                <td class="px-6 py-4 font-bold text-gray-200">{{ item.quantidade }}</td>
-                <td class="px-6 py-4 text-gray-500">{{ item.minimo }}</td>
+                <td class="px-6 py-4 font-semibold text-gray-200">{{ item.name || item.nome }}</td>
+                <td class="px-6 py-4 text-gray-500">{{ item.unit || item.unidade }}</td>
+                <td class="px-6 py-4 font-bold text-gray-200">{{ item.currentQuantity ?? item.quantidade }}</td>
+                <td class="px-6 py-4 text-gray-500">{{ item.minimumQuantity ?? item.minimo }}</td>
                 <td class="px-6 py-4">
                   <span
                     class="px-3 py-1 rounded-full text-[11px] font-bold border inline-block tracking-wider uppercase"
@@ -294,9 +294,9 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
+import { productService } from '~/services/modules/productService'
 
 // ==================== CONFIGURAÇÃO ====================
-const API_URL = 'https://sua-api.com.br/api/estoque'
 const PAGE_SIZE = 6
 const HISTORICO_KEY = 'estoque:historico-busca'
 
@@ -318,6 +318,12 @@ const formData = ref({ id: null, nome: '', unidade: 'kg', quantidade: 0, minimo:
 
 const itensEstoque = ref([])
 const itensCriticos = ref([])
+
+// Helpers de propriedades
+const getItemName = (item) => item?.name || item?.nome || ''
+const getItemUnit = (item) => item?.unit || item?.unidade || ''
+const getItemQty = (item) => item?.currentQuantity ?? item?.quantidade ?? 0
+const getItemMin = (item) => item?.minimumQuantity ?? item?.minimo ?? 0
 
 // ==================== HISTÓRICO DE BUSCA ====================
 const carregarHistorico = () => {
@@ -362,7 +368,7 @@ const itensFiltrados = computed(() => {
   let lista = itensEstoque.value
   if (searchQuery.value) {
     const termo = searchQuery.value.toLowerCase()
-    lista = lista.filter(i => i.nome.toLowerCase().includes(termo))
+    lista = lista.filter(i => getItemName(i).toLowerCase().includes(termo))
   }
   const inicio = (currentPage.value - 1) * PAGE_SIZE
   return lista.slice(inicio, inicio + PAGE_SIZE)
@@ -372,7 +378,7 @@ const totalFiltrado = computed(() => {
   if (paginadoNoServidor.value) return totalItens.value
   if (!searchQuery.value) return itensEstoque.value.length
   const termo = searchQuery.value.toLowerCase()
-  return itensEstoque.value.filter(i => i.nome.toLowerCase().includes(termo)).length
+  return itensEstoque.value.filter(i => getItemName(i).toLowerCase().includes(termo)).length
 })
 
 const totalPaginas = computed(() => Math.max(1, Math.ceil(totalFiltrado.value / PAGE_SIZE)))
@@ -391,7 +397,7 @@ const irParaPagina = (p) => {
   fetchEstoque()
 }
 
-// Busca com debounce: volta pra página 1 e consulta o banco
+// Busca com debounce: volta pra página 1 e consulta o banco via API
 let debounceTimer = null
 watch(searchQuery, () => {
   clearTimeout(debounceTimer)
@@ -403,39 +409,38 @@ watch(searchQuery, () => {
 
 // ==================== APOIO ====================
 const nomesItensCriticos = computed(() => {
-  const nomes = itensCriticos.value.map(i => i.nome)
+  const nomes = itensCriticos.value.map(getItemName).filter(Boolean)
   if (nomes.length === 0) return ''
   if (nomes.length === 1) return nomes[0]
-  const ultimo = nomes.pop()
-  return nomes.join(', ') + ' e ' + ultimo
+  const copy = [...nomes]
+  const ultimo = copy.pop()
+  return copy.join(', ') + ' e ' + ultimo
 })
 
-const verificarStatus = (item) => (item.quantidade <= item.minimo ? 'Crítico' : 'Saudável')
+const verificarStatus = (item) => (getItemQty(item) <= getItemMin(item) ? 'Crítico' : 'Saudável')
 
 // ==================== API ====================
 const fetchEstoque = async () => {
   isLoading.value = true
   errorMessage.value = ''
   try {
-    const params = new URLSearchParams({ page: currentPage.value, limit: PAGE_SIZE })
-    if (searchQuery.value.trim()) params.set('search', searchQuery.value.trim())
+    const pagedResult = await productService.getPaged({
+      pageNumber: currentPage.value,
+      pageSize: PAGE_SIZE,
+      search: searchQuery.value
+    })
 
-    const response = await fetch(`${API_URL}?${params.toString()}`)
-    if (!response.ok) throw new Error('Falha ao buscar dados.')
-    const data = await response.json()
-
-    if (Array.isArray(data)) {
-      // A API ignorou os parâmetros e mandou a lista inteira: pagina no cliente
-      paginadoNoServidor.value = false
-      itensEstoque.value = data
-      totalItens.value = data.length
-    } else {
+    if (pagedResult && Array.isArray(pagedResult.items)) {
       paginadoNoServidor.value = true
-      itensEstoque.value = data.data ?? data.items ?? []
-      totalItens.value = data.total ?? itensEstoque.value.length
+      itensEstoque.value = pagedResult.items
+      totalItens.value = pagedResult.totalCount ?? pagedResult.items.length
+    } else if (Array.isArray(pagedResult)) {
+      paginadoNoServidor.value = false
+      itensEstoque.value = pagedResult
+      totalItens.value = pagedResult.length
     }
 
-    if (currentPage.value > totalPaginas.value) {
+    if (currentPage.value > totalPaginas.value && totalPaginas.value > 0) {
       currentPage.value = totalPaginas.value
     }
   } catch (error) {
@@ -446,15 +451,16 @@ const fetchEstoque = async () => {
   }
 }
 
-// O alerta precisa olhar o estoque inteiro, não só a página atual
+// Busca de itens em estado crítico via API server-side
 const fetchCriticos = async () => {
   try {
-    const response = await fetch(`${API_URL}?critico=true`)
-    if (!response.ok) throw new Error()
-    const data = await response.json()
-    itensCriticos.value = Array.isArray(data) ? data : (data.data ?? [])
+    const pagedResult = await productService.getPaged({
+      isCritical: true,
+      pageSize: 100
+    })
+    itensCriticos.value = pagedResult?.items || []
   } catch {
-    itensCriticos.value = itensEstoque.value.filter(i => i.quantidade <= i.minimo)
+    itensCriticos.value = itensEstoque.value.filter(i => getItemQty(i) <= getItemMin(i))
   }
 }
 
@@ -462,22 +468,25 @@ const salvarItem = async () => {
   isSaving.value = true
   errorMessage.value = ''
   try {
-    const method = isEditing.value ? 'PUT' : 'POST'
-    const url = isEditing.value ? `${API_URL}/${formData.value.id}` : API_URL
+    const payload = {
+      name: formData.value.nome,
+      unit: formData.value.unidade,
+      currentQuantity: formData.value.quantidade,
+      minimumQuantity: formData.value.minimo
+    }
 
-    const response = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData.value)
-    })
-    if (!response.ok) throw new Error('Falha ao salvar.')
+    if (isEditing.value && formData.value.id) {
+      await productService.update(formData.value.id, payload)
+    } else {
+      await productService.create(payload)
+    }
 
     await fetchEstoque()
     await fetchCriticos()
     fecharModal()
   } catch (error) {
     console.error(error)
-    errorMessage.value = 'Erro ao tentar salvar o item.'
+    errorMessage.value = 'Erro ao tentar salvar o item no estoque.'
   } finally {
     isSaving.value = false
   }
@@ -487,8 +496,7 @@ const deletarItem = async (id) => {
   if (!confirm('Deseja mesmo remover este item?')) return
   errorMessage.value = ''
   try {
-    const response = await fetch(`${API_URL}/${id}`, { method: 'DELETE' })
-    if (!response.ok) throw new Error('Falha ao excluir.')
+    await productService.delete(id)
     await fetchEstoque()
     await fetchCriticos()
   } catch (error) {
@@ -500,7 +508,13 @@ const deletarItem = async (id) => {
 // ==================== MODAL ====================
 const abrirModal = (item = null) => {
   if (item) {
-    formData.value = { ...item }
+    formData.value = {
+      id: item.id,
+      nome: getItemName(item),
+      unidade: getItemUnit(item),
+      quantidade: getItemQty(item),
+      minimo: getItemMin(item)
+    }
     isEditing.value = true
   } else {
     formData.value = { id: null, nome: '', unidade: 'kg', quantidade: 0, minimo: 0 }

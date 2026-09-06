@@ -30,6 +30,7 @@ public sealed class ProductRepository : IProductRepository
         int pageNumber,
         int pageSize,
         string? search = null,
+        bool? isCritical = null,
         CancellationToken cancellationToken = default)
     {
         var query = _dbContext.Products
@@ -44,6 +45,11 @@ public sealed class ProductRepository : IProductRepository
         {
             var term = search.Trim().ToLower();
             query = query.Where(p => p.Name.ToLower().Contains(term) || p.Unit.ToLower().Contains(term));
+        }
+
+        if (isCritical.HasValue && isCritical.Value)
+        {
+            query = query.Where(p => p.CurrentQuantity <= p.MinimumQuantity);
         }
 
         var totalCount = await query.CountAsync(cancellationToken);
