@@ -4,7 +4,7 @@ import {
   importService,
   type ImportAuditDto,
   type ImportAuditDetailDto
-} from "~/services/modules/importService";
+} from "~/services/modules/import/importService";
 
 const props = defineProps<{ restaurantId: number | null; refreshToken: number }>();
 

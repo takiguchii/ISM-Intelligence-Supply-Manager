@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import AppSidebar from "~/components/layout/AppSidebar.vue";
 import AppLoader from "~/components/base/AppLoader.vue";
 import { useAuthStore } from "~/stores/auth";
 import {
   employeeService,
   EMPLOYEE_ROLES,
   type EmployeeResponse
-} from "~/services/modules/employeeService";
+} from "~/services/modules/employees/employeeService";
 
-definePageMeta({ layout: false });
 
 const PAGE_SIZE = 10;
 
@@ -345,68 +343,42 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans">
+  <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
     <AppLoader :visible="isPageLoading" />
 
-    <header
-      class="h-16 border-b border-zinc-800/80 bg-zinc-900/60 backdrop-blur-xl sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between"
+    <!-- Feedback -->
+    <div
+      v-if="successMessage"
+      class="px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm flex items-center justify-between gap-4"
     >
-      <div class="flex items-center gap-4">
-        <button
-          type="button"
-          @click="isSidebarOpen = !isSidebarOpen"
-          class="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-zinc-800/80 transition"
-          aria-label="Abrir menu"
-        >
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
+      <span>{{ successMessage }}</span>
+      <button type="button" @click="successMessage = ''" class="text-emerald-400 hover:text-emerald-200 font-bold">
+        ✕
+      </button>
+    </div>
 
-        <span class="font-bold text-lg text-white tracking-tight">ISM</span>
+    <!-- Cabeçalho -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-zinc-800 bg-zinc-900/80 text-[11px] font-bold uppercase tracking-widest text-zinc-400 mb-2">
+          Equipe
+        </div>
+        <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white tracking-tight">Funcionários</h1>
+        <p class="text-sm text-zinc-400 mt-1">
+          Equipe vinculada ao restaurante, com cargos e acesso ao sistema.
+        </p>
       </div>
 
       <button
+        v-if="canManage"
         type="button"
-        @click="handleLogout"
-        class="px-4 py-2 text-xs font-semibold rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white border border-zinc-700/60 transition"
+        @click="openCreateModal"
+        class="shrink-0 px-4 py-2.5 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 text-sm font-semibold transition self-start sm:self-auto shadow-lg shadow-white/5 flex items-center gap-2 active:scale-95"
       >
-        Sair
+        <span class="text-base leading-none font-bold">+</span>
+        Adicionar funcionário
       </button>
-    </header>
-
-    <AppSidebar :isOpen="isSidebarOpen" @close="isSidebarOpen = false" />
-
-    <main class="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-8">
-      <!-- Feedback -->
-      <div
-        v-if="successMessage"
-        class="mb-6 px-4 py-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm flex items-center justify-between gap-4"
-      >
-        <span>{{ successMessage }}</span>
-        <button type="button" @click="successMessage = ''" class="text-emerald-400 hover:text-emerald-200 font-bold">
-          ✕
-        </button>
-      </div>
-
-      <!-- Cabeçalho -->
-      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
-        <div>
-          <h1 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">Funcionários</h1>
-          <p class="text-sm text-zinc-400 mt-1">
-            Equipe vinculada ao restaurante, com cargos e acesso ao sistema.
-          </p>
-        </div>
-
-        <button
-          v-if="canManage"
-          type="button"
-          @click="openCreateModal"
-          class="shrink-0 px-4 py-2.5 rounded-lg bg-white text-zinc-950 hover:bg-zinc-200 text-sm font-semibold transition self-start sm:self-auto"
-        >
-          Adicionar funcionário
-        </button>
-      </div>
+    </div>
 
       <!-- Busca -->
       <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
@@ -551,16 +523,16 @@ onMounted(async () => {
                 type="button"
                 :disabled="page === 1"
                 @click="goToPage(page - 1)"
-                class="px-3 py-1.5 rounded-lg border border-zinc-800 text-zinc-300 hover:bg-zinc-800 disabled:opacity-40 disabled:hover:bg-transparent transition"
+                class="px-3 py-1.5 rounded-xl border border-zinc-700/60 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white disabled:opacity-40 disabled:hover:bg-transparent transition text-xs font-semibold"
               >
                 Anterior
               </button>
-              <span class="px-2 text-zinc-400">Página {{ page }} de {{ totalPages }}</span>
+              <span class="px-2 text-zinc-400 text-xs">Página {{ page }} de {{ totalPages }}</span>
               <button
                 type="button"
                 :disabled="page === totalPages"
                 @click="goToPage(page + 1)"
-                class="px-3 py-1.5 rounded-lg border border-zinc-800 text-zinc-300 hover:bg-zinc-800 disabled:opacity-40 disabled:hover:bg-transparent transition"
+                class="px-3 py-1.5 rounded-xl border border-zinc-700/60 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white disabled:opacity-40 disabled:hover:bg-transparent transition text-xs font-semibold"
               >
                 Próxima
               </button>
@@ -568,17 +540,16 @@ onMounted(async () => {
           </div>
         </template>
       </div>
-    </main>
 
     <!-- Modal: adicionar / editar -->
     <div
       v-if="showFormModal"
-      class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+      class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
       @click.self="closeFormModal"
     >
-      <div class="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl">
-        <div class="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
-          <h2 class="text-base font-semibold text-white">
+      <div class="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
+          <h2 class="text-base font-bold text-white">
             {{ editingEmployee ? "Editar funcionário" : "Adicionar funcionário" }}
           </h2>
           <button
@@ -591,7 +562,7 @@ onMounted(async () => {
           </button>
         </div>
 
-        <form class="px-5 py-5 space-y-4" @submit.prevent="saveEmployee">
+        <form class="px-6 py-5 space-y-4" @submit.prevent="saveEmployee">
           <div>
             <label for="employee-name" class="block text-xs font-semibold text-zinc-400 mb-1.5">Nome</label>
             <input
@@ -599,7 +570,7 @@ onMounted(async () => {
               v-model="form.name"
               type="text"
               autocomplete="off"
-              class="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white focus:outline-none focus:border-zinc-600 transition"
+              class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white focus:outline-none focus:border-zinc-600 transition"
             />
           </div>
 
@@ -610,7 +581,7 @@ onMounted(async () => {
               v-model="form.email"
               type="email"
               autocomplete="off"
-              class="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white focus:outline-none focus:border-zinc-600 transition"
+              class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white focus:outline-none focus:border-zinc-600 transition"
             />
           </div>
 
@@ -623,7 +594,7 @@ onMounted(async () => {
               v-model="form.password"
               type="password"
               autocomplete="new-password"
-              class="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white focus:outline-none focus:border-zinc-600 transition"
+              class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white focus:outline-none focus:border-zinc-600 transition"
             />
             <p class="mt-1.5 text-[11px] text-zinc-500">Mínimo de 6 caracteres.</p>
           </div>
@@ -634,7 +605,7 @@ onMounted(async () => {
               <select
                 id="employee-role"
                 v-model="form.role"
-                class="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white focus:outline-none focus:border-zinc-600 transition"
+                class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white focus:outline-none focus:border-zinc-600 transition"
               >
                 <option v-for="role in EMPLOYEE_ROLES" :key="role" :value="role">
                   {{ ROLE_LABELS[role] }}
@@ -647,7 +618,7 @@ onMounted(async () => {
               <select
                 id="employee-status"
                 v-model="form.isActive"
-                class="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white focus:outline-none focus:border-zinc-600 transition"
+                class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white focus:outline-none focus:border-zinc-600 transition"
               >
                 <option :value="true">Ativo</option>
                 <option :value="false">Inativo</option>
@@ -655,22 +626,22 @@ onMounted(async () => {
             </div>
           </div>
 
-          <p v-if="formError" class="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-300">
+          <p v-if="formError" class="px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-300">
             {{ formError }}
           </p>
 
-          <div class="flex items-center justify-end gap-3 pt-2">
+          <div class="flex items-center justify-end gap-3 pt-3 border-t border-zinc-800">
             <button
               type="button"
               @click="closeFormModal"
-              class="px-4 py-2 rounded-lg text-xs font-semibold text-zinc-400 hover:text-white transition"
+              class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/60 transition"
             >
               Cancelar
             </button>
             <button
               type="submit"
               :disabled="isSaving"
-              class="px-4 py-2 rounded-lg bg-white text-zinc-950 hover:bg-zinc-200 text-xs font-semibold transition disabled:opacity-50"
+              class="px-5 py-2.5 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 text-xs sm:text-sm font-semibold transition shadow-lg shadow-white/5 disabled:opacity-50"
             >
               {{ isSaving ? "Salvando..." : editingEmployee ? "Salvar alterações" : "Cadastrar" }}
             </button>
@@ -682,28 +653,28 @@ onMounted(async () => {
     <!-- Modal: confirmar exclusão -->
     <div
       v-if="employeeToDelete"
-      class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+      class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
       @click.self="closeDeleteModal"
     >
-      <div class="w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl p-5">
-        <h2 class="text-base font-semibold text-white">Excluir funcionário</h2>
-        <p class="mt-2 text-sm text-zinc-400">
+      <div class="w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl p-6 space-y-4">
+        <h2 class="text-base font-bold text-white">Excluir funcionário</h2>
+        <p class="text-sm text-zinc-400">
           <strong class="text-zinc-200">{{ employeeToDelete.name }}</strong> perderá o acesso ao sistema.
           Esta ação não pode ser desfeita.
         </p>
 
         <p
           v-if="deleteError"
-          class="mt-4 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-300"
+          class="px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-300"
         >
           {{ deleteError }}
         </p>
 
-        <div class="flex items-center justify-end gap-3 mt-5">
+        <div class="flex items-center justify-end gap-3 pt-3 border-t border-zinc-800">
           <button
             type="button"
             @click="closeDeleteModal"
-            class="px-4 py-2 rounded-lg text-xs font-semibold text-zinc-400 hover:text-white transition"
+            class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/60 transition"
           >
             Cancelar
           </button>
@@ -711,7 +682,7 @@ onMounted(async () => {
             type="button"
             :disabled="isDeleting"
             @click="deleteEmployee"
-            class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-semibold transition disabled:opacity-50"
+            class="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs sm:text-sm font-semibold transition shadow-lg shadow-red-600/20 disabled:opacity-50"
           >
             {{ isDeleting ? "Excluindo..." : "Excluir" }}
           </button>
