@@ -3,7 +3,6 @@ import { ref, computed, onMounted } from "vue";
 import type { ImportAuditDto, ImportPreviewDto, ImportResultDto } from "~/services/modules/import/importService";
 import { importService } from "~/services/modules/import/importService";
 import { useAuthStore } from "~/stores/auth";
-import AppSidebar from "~/components/layout/AppSidebar.vue";
 import AppLoader from "~/components/base/AppLoader.vue";
 import ImportConfirmationStep from "~/components/import/ImportConfirmationStep.vue";
 import ImportHistoryStep from "~/components/import/ImportHistoryStep.vue";
@@ -299,7 +298,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col font-sans selection:bg-zinc-800 selection:text-white">
+  <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-8">
     <AppLoader :visible="isLoading" />
 
     <!-- Toast Notification -->
@@ -322,10 +321,7 @@ onMounted(async () => {
       </Transition>
     </Teleport>
 
-    <!-- Main Container -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-8 space-y-8">
-      
-      <!-- Top Title & Tag Section (Protótipo exatamente igual ao enviado) -->
+    <!-- Top Title & Tag Section -->
       <div class="space-y-2">
         <div class="inline-flex items-center px-3 py-1 rounded-full bg-zinc-900/90 border border-zinc-800 text-[11px] font-mono tracking-wider text-zinc-300 uppercase">
           INTEGRAÇÕES
@@ -597,8 +593,6 @@ onMounted(async () => {
         <ImportHistoryStep :restaurant-id="targetRestaurantId" :refresh-token="historyRefreshToken" />
       </section>
 
-    </main>
-
     <!-- MODAL SLIDE-OVER DE GERENCIAMENTO DA SKILL (PLUG & PLAY) -->
     <Teleport to="body">
       <div
@@ -716,18 +710,6 @@ onMounted(async () => {
         </div>
       </div>
     </Teleport>
-
-    <!-- Footer -->
-    <footer class="mt-auto border-t border-zinc-800/80 bg-[#09090b] py-6 text-center text-xs text-zinc-500">
-      <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <p>&copy; 2026 ISM — Intelligence Supply Manager. Todos os direitos reservados.</p>
-        <div class="flex items-center gap-4 text-zinc-400">
-          <NuxtLink to="/" class="hover:text-white transition-colors">Início</NuxtLink>
-          <NuxtLink to="/login" class="hover:text-white transition-colors">Login</NuxtLink>
-          <a href="http://localhost:8080/swagger" target="_blank" class="hover:text-white transition-colors">Swagger API</a>
-        </div>
-      </div>
-    </footer>
   </div>
 </template>
 

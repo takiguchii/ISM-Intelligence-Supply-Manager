@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import AppSidebar from "~/components/layout/AppSidebar.vue";
 import AppLoader from "~/components/base/AppLoader.vue";
 import { useAuthStore } from "~/stores/auth";
 import {
@@ -229,24 +228,19 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
+  <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
     <AppLoader :visible="isLoading" />
 
-    <!-- ========================================================= -->
-    <!-- MAIN CONTENT -->
-    <!-- ========================================================= -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
-      
-      <!-- Notifications Alert -->
-      <div v-if="successMessage" class="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs sm:text-sm flex items-center justify-between">
-        <span>{{ successMessage }}</span>
-        <button @click="successMessage = ''" class="text-emerald-400 hover:text-emerald-200 font-bold ml-4">✕</button>
-      </div>
+    <!-- Notifications Alert -->
+    <div v-if="successMessage" class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs sm:text-sm flex items-center justify-between">
+      <span>{{ successMessage }}</span>
+      <button @click="successMessage = ''" class="text-emerald-400 hover:text-emerald-200 font-bold ml-4">✕</button>
+    </div>
 
-      <div v-if="errorMessage" class="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs sm:text-sm flex items-center justify-between">
-        <span>{{ errorMessage }}</span>
-        <button @click="errorMessage = ''" class="text-red-400 hover:text-red-200 font-bold ml-4">✕</button>
-      </div>
+    <div v-if="errorMessage" class="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs sm:text-sm flex items-center justify-between">
+      <span>{{ errorMessage }}</span>
+      <button @click="errorMessage = ''" class="text-red-400 hover:text-red-200 font-bold ml-4">✕</button>
+    </div>
 
       <!-- ========================================================= -->
       <!-- PAGE HEADER -->
@@ -486,7 +480,6 @@ onMounted(async () => {
           </div>
         </div>
       </div>
-    </main>
 
     <!-- ========================================================= -->
     <!-- MODAL: CRIAR / EDITAR FORNECEDOR -->
