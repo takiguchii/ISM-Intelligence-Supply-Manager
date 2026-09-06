@@ -10,6 +10,7 @@ export interface CategoryDto {
 }
 
 export interface CreateCategoryRequest {
+  restaurantId?: number;
   name: string;
   displayOrder?: number;
   isActive?: boolean;
@@ -44,6 +45,7 @@ export interface DishDto {
 }
 
 export interface CreateDishRequest {
+  restaurantId?: number;
   name: string;
   description?: string;
   categoryId?: number;

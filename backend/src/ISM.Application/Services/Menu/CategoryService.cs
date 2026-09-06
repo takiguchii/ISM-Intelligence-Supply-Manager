@@ -38,11 +38,11 @@ public sealed class CategoryService : ICategoryService
 
     public async Task<IReadOnlyList<CategoryResponse>> GetAllCategoriesAsync(int? restaurantId = null, CancellationToken cancellationToken = default)
     {
-        var categories = await _categoryRepository.GetAllCategoriesAsync(restaurantId, cancellationToken);
-        if (!_currentUser.IsSuperAdmin && _currentUser.RestaurantId.HasValue)
-        {
-            categories = categories.Where(c => c.RestaurantId == _currentUser.RestaurantId.Value).ToList();
-        }
+        var targetRestaurantId = (!_currentUser.IsSuperAdmin && _currentUser.RestaurantId.HasValue)
+            ? _currentUser.RestaurantId.Value
+            : restaurantId;
+
+        var categories = await _categoryRepository.GetAllCategoriesAsync(targetRestaurantId, cancellationToken);
         return categories.Select(Map).ToArray();
     }
 
@@ -117,7 +117,7 @@ public sealed class CategoryService : ICategoryService
         if (_currentUser.IsSuperAdmin)
         {
             if (requestRestaurantId <= 0)
-                throw new InvalidOperationException("Super Admin deve informar o RestaurantId.");
+                return _currentUser.RestaurantId ?? 1;
             return requestRestaurantId;
         }
 

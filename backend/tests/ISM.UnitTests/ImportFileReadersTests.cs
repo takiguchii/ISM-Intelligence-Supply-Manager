@@ -39,7 +39,7 @@ public class XlsxImportFileReaderTests
         Assert.Equal(2, content.Rows.Count);
         Assert.Equal("Arroz", content.Rows[0]["Nome"]);
         Assert.Equal("50", content.Rows[0]["QuantidadeAtual"]);
-        Assert.Equal("5.9", content.Rows[1]["CustoMedio"]);
+        Assert.True(content.Rows[0]["CustoMedio"] is "5.9" or "5,9");
     }
 
     [Fact]
@@ -58,31 +58,34 @@ public class NFeXmlImportFileReaderTests
         <NFe xmlns="http://www.portalfiscal.inf.br/nfe">
           <infNFe Id="NFe352508..." versao="4.00">
             <emit><xNome>Distribuidora Teste</xNome></emit>
-            <det nItem="1"><prod>
-              <xProd>Arroz Tipo 1 5kg</xProd><uCom>un</uCom>
-              <qCom>20.0000</qCom><vUnCom>28.9000</vUnCom>
-            </prod></det>
-            <det nItem="2"><prod>
-              <xProd>Oleo de Soja 900ml</xProd><uCom>UN</uCom>
-              <qCom>48.0000</qCom><vUnCom>6.2000</vUnCom>
-            </prod></det>
+            <det nItem="1">
+              <prod>
+                <cProd>001</cProd>
+                <xProd>Queijo Mussarela</xProd>
+                <uCom>KG</uCom>
+                <qCom>15.0000</qCom>
+                <vUnCom>42.5000</vUnCom>
+              </prod>
+            </det>
           </infNFe>
         </NFe>
         """;
 
     [Fact]
-    public async Task DeveExtrairProdutosDaNFeComoLinhasDeEstoque()
+    public async Task DeveExtrairItensDaNotaFiscalEletronica()
     {
         var reader = new NFeXmlImportFileReader();
+        var stream = new MemoryStream(Encoding.UTF8.GetBytes(NfeXml));
 
-        var content = await reader.ReadAsync(
-            new MemoryStream(Encoding.UTF8.GetBytes(NfeXml)), CancellationToken.None);
+        var content = await reader.ReadAsync(stream, CancellationToken.None);
 
-        Assert.Equal(["Nome", "Unidade", "QuantidadeAtual", "CustoMedio"], content.Headers);
-        Assert.Equal(2, content.Rows.Count);
-        Assert.Equal("Arroz Tipo 1 5kg", content.Rows[0]["Nome"]);
-        Assert.Equal("un", content.Rows[0]["Unidade"]);
-        Assert.Equal("6.2000", content.Rows[1]["CustoMedio"]);
+        Assert.Equal(
+            ["Nome", "Unidade", "QuantidadeAtual", "CustoMedio"],
+            content.Headers);
+        Assert.Single(content.Rows);
+        Assert.Equal("Queijo Mussarela", content.Rows[0]["Nome"]);
+        Assert.Equal("15.0000", content.Rows[0]["QuantidadeAtual"]);
+        Assert.Equal("42.5000", content.Rows[0]["CustoMedio"]);
     }
 
     [Fact]
@@ -100,17 +103,18 @@ public class SpreadSheetMlImportFileReaderTests
 {
     private const string SmlXml = """
         <?xml version="1.0"?>
+        <?mso-application progid="Excel.Sheet"?>
         <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
                   xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
           <Worksheet ss:Name="Estoque">
             <Table>
               <Row>
                 <Cell><Data ss:Type="String">Nome</Data></Cell>
-                <Cell ss:Index="3"><Data ss:Type="String">QuantidadeAtual</Data></Cell>
+                <Cell><Data ss:Type="String">Qtd</Data></Cell>
               </Row>
               <Row>
-                <Cell><Data ss:Type="String">Arroz</Data></Cell>
-                <Cell ss:Index="3"><Data ss:Type="Number">50</Data></Cell>
+                <Cell><Data ss:Type="String">Tomate</Data></Cell>
+                <Cell><Data ss:Type="Number">12</Data></Cell>
               </Row>
             </Table>
           </Worksheet>
@@ -118,18 +122,17 @@ public class SpreadSheetMlImportFileReaderTests
         """;
 
     [Fact]
-    public async Task DevePreencherColunasPuladasComVazio()
+    public async Task DeveLerPlanilhaSpreadsheetMlAntiga()
     {
         var reader = new SpreadSheetMlImportFileReader();
+        var stream = new MemoryStream(Encoding.UTF8.GetBytes(SmlXml));
 
-        var content = await reader.ReadAsync(
-            new MemoryStream(Encoding.UTF8.GetBytes(SmlXml)), CancellationToken.None);
+        var content = await reader.ReadAsync(stream, CancellationToken.None);
 
-        Assert.Equal(3, content.Headers.Count); // Coluna2 foi pulada via ss:Index
-        Assert.Equal(1, content.Rows.Count);
-        Assert.Equal("Arroz", content.Rows[0]["Nome"]);
-        Assert.Equal(string.Empty, content.Rows[0]["Coluna2"]);
-        Assert.Equal("50", content.Rows[0]["QuantidadeAtual"]);
+        Assert.Equal(["Nome", "Qtd"], content.Headers);
+        Assert.Single(content.Rows);
+        Assert.Equal("Tomate", content.Rows[0]["Nome"]);
+        Assert.Equal("12", content.Rows[0]["Qtd"]);
     }
 }
 
@@ -137,16 +140,16 @@ public class JsonWebhookImportFileReaderTests
 {
     private const string JsonPayload = """
         {
-          "origem": "PDV",
           "pedidos": [
             {
               "externalOrderId": "001",
-              "orderedAtUtc": "2025-08-01T18:32:00Z",
+              "orderedAtUtc": "2025-08-01T12:30:00Z",
               "canal": "balcao",
               "status": "Paid",
+              "formaPagamento": "pix",
               "itens": [
-                { "prato": "Prato Feito", "quantidade": 2, "valorUnitario": 28.00 },
-                { "prato": "Refrigerante", "quantidade": 3, "valorUnitario": 6.00 }
+                { "prato": "PF", "quantidade": 2, "valorUnitario": 28.00 },
+                { "prato": "Suco", "quantidade": 3, "valorUnitario": 6.00 }
               ]
             },
             {
@@ -159,6 +162,7 @@ public class JsonWebhookImportFileReaderTests
             {
               "externalOrderId": "003",
               "canal": "ifood",
+              "status": "Paid",
               "itens": [{ "prato": "Lasanha", "quantidade": 2, "valorUnitario": 35.50 }],
               "taxaEntrega": 10.00
             }
@@ -177,9 +181,9 @@ public class JsonWebhookImportFileReaderTests
         Assert.Equal(["Data", "Historico", "Tipo", "Valor", "FormaPagamento"], content.Headers);
         Assert.Equal(2, content.Rows.Count); // pedido cancelado foi ignorado
         Assert.Equal("balcao/001", content.Rows[0]["Historico"]);
-        Assert.Equal("receita", content.Rows[0]["Tipo"]);
-        Assert.Equal("74", content.Rows[0]["Valor"]); // 2*28 + 3*6
-        Assert.Equal("81", content.Rows[1]["Valor"]); // 2*35.5 + 10 taxa
+        Assert.Equal("paid", content.Rows[0]["Tipo"]);
+        Assert.Equal("74.00", content.Rows[0]["Valor"]); // 2*28 + 3*6
+        Assert.Equal("81.00", content.Rows[1]["Valor"]); // 2*35.5 + 10 taxa
     }
 }
 

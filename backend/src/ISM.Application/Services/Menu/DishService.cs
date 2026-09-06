@@ -47,11 +47,11 @@ public sealed class DishService : IDishService
         int? categoryId = null,
         CancellationToken cancellationToken = default)
     {
-        var dishes = await _dishRepository.GetAllDishesAsync(restaurantId, categoryId, cancellationToken);
-        if (!_currentUser.IsSuperAdmin && _currentUser.RestaurantId.HasValue)
-        {
-            dishes = dishes.Where(d => d.RestaurantId == _currentUser.RestaurantId.Value).ToList();
-        }
+        var targetRestaurantId = (!_currentUser.IsSuperAdmin && _currentUser.RestaurantId.HasValue)
+            ? _currentUser.RestaurantId.Value
+            : restaurantId;
+
+        var dishes = await _dishRepository.GetAllDishesAsync(targetRestaurantId, categoryId, cancellationToken);
         return dishes.Select(Map).ToArray();
     }
 
@@ -181,7 +181,7 @@ public sealed class DishService : IDishService
         if (_currentUser.IsSuperAdmin)
         {
             if (requestRestaurantId <= 0)
-                throw new InvalidOperationException("Super Admin deve informar o RestaurantId.");
+                return _currentUser.RestaurantId ?? 1;
             return requestRestaurantId;
         }
 

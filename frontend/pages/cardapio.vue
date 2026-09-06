@@ -255,6 +255,10 @@ const getDishCategoryName = (dish: Dish) => {
   )
 }
 
+const getRestaurantId = (): number | undefined => {
+  return authStore.currentUser?.restaurantId ?? undefined
+}
+
 /*
    API - CATEGORIES
 */
@@ -278,6 +282,7 @@ const createCategory = async () => {
 
   try {
     await menuService.createCategory({
+      restaurantId: getRestaurantId() || 1,
       name,
       displayOrder: categoryForm.value.displayOrder,
       isActive: categoryForm.value.isActive
@@ -393,6 +398,7 @@ const createDish = async () => {
 
   try {
     await menuService.createDish({
+      restaurantId: getRestaurantId() || 1,
       name: dishForm.value.name.trim(),
       description: dishForm.value.description.trim() || undefined,
       categoryId: dishForm.value.categoryId,
