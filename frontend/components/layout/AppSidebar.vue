@@ -11,8 +11,8 @@ const emit = defineEmits<{
 }>();
 
 const authStore = useAuthStore();
-
-const activeItem = ref("dashboard");
+const route = useRoute();
+const router = useRouter();
 
 const menuItems = [
   { id: "dashboard", label: "Dashboard", icon: "dashboard", route: "/" },
@@ -24,10 +24,13 @@ const menuItems = [
   { id: "integracoes", label: "Integrações", icon: "plug", route: "/integracoes" }
 ];
 
-const router = useRouter();
+const activeItem = computed(() => {
+  const match = menuItems.find(item => item.route === route.path);
+  return match ? match.id : "dashboard";
+});
 
 const selectItem = (item: typeof menuItems[number]) => {
-  activeItem.value = item.id;
+  emit("close");
   router.push(item.route);
 };
 

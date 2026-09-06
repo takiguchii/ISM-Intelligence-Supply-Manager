@@ -9,7 +9,6 @@ import {
   type EmployeeResponse
 } from "~/services/modules/employees/employeeService";
 
-definePageMeta({ layout: false });
 
 const PAGE_SIZE = 10;
 
@@ -345,39 +344,10 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans">
+  <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
     <AppLoader :visible="isPageLoading" />
 
-    <header
-      class="h-16 border-b border-zinc-800/80 bg-zinc-900/60 backdrop-blur-xl sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between"
-    >
-      <div class="flex items-center gap-4">
-        <button
-          type="button"
-          @click="isSidebarOpen = !isSidebarOpen"
-          class="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-zinc-800/80 transition"
-          aria-label="Abrir menu"
-        >
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-
-        <span class="font-bold text-lg text-white tracking-tight">ISM</span>
-      </div>
-
-      <button
-        type="button"
-        @click="handleLogout"
-        class="px-4 py-2 text-xs font-semibold rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white border border-zinc-700/60 transition"
-      >
-        Sair
-      </button>
-    </header>
-
-    <AppSidebar :isOpen="isSidebarOpen" @close="isSidebarOpen = false" />
-
-    <main class="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-8">
+    <main class="flex-1 w-full mx-auto">
       <!-- Feedback -->
       <div
         v-if="successMessage"

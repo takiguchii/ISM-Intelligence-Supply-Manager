@@ -8,7 +8,6 @@ import AppLoader from "~/components/base/AppLoader.vue";
 import ImportConfirmationStep from "~/components/import/ImportConfirmationStep.vue";
 import ImportHistoryStep from "~/components/import/ImportHistoryStep.vue";
 
-definePageMeta({ layout: false });
 
 const runtimeConfig = useRuntimeConfig();
 const authStore = useAuthStore();
@@ -323,48 +322,8 @@ onMounted(async () => {
       </Transition>
     </Teleport>
 
-    <!-- App Header -->
-    <header class="h-16 border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-xl sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between">
-      <div class="flex items-center gap-4">
-        <button
-          @click="toggleSidebar"
-          class="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-zinc-800/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-zinc-600"
-          title="Abrir Menu Lateral"
-        >
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-          </svg>
-        </button>
-        <div class="flex items-center gap-3">
-          <span class="font-bold text-lg text-white tracking-tight">ISM</span>
-          <span class="hidden sm:inline-block text-xs uppercase tracking-widest text-zinc-400 font-mono border-l border-zinc-700/60 pl-3">
-            {{ runtimeConfig.public.appName }}
-          </span>
-        </div>
-      </div>
-
-      <div class="flex items-center gap-3">
-        <div v-if="authStore.isAuthenticated" class="flex items-center gap-3">
-          <span class="hidden md:inline-block text-xs text-zinc-400 font-medium">
-            {{ authStore.currentUser?.name }} ({{ authStore.currentUser?.role }})
-          </span>
-          <button
-            @click="handleLogout"
-            class="px-4 py-2 text-xs font-semibold rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-200 hover:text-white border border-zinc-800 transition-all duration-200 flex items-center gap-2"
-          >
-            <svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-            </svg>
-            <span>Sair</span>
-          </button>
-        </div>
-      </div>
-    </header>
-
-    <AppSidebar :isOpen="isSidebarOpen" @close="isSidebarOpen = false" />
-
     <!-- Main Container -->
-    <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-8 py-8 space-y-8">
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-8 space-y-8">
       
       <!-- Top Title & Tag Section (Protótipo exatamente igual ao enviado) -->
       <div class="space-y-2">

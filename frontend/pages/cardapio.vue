@@ -1,13 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import AppSidebar from '~/components/layout/AppSidebar.vue'
 import AppLoader from '~/components/base/AppLoader.vue'
 import { useAuthStore } from '~/stores/auth'
 import { menuService } from '~/services/modules/menu/menuService'
-
-definePageMeta({
-  layout: false
-})
 
 interface Category {
   id: number
@@ -878,35 +873,11 @@ onMounted(loadPage)
 </script>
 
 <template>
-  <div class="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans">
+  <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
     <AppLoader :visible="isLoading" />
 
-    <!-- HEADER -->
-    <header
-      class="h-16 border-b border-zinc-800/80 bg-zinc-900/60 backdrop-blur-xl sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between">
-      <div class="flex items-center gap-4">
-        <button type="button" @click="toggleSidebar"
-          class="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-zinc-800/80 transition" aria-label="Abrir menu">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-
-        <span class="font-bold text-lg text-white tracking-tight">
-          ISM
-        </span>
-      </div>
-
-      <button type="button" @click="handleLogout"
-        class="px-4 py-2 text-xs font-semibold rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white border border-zinc-700/60 transition">
-        Sair
-      </button>
-    </header>
-
-    <AppSidebar :isOpen="isSidebarOpen" @close="isSidebarOpen = false" />
-
     <!-- MAIN -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
+    <main class="flex-1">
       <!-- PAGE HEADER -->
       <section
         class="p-6 sm:p-8 rounded-2xl bg-gradient-to-r from-zinc-900 via-zinc-900/90 to-zinc-950 border border-zinc-800 shadow-xl mb-6">
