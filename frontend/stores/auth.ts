@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import type { AuthResponse, LoginRequest, RegisterRequest, User } from "~/types/auth";
 import { authService } from "~/services/modules/authService";
+import { isJwtExpired } from "~/utils/jwt";
 
 interface AuthState {
   token: string | null;
@@ -16,7 +17,7 @@ export const useAuthStore = defineStore("auth", {
   }),
 
   getters: {
-    isAuthenticated: (state): boolean => !!state.token && !!state.user,
+    isAuthenticated: (state): boolean => !!state.token && !!state.user && !isJwtExpired(state.token),
     currentUser: (state): User | null => state.user,
     userRole: (state): string | null => state.user?.role ?? null,
     isLoading: (state): boolean => state.loading
@@ -28,6 +29,10 @@ export const useAuthStore = defineStore("auth", {
         const token = localStorage.getItem("auth_token");
         const userStr = localStorage.getItem("auth_user");
         if (token) {
+          if (isJwtExpired(token)) {
+            this.clearAuth();
+            return;
+          }
           this.token = token;
         }
         if (userStr) {
