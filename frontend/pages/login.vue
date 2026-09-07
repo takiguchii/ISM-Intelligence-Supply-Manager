@@ -127,7 +127,7 @@ const drawParticles = () => {
         ctx.beginPath();
         ctx.moveTo(a.x, a.y);
         ctx.lineTo(b.x, b.y);
-        ctx.strokeStyle = `rgba(161, 161, 170, ${(opacity * 0.55).toFixed(3)})`;
+        ctx.strokeStyle = `rgba(34, 211, 238, ${(opacity * 0.55).toFixed(3)})`;
         ctx.lineWidth = lineWidth;
         ctx.stroke();
       }
@@ -142,7 +142,7 @@ const drawParticles = () => {
         ctx.beginPath();
         ctx.moveTo(a.x, a.y);
         ctx.lineTo(mouse.x, mouse.y);
-        ctx.strokeStyle = `rgba(212, 212, 216, ${(opacity * 0.9).toFixed(3)})`;
+        ctx.strokeStyle = `rgba(34, 197, 94, ${(opacity * 0.9).toFixed(3)})`;
         ctx.lineWidth = 0.8 + opacity * 1.1;
         ctx.stroke();
       }
@@ -156,9 +156,9 @@ const drawParticles = () => {
 
     const glowRadius = isNearMouse ? p.radius * 4.5 : p.radius * 2.8;
     const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, glowRadius);
-    grad.addColorStop(0, `rgba(255, 255, 255, ${isNearMouse ? 0.98 : 0.92})`);
-    grad.addColorStop(0.3, `rgba(228, 228, 231, ${isNearMouse ? 0.75 : 0.55})`);
-    grad.addColorStop(1, `rgba(161, 161, 170, 0)`);
+    grad.addColorStop(0, `rgba(163, 230, 53, ${isNearMouse ? 0.98 : 0.92})`);
+    grad.addColorStop(0.3, `rgba(34, 197, 94, ${isNearMouse ? 0.78 : 0.58})`);
+    grad.addColorStop(1, `rgba(34, 211, 238, 0)`);
 
     ctx.beginPath();
     ctx.arc(p.x, p.y, glowRadius, 0, Math.PI * 2);
@@ -167,7 +167,7 @@ const drawParticles = () => {
 
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-    ctx.fillStyle = isNearMouse ? "#fafafa" : "#e4e4e7";
+    ctx.fillStyle = isNearMouse ? "#bef264" : "#86efac";
     ctx.fill();
   }
 
@@ -272,52 +272,52 @@ const handleLogin = async () => {
 </script>
 
 <template>
-  <main class="relative min-h-screen w-full overflow-hidden bg-zinc-950 text-zinc-100 font-sans selection:bg-white/15 selection:text-white">
+  <main class="relative min-h-screen w-full overflow-hidden bg-slate-950 text-white font-sans selection:bg-green-500/25 selection:text-lime-100">
     <canvas
       ref="particlesCanvas"
       class="fixed inset-0 z-0 block"
       aria-hidden="true"
     ></canvas>
 
-    <div class="fixed inset-0 z-[1] pointer-events-none bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.06)_0%,transparent_55%)]"></div>
+    <div class="fixed inset-0 z-[1] pointer-events-none bg-[radial-gradient(ellipse_at_center,rgba(34,197,94,0.10)_0%,rgba(34,211,238,0.06)_35%,transparent_65%)]"></div>
 
-    <div class="fixed inset-0 z-[1] pointer-events-none opacity-[0.03]" style="background-image: linear-gradient(rgba(255,255,255,0.9) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.9) 1px, transparent 1px); background-size: 48px 48px;"></div>
+    <div class="fixed inset-0 z-[1] pointer-events-none opacity-[0.035]" style="background-image: linear-gradient(rgba(163,230,53,0.9) 1px, transparent 1px), linear-gradient(90deg, rgba(163,230,53,0.9) 1px, transparent 1px); background-size: 48px 48px;"></div>
 
     <div class="relative z-10 min-h-screen w-full flex items-center justify-center px-4 sm:px-6 py-10">
       <div class="w-full sm:max-w-md lg:max-w-md">
         <div class="relative group">
-          <div class="absolute -inset-1 bg-gradient-to-r from-white/10 via-zinc-300/8 to-white/10 rounded-3xl blur-xl opacity-60 group-hover:opacity-100 transition-opacity duration-700"></div>
+          <div class="absolute -inset-1 bg-gradient-to-r from-lime-400/20 via-green-500/12 to-cyan-400/20 rounded-3xl blur-xl opacity-60 group-hover:opacity-100 transition-opacity duration-700"></div>
 
-          <div class="absolute -inset-[1px] bg-gradient-to-r from-zinc-300/50 via-zinc-200/30 to-zinc-300/50 rounded-3xl opacity-30 group-hover:opacity-60 transition-opacity duration-500"></div>
+          <div class="absolute -inset-[1px] bg-gradient-to-r from-lime-400/50 via-green-500/30 to-emerald-400/50 rounded-3xl opacity-30 group-hover:opacity-60 transition-opacity duration-500"></div>
 
-          <div class="relative bg-zinc-950/85 backdrop-blur-2xl border border-zinc-700/50 shadow-[0_0_80px_-15px_rgba(255,255,255,0.25)] rounded-3xl p-8 sm:p-10">
+          <div class="relative bg-slate-950/85 backdrop-blur-2xl border-green-500/30 shadow-[0_0_80px_-12px_rgba(34,197,94,0.35)] rounded-3xl p-8 sm:p-10">
             <div class="flex flex-col items-center mb-8">
               <div class="mb-6">
-                <div class="w-16 h-16 rounded-2xl bg-zinc-900 flex items-center justify-center shadow-[0_0_40px_rgba(255,255,255,0.12)] border border-zinc-700 relative overflow-hidden">
-                  <div class="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.18)_0%,transparent_50%,transparent_100%)]"></div>
+                <div class="w-16 h-16 rounded-2xl bg-slate-900 flex items-center justify-center shadow-[0_0_40px_rgba(34,197,94,0.25)] border-green-500/40 relative overflow-hidden">
+                  <div class="absolute inset-0 bg-[linear-gradient(135deg,rgba(163,230,53,0.25)_0%,transparent_50%,transparent_100%)]"></div>
                   <span class="relative text-2xl font-black text-white tracking-tighter drop-shadow-[0_1px_0_rgba(0,0,0,0.4)]">ISM</span>
                 </div>
               </div>
 
               <div class="text-center space-y-2 w-full">
-                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] font-mono bg-zinc-900/70 border border-zinc-700/60 text-zinc-300 mx-auto shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-                  <span class="w-1.5 h-1.5 rounded-full animate-pulse bg-zinc-300 shadow-[0_0_8px_rgba(255,255,255,0.8)]"></span>
+                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] font-mono bg-slate-900/80 border-green-500/40 text-lime-200 mx-auto shadow-[inset_0_1px_0_rgba(163,230,53,0.15)]">
+                  <span class="w-1.5 h-1.5 rounded-full animate-pulse bg-lime-400 shadow-[0_0_10px_rgba(163,230,53,0.9)]"></span>
                   <span class="font-mono uppercase tracking-[0.18em]">Acesso ao sistema</span>
                 </div>
                 <h1 class="text-2xl sm:text-3xl font-bold tracking-tight mt-5">
-                  <span class="bg-gradient-to-r from-white via-zinc-100 to-zinc-300 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(255,255,255,0.15)]">
+                  <span class="bg-gradient-to-r from-lime-300 via-green-400 to-emerald-400 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(34,197,94,0.35)]">
                     {{ runtimeConfig.public.appName }}
                   </span>
                 </h1>
-                <p class="text-sm text-zinc-400">
+                <p class="text-sm text-green-200/70">
                   Faça login para continuar
                 </p>
               </div>
             </div>
 
             <div v-if="errorMessage" class="mb-6 w-full">
-              <div class="flex items-start gap-3 p-4 rounded-xl bg-white/5 border border-zinc-700/60 text-zinc-200 text-sm backdrop-blur">
-                <svg class="w-5 h-5 flex-shrink-0 mt-0.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="flex items-start gap-3 p-4 rounded-xl bg-red-500/10 border-red-500/40 text-red-200 text-sm backdrop-blur">
+                <svg class="w-5 h-5 flex-shrink-0 mt-0.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span class="leading-relaxed">{{ errorMessage }}</span>
@@ -326,13 +326,13 @@ const handleLogin = async () => {
 
             <form class="space-y-5" @submit.prevent="handleLogin">
               <div class="space-y-2">
-                <label for="email" class="block text-sm font-medium text-zinc-300">
+                <label for="email" class="block text-sm font-medium text-green-100">
                   E-mail
                 </label>
                 <div class="relative group/input">
-                  <div class="absolute -inset-[1px] rounded-xl bg-gradient-to-r from-zinc-400/0 via-zinc-300/50 to-zinc-400/0 opacity-0 group-focus-within/input:opacity-100 blur-sm transition-opacity duration-300 pointer-events-none"></div>
+                  <div class="absolute -inset-[1px] rounded-xl bg-gradient-to-r from-lime-400/0 via-green-400/60 to-cyan-400/0 opacity-0 group-focus-within/input:opacity-100 blur-sm transition-opacity duration-300 pointer-events-none"></div>
                   <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                    <svg class="w-5 h-5 text-zinc-500 group-focus-within/input:text-zinc-300 transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-5 h-5 text-green-500/80 group-focus-within/input:text-lime-300 transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                   </div>
@@ -343,19 +343,19 @@ const handleLogin = async () => {
                     autocomplete="email"
                     v-model="loginForm.email"
                     placeholder="seu@email.com.br"
-                    class="relative w-full h-12 pl-12 pr-4 rounded-xl bg-zinc-900/70 border border-zinc-700/60 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-400/30 focus:border-zinc-400/60 transition-all duration-200 autofill:bg-zinc-900/70 autofill:text-zinc-100 autofill:shadow-[inset_0_0_0px_1000px_rgba(9,9,11,0.92)]"
+                    class="relative w-full h-12 pl-12 pr-4 rounded-xl bg-slate-900/75 border-green-500/35 text-white placeholder:text-green-300/40 focus:outline-none focus:ring-2 focus:ring-lime-400/40 focus:border-lime-400/60 transition-all duration-200 autofill:bg-slate-900/75 autofill:text-white autofill:shadow-[inset_0_0_0px_1000px_rgba(2,6,23,0.96)]"
                   />
                 </div>
               </div>
 
               <div class="space-y-2">
-                <label for="password" class="block text-sm font-medium text-zinc-300">
+                <label for="password" class="block text-sm font-medium text-green-100">
                   Senha
                 </label>
                 <div class="relative group/input">
-                  <div class="absolute -inset-[1px] rounded-xl bg-gradient-to-r from-zinc-400/0 via-zinc-300/50 to-zinc-400/0 opacity-0 group-focus-within/input:opacity-100 blur-sm transition-opacity duration-300 pointer-events-none"></div>
+                  <div class="absolute -inset-[1px] rounded-xl bg-gradient-to-r from-lime-400/0 via-green-400/60 to-cyan-400/0 opacity-0 group-focus-within/input:opacity-100 blur-sm transition-opacity duration-300 pointer-events-none"></div>
                   <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                    <svg class="w-5 h-5 text-zinc-500 group-focus-within/input:text-zinc-300 transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-5 h-5 text-green-500/80 group-focus-within/input:text-lime-300 transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
                   </div>
@@ -366,7 +366,7 @@ const handleLogin = async () => {
                     autocomplete="current-password"
                     v-model="loginForm.password"
                     placeholder="••••••••"
-                    class="relative w-full h-12 pl-12 pr-4 rounded-xl bg-zinc-900/70 border border-zinc-700/60 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-400/30 focus:border-zinc-400/60 transition-all duration-200 autofill:bg-zinc-900/70 autofill:text-zinc-100 autofill:shadow-[inset_0_0_0px_1000px_rgba(9,9,11,0.92)]"
+                    class="relative w-full h-12 pl-12 pr-4 rounded-xl bg-slate-900/75 border-green-500/35 text-white placeholder:text-green-300/40 focus:outline-none focus:ring-2 focus:ring-lime-400/40 focus:border-lime-400/60 transition-all duration-200 autofill:bg-slate-900/75 autofill:text-white autofill:shadow-[inset_0_0_0px_1000px_rgba(2,6,23,0.96)]"
                     @keyup.enter="handleLogin"
                   />
                 </div>
@@ -375,18 +375,18 @@ const handleLogin = async () => {
               <button
                 type="submit"
                 :disabled="submitting"
-                class="relative w-full h-12 mt-2 rounded-xl font-semibold text-zinc-950 overflow-hidden transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed group/btn shadow-[0_10px_40px_-12px_rgba(255,255,255,0.35)]"
+                class="relative w-full h-12 mt-2 rounded-xl font-semibold text-slate-950 overflow-hidden transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed group/btn shadow-[0_10px_40px_-10px_rgba(34,197,94,0.55)]"
               >
-                <span class="absolute inset-0 bg-gradient-to-br from-zinc-100 via-white to-zinc-200 transition-all duration-300 group-hover/btn:from-white group-hover/btn:via-zinc-50 group-hover/btn:to-zinc-100"></span>
+                <span class="absolute inset-0 bg-gradient-to-br from-lime-400 via-green-500 to-emerald-500 transition-all duration-300 group-hover/btn:from-lime-300 group-hover/btn:via-green-400 group-hover/btn:to-emerald-400"></span>
                 <span class="absolute inset-0 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-500 bg-[linear-gradient(135deg,rgba(255,255,255,0)_0%,rgba(255,255,255,0.6)_50%,rgba(255,255,255,0)_100%)] translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-900"></span>
-                <span class="absolute inset-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] rounded-xl pointer-events-none"></span>
+                <span class="absolute inset-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] rounded-xl pointer-events-none"></span>
                 <span class="relative flex items-center justify-center gap-2 w-full h-full">
-                  <svg v-if="submitting" class="w-5 h-5 animate-spin text-zinc-950" fill="none" viewBox="0 0 24 24">
+                  <svg v-if="submitting" class="w-5 h-5 animate-spin text-slate-950" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
                   <span>{{ submitting ? 'Aguarde...' : 'Entrar no sistema' }}</span>
-                  <svg v-if="!submitting" class="w-4 h-4 opacity-0 -translate-x-2 group-hover/btn:opacity-100 group-hover/btn:translate-x-0 transition-all duration-300 text-zinc-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg v-if="!submitting" class="w-4 h-4 opacity-0 -translate-x-2 group-hover/btn:opacity-100 group-hover/btn:translate-x-0 transition-all duration-300 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </svg>
                 </span>
@@ -396,7 +396,7 @@ const handleLogin = async () => {
           </div>
         </div>
 
-        <p class="mt-10 text-center text-xs text-zinc-600">
+        <p class="mt-10 text-center text-xs text-green-500/50">
           © {{ new Date().getFullYear() }} ISM — Todos os direitos reservados
         </p>
       </div>
@@ -418,9 +418,9 @@ input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
 input:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0 30px rgb(9, 9, 11) inset !important;
-  -webkit-text-fill-color: rgb(244, 244, 245) !important;
-  caret-color: rgb(244, 244, 245) !important;
+  -webkit-box-shadow: 0 0 0 30px rgb(2, 6, 23) inset !important;
+  -webkit-text-fill-color: rgb(255, 255, 255) !important;
+  caret-color: rgb(255, 255, 255) !important;
   transition: background-color 5000s ease-in-out 0s;
 }
 </style>
