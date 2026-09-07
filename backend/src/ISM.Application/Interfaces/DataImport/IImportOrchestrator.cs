@@ -33,6 +33,20 @@ public interface IImportOrchestrator
         ImportContext context,
         CancellationToken ct);
 
+    /// <summary>Dry-run: analisa a planilha e gera as confirmações por categoria sem gravar nada.</summary>
+    Task<ImportPreviewDto> PreviewFileAsync(
+        Stream fileContent,
+        string? contentType,
+        string fileName,
+        CancellationToken ct);
+
+    /// <summary>Dry-run: extrai a tabela de uma foto/PDF escaneado e gera as confirmações por categoria.</summary>
+    Task<ImportPreviewDto> PreviewPhotoAsync(
+        Stream fileContent,
+        string contentType,
+        string fileName,
+        CancellationToken ct);
+
     Task<IReadOnlyList<ImportAuditDto>> GetHistoryAsync(int restaurantId, int limit, CancellationToken ct);
     Task<ImportAuditDetailDto?> GetImportDetailAsync(Guid importId, int? restaurantId, CancellationToken ct);
 }

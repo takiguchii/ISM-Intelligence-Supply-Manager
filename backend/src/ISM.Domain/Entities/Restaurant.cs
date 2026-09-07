@@ -15,12 +15,12 @@ public sealed class Restaurant : BaseEntity
     public string CNPJ { get; set; } = string.Empty;
     public DateTime Created { get; set; }
 
-    public int? PlanoId { get; set; }
-    [ForeignKey(nameof(PlanoId))]
-    public Plano? Plano { get; set; }
+    public int? PlanId { get; set; }
+    [ForeignKey(nameof(PlanId))]
+    public Plan? Plan { get; set; }
 
     public DateTime? TrialEndAtUtc { get; set; }
-    public bool PlanoAtivo { get; set; } = true;
+    public bool IsPlanActive { get; set; } = true;
 
     public ICollection<Category> Categories { get; set; } = [];
     public ICollection<Dish> Dishes { get; set; } = [];

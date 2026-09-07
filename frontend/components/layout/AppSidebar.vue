@@ -11,8 +11,8 @@ const emit = defineEmits<{
 }>();
 
 const authStore = useAuthStore();
-
-const activeItem = ref("dashboard");
+const route = useRoute();
+const router = useRouter();
 
 const menuItems = [
   { id: "dashboard", label: "Dashboard", icon: "dashboard", route: "/" },
@@ -20,13 +20,17 @@ const menuItems = [
   { id: "cardapio", label: "Cardápio", icon: "menu", route: "/cardapio" },
   { id: "estoque", label: "Estoque", icon: "boxes", route: "/estoque" },
   { id: "fornecedores", label: "Fornecedores", icon: "truck", route: "/fornecedores" },
+  { id: "funcionarios", label: "Funcionários", icon: "users", route: "/funcionarios" },
   { id: "integracoes", label: "Integrações", icon: "plug", route: "/integracoes" }
 ];
 
-const router = useRouter();
+const activeItem = computed(() => {
+  const match = menuItems.find(item => item.route === route.path);
+  return match ? match.id : "dashboard";
+});
 
 const selectItem = (item: typeof menuItems[number]) => {
-  activeItem.value = item.id;
+  emit("close");
   router.push(item.route);
 };
 
@@ -41,26 +45,30 @@ const userInitials = computed(() => {
 
 <template>
   <div>
-    <!-- Backdrop overlay for mobile screen sizes -->
-    <div
-      v-if="isOpen"
-      @click="emit('close')"
-      class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
-    ></div>
+    <!-- Backdrop overlay for mobile screen sizes with ultra-smooth fade -->
+    <Transition name="sidebar-backdrop">
+      <div
+        v-if="isOpen"
+        @click="emit('close')"
+        class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+      ></div>
+    </Transition>
 
-    <!-- Sidebar Drawer Container -->
+    <!-- Sidebar Drawer Container with 120fps GPU-accelerated smooth slide -->
     <aside
       :class="[
-        'fixed top-0 left-0 bottom-0 z-50 w-64 bg-zinc-950 border-r border-zinc-800/80 flex flex-col transition-transform duration-300 ease-in-out',
-        isOpen ? 'translate-x-0' : '-translate-x-full'
+        'sidebar-drawer fixed top-0 left-0 bottom-0 z-50 w-64 bg-zinc-950 border-r border-zinc-800/80 flex flex-col',
+        isOpen ? 'is-open' : ''
       ]"
     >
       <!-- Sidebar Header -->
       <div class="h-16 px-6 flex items-center justify-between border-b border-zinc-800/60">
         <div class="flex items-center gap-3">
-          <div class="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-700/60 flex items-center justify-center">
-            <span class="font-bold text-xs text-white tracking-widest">ISM</span>
-          </div>
+          <img
+            src="/favicon.ico"
+            alt="ISM Logo"
+            class="w-8 h-8 rounded-lg object-contain shadow-sm shrink-0"
+          />
           <span class="font-semibold text-sm text-white tracking-tight">Intelligence Supply</span>
         </div>
         <button
@@ -112,6 +120,11 @@ const userInitials = computed(() => {
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8h4l3 3v5h-2m-6 0h2"></path>
           </svg>
 
+          <!-- Funcionários Icon (Users) -->
+          <svg v-else-if="item.icon === 'users'" class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+          </svg>
+
           <!-- Integrações Icon (Plug) -->
           <svg v-else-if="item.icon === 'plug'" class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
@@ -136,3 +149,27 @@ const userInitials = computed(() => {
     </aside>
   </div>
 </template>
+
+<style scoped>
+.sidebar-drawer {
+  transform: translate3d(-100%, 0, 0);
+  transition: transform 340ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.sidebar-drawer.is-open {
+  transform: translate3d(0, 0, 0);
+}
+
+.sidebar-backdrop-enter-active,
+.sidebar-backdrop-leave-active {
+  transition: opacity 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sidebar-backdrop-enter-from,
+.sidebar-backdrop-leave-to {
+  opacity: 0;
+}
+</style>
