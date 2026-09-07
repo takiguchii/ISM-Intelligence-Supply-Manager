@@ -5,9 +5,6 @@ namespace ISM.Domain.Entities;
 
 public sealed class TmpAuthorization : BaseEntity
 {
-    [Key]
-    public int Id { get; set; }
-
     [Required]
     public int RestaurantId { get; set; }
 
