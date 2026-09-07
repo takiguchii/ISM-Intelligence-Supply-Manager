@@ -2,7 +2,7 @@ using System.Globalization;
 using ISM.Application.Interfaces.DataImport;
 using ISM.Domain.Modules.DataImport;
 using ISM.Domain.Modules.Stock.Entities;
-using ISM.Domain.Modules.Stock.Interfaces;
+using ISM.Domain.Interfaces;
 
 namespace ISM.Application.Services.DataImport;
 
