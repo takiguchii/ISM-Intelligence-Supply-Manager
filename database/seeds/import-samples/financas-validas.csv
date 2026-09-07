@@ -1,0 +1,11 @@
+Data,Descricao,Tipo,Valor,FormaPagamento
+2025-08-01,Venda balcão - almoço,receita,1850.00,Pix
+2025-08-01,Venda delivery iFood,receita,920.50,Cartão
+2025-08-02,Compra de insumos - Alimentos Já,despesa,1240.00,Boleto
+2025-08-03,Conta de energia elétrica,despesa,480.75,Débito automático
+2025-08-05,Venda balcão - jantar,receita,2130.00,Cartão
+2025-08-07,Aluguel do salão comercial,despesa,3500.00,Transferência
+2025-08-10,Venda evento particular,receita,4200.00,Pix
+2025-08-12,Gás e manutenção de fogões,despesa,215.00,Dinheiro
+2025-08-15,Venda delivery iFood,receita,1105.30,Cartão
+2025-08-20,Folha de pagamento parcial,despesa,5800.00,Transferência

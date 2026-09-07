@@ -6,7 +6,14 @@ using ISM.Application.Interfaces.DataImport;
 using ISM.Application.Options;
 using ISM.Application.Security;
 using ISM.Application.Services;
+using ISM.Application.Services.Auth;
+using ISM.Application.Services.Menu;
+using ISM.Application.Services.Stock;
+using ISM.Application.Services.Suppliers;
+using ISM.Application.Services.Users;
+using ISM.Application.Services.Tenants;
 using ISM.Application.Services.DataImport;
+using ISM.Application.Services.DataImport.Readers;
 using ISM.Infrastructure.Data.Options;
 using ISM.Infrastructure.DependencyInjection;
 using ISM.Infrastructure.Services;
@@ -150,6 +157,26 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IImportOrchestrator, ImportOrchestrator>();
         services.AddScoped<IFileImporter, CsvProductImporter>();
         services.AddScoped<IFileImporter, CsvSupplierImporter>();
+
+        // Categorias reconhecidas na análise de planilhas (dry-run / confirmação).
+        // Para uma nova categoria: implemente IImportCategoryProfile e registre aqui.
+        services.AddScoped<IImportCategoryProfile, StockCategoryProfile>();
+        services.AddScoped<IImportCategoryProfile, SuppliersCategoryProfile>();
+        services.AddScoped<IImportCategoryProfile, FinanceCategoryProfile>();
+        services.AddScoped<ICsvStructureAnalyzer, CsvStructureAnalyzer>();
+
+        // Leitores de formato (CSV, XLSX, XML NF-e, SpreadsheetML, JSON) + resolver
+        services.AddScoped<IImportFileReader, CsvImportFileReader>();
+        services.AddScoped<IImportFileReader, XlsxImportFileReader>();
+        services.AddScoped<IImportFileReader, NFeXmlImportFileReader>();
+        services.AddScoped<IImportFileReader, SpreadSheetMlImportFileReader>();
+        services.AddScoped<IImportFileReader, JsonWebhookImportFileReader>();
+        services.AddScoped<IImportFileReaderResolver, ImportFileReaderResolver>();
+
+        // Importação por foto/PDF escaneado (visão computacional)
+        services.Configure<PhotoImportOptions>(configuration.GetSection(PhotoImportOptions.SectionName));
+        services.AddHttpClient<IPhotoImportExtractor, LlmVisionPhotoExtractor>();
+        services.AddScoped<IPhotoImportService, PhotoImportService>();
 
         return services;
     }

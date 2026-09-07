@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import AppSidebar from "~/components/layout/AppSidebar.vue";
 import AppLoader from "~/components/base/AppLoader.vue";
 import { useAuthStore } from "~/stores/auth";
 import {
@@ -8,9 +7,8 @@ import {
   type SupplierResponse,
   type CreateSupplierRequest,
   type UpdateSupplierRequest
-} from "~/services/modules/supplierService";
+} from "~/services/modules/suppliers/supplierService";
 
-definePageMeta({ layout: false });
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -230,59 +228,19 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-zinc-800 selection:text-white">
+  <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
     <AppLoader :visible="isLoading" />
 
-    <!-- ========================================================= -->
-    <!-- NAVBAR PADRÃO (IDENTICA AS DEMAIS TELAS DO SISTEMA) -->
-    <!-- ========================================================= -->
-    <header
-      class="h-16 border-b border-zinc-800/80 bg-zinc-900/60 backdrop-blur-xl sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between"
-    >
-      <div class="flex items-center gap-4">
-        <button
-          type="button"
-          @click="toggleSidebar"
-          class="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-zinc-800/80 transition"
-          aria-label="Abrir menu"
-        >
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
+    <!-- Notifications Alert -->
+    <div v-if="successMessage" class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs sm:text-sm flex items-center justify-between">
+      <span>{{ successMessage }}</span>
+      <button @click="successMessage = ''" class="text-emerald-400 hover:text-emerald-200 font-bold ml-4">✕</button>
+    </div>
 
-        <span class="font-bold text-lg text-white tracking-tight">
-          ISM
-        </span>
-      </div>
-
-      <button
-        type="button"
-        @click="handleLogout"
-        class="px-4 py-2 text-xs font-semibold rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white border border-zinc-700/60 transition"
-      >
-        Sair
-      </button>
-    </header>
-
-    <!-- Sidebar Drawer -->
-    <AppSidebar :isOpen="isSidebarOpen" @close="isSidebarOpen = false" />
-
-    <!-- ========================================================= -->
-    <!-- MAIN CONTENT -->
-    <!-- ========================================================= -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
-      
-      <!-- Notifications Alert -->
-      <div v-if="successMessage" class="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs sm:text-sm flex items-center justify-between">
-        <span>{{ successMessage }}</span>
-        <button @click="successMessage = ''" class="text-emerald-400 hover:text-emerald-200 font-bold ml-4">✕</button>
-      </div>
-
-      <div v-if="errorMessage" class="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs sm:text-sm flex items-center justify-between">
-        <span>{{ errorMessage }}</span>
-        <button @click="errorMessage = ''" class="text-red-400 hover:text-red-200 font-bold ml-4">✕</button>
-      </div>
+    <div v-if="errorMessage" class="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs sm:text-sm flex items-center justify-between">
+      <span>{{ errorMessage }}</span>
+      <button @click="errorMessage = ''" class="text-red-400 hover:text-red-200 font-bold ml-4">✕</button>
+    </div>
 
       <!-- ========================================================= -->
       <!-- PAGE HEADER -->
@@ -522,7 +480,6 @@ onMounted(async () => {
           </div>
         </div>
       </div>
-    </main>
 
     <!-- ========================================================= -->
     <!-- MODAL: CRIAR / EDITAR FORNECEDOR -->
