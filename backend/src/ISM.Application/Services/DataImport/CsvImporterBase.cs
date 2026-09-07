@@ -4,6 +4,7 @@ using System.Text.Json;
 using ISM.Application.DTOs.DataImport;
 using ISM.Application.Interfaces.DataImport;
 using ISM.Domain.Modules.DataImport;
+using ISM.Domain.Interfaces;
 
 namespace ISM.Application.Services.DataImport;
 

@@ -1,10 +1,12 @@
 using ISM.Infrastructure.Data.Context;
 using ISM.Infrastructure.Data.Options;
 using ISM.Domain.Interfaces;
-using ISM.Domain.Modules.DataImport;
-using ISM.Domain.Modules.Menu.Interfaces;
-using ISM.Domain.Modules.Stock.Interfaces;
-using ISM.Infrastructure.Repositories;
+using ISM.Infrastructure.Repositories.Menu;
+using ISM.Infrastructure.Repositories.Stock;
+using ISM.Infrastructure.Repositories.Suppliers;
+using ISM.Infrastructure.Repositories.Tenants;
+using ISM.Infrastructure.Repositories.Users;
+using ISM.Infrastructure.Repositories.DataImport;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 

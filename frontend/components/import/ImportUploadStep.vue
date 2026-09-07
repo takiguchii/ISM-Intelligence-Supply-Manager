@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { importService, PHOTO_CONTENT_PREFIXES, type ImportPreviewDto } from "~/services/modules/importService";
+import { importService, PHOTO_CONTENT_PREFIXES, type ImportPreviewDto } from "~/services/modules/import/importService";
 
 const props = defineProps<{ restaurantId: number | null }>();
 const emit = defineEmits<{

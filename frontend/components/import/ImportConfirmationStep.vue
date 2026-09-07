@@ -5,7 +5,7 @@ import {
   type ImportPreviewDto,
   type ImportResultDto,
   type CategoryConfirmationDto
-} from "~/services/modules/importService";
+} from "~/services/modules/import/importService";
 
 const props = defineProps<{
   preview: ImportPreviewDto;
