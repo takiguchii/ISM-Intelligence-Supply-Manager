@@ -22,7 +22,8 @@ public sealed class ImportFileReaderResolver : IImportFileReaderResolver
     public async Task<ImportFileContent> ReadAsync(
         Stream fileContent, string fileName, string? contentType, CancellationToken ct)
     {
-        fileContent.Position = 0;
+        if (fileContent.CanSeek)
+            fileContent.Position = 0;
         using var buffered = new MemoryStream();
         await fileContent.CopyToAsync(buffered, ct);
         var bytes = buffered.ToArray();

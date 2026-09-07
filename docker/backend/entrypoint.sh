@@ -7,7 +7,7 @@ export NUGET_HTTP_CACHE_PATH="${NUGET_HTTP_CACHE_PATH:-/root/.nuget/http-cache}"
 mkdir -p "${NUGET_PACKAGES}" "${NUGET_HTTP_CACHE_PATH}"
 
 echo "Waiting for MySQL to accept TCP connections..."
-until (echo > /dev/tcp/mysql/3306) >/dev/null 2>&1; do
+until nc -z -w 2 mysql 3306 >/dev/null 2>&1; do
   sleep 2
 done
 

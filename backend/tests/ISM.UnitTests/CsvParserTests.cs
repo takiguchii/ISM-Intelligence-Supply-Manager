@@ -24,7 +24,7 @@ public class CsvParserTests
     public async Task ReadRowsAsync_DeveTratarVirgulaDentroDeAspas()
     {
         var (rows, errors) = await CsvParser.ReadRowsAsync(
-            Csv("Descricao,Valor\n\"Óleo de Soja, 900ml\",7,50\n"), CancellationToken.None);
+            Csv("Descricao,Valor\n\"Óleo de Soja, 900ml\",\"7,50\"\n"), CancellationToken.None);
 
         Assert.Empty(errors);
         Assert.Single(rows);
