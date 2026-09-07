@@ -1,14 +1,21 @@
 <script setup lang="ts">
+import { useThemeStore } from "~/stores/theme";
+
 defineProps<{
   visible?: boolean;
 }>();
+
+const themeStore = useThemeStore();
 </script>
 
 <template>
   <Transition name="fade">
     <div
       v-if="visible"
-      class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-zinc-950/95 backdrop-blur-md"
+      :class="[
+        'fixed inset-0 z-[9999] flex flex-col items-center justify-center backdrop-blur-md',
+        themeStore.isDark ? 'bg-zinc-950/95' : 'bg-zinc-50/95'
+      ]"
     >
       <div class="loader mb-6">
         <div class="circle">
@@ -28,7 +35,12 @@ defineProps<{
           <div class="outline"></div>
         </div>
       </div>
-      <p class="font-mono text-xs uppercase tracking-[0.3em] text-zinc-400 animate-pulse">
+      <p
+        :class="[
+          'font-mono text-xs uppercase tracking-[0.3em] animate-pulse',
+          themeStore.isDark ? 'text-zinc-400' : 'text-zinc-600'
+        ]"
+      >
         Carregando ISM...
       </p>
     </div>

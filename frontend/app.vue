@@ -15,6 +15,20 @@ onMounted(() => {
   authReady.value = true;
 });
 
+watch(
+  () => route.path,
+  (newPath) => {
+    if (!process.client) return;
+    if (newPath === "/login") {
+      themeStore.force("dark");
+    } else if (authReady.value) {
+      themeStore.force(null);
+      themeStore.applyToDocument();
+    }
+  },
+  { immediate: true }
+);
+
 watchEffect(() => {
   if (!authReady.value) return;
   if (!process.client) return;

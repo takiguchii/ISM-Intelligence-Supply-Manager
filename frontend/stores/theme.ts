@@ -8,17 +8,19 @@ export const useThemeStore = defineStore("theme", {
   state: () => ({
     mode: (process.client
       ? (localStorage.getItem(STORAGE_KEY) as ThemeMode | null)
-      : null) || ("dark" as ThemeMode)
+      : null) || ("dark" as ThemeMode),
+    forcedMode: null as ThemeMode | null
   }),
   getters: {
-    isDark: (s) => s.mode === "dark",
-    isLight: (s) => s.mode === "light"
+    isDark: (s) => s.forcedMode ? s.forcedMode === "dark" : s.mode === "dark",
+    isLight: (s) => s.forcedMode ? s.forcedMode === "light" : s.mode === "light"
   },
   actions: {
     applyToDocument() {
       if (!process.client) return;
       const root = document.documentElement;
-      if (this.mode === "dark") {
+      const effective = this.forcedMode || this.mode;
+      if (effective === "dark") {
         root.classList.add("dark");
         root.classList.remove("light");
         root.style.colorScheme = "dark";
@@ -35,6 +37,10 @@ export const useThemeStore = defineStore("theme", {
     },
     toggle() {
       this.set(this.mode === "dark" ? "light" : "dark");
+    },
+    force(mode: ThemeMode | null) {
+      this.forcedMode = mode;
+      this.applyToDocument();
     },
     init() {
       if (!process.client) return;

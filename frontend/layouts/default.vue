@@ -3,19 +3,35 @@ const authReady = inject<Ref<boolean>>("authReady", ref(true));
 const route = useRoute();
 const isLoginPage = computed(() => route.path === "/login");
 const showContent = computed(() => isLoginPage.value || authReady.value);
+
 const themeStore = useThemeStore();
+const isSidebarOpen = ref(false);
 </script>
 
 <template>
   <div
     :class="[
-      'min-h-screen transition-colors duration-200',
+      'min-h-screen flex flex-col font-sans transition-colors duration-200',
       themeStore.isDark
-        ? 'bg-abyss text-white'
-        : 'bg-zinc-50 text-zinc-900'
+        ? 'bg-abyss text-white selection:bg-zinc-800 selection:text-white'
+        : 'bg-zinc-50 text-zinc-900 selection:bg-indigo-100 selection:text-indigo-950'
     ]"
   >
-    <slot v-if="showContent" />
+    <template v-if="showContent">
+      <template v-if="isLoginPage">
+        <slot />
+      </template>
+
+      <template v-else>
+        <AppNavbar @toggleSidebar="isSidebarOpen = !isSidebarOpen" />
+        <AppSidebar :isOpen="isSidebarOpen" @close="isSidebarOpen = false" />
+        <div class="flex-1">
+          <slot />
+        </div>
+        <AppFooter />
+      </template>
+    </template>
+
     <div v-else class="flex min-h-screen items-center justify-center">
       <div class="flex flex-col items-center gap-4">
         <div

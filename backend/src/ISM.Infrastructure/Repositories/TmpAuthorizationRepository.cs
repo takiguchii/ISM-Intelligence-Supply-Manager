@@ -25,6 +25,7 @@ public sealed class TmpAuthorizationRepository : ITmpAuthorizationRepository
     public async Task<TmpAuthorization?> GetByTokenHashAsync(string tokenHash, CancellationToken cancellationToken = default)
     {
         return await _dbContext.TmpAuthorizations
+            .IgnoreQueryFilters()
             .Include(t => t.Restaurant)
             .FirstOrDefaultAsync(t => t.TokenHash == tokenHash, cancellationToken);
     }

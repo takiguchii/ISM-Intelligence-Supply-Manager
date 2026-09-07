@@ -3,13 +3,17 @@ import { ref, computed, onMounted } from "vue";
 import type { ImportAuditDto, ImportPreviewDto, ImportResultDto } from "~/services/modules/import/importService";
 import { importService } from "~/services/modules/import/importService";
 import { useAuthStore } from "~/stores/auth";
+import { useThemeStore } from "~/stores/theme";
+import AppSidebar from "~/components/layout/AppSidebar.vue";
 import AppLoader from "~/components/base/AppLoader.vue";
 import ImportConfirmationStep from "~/components/import/ImportConfirmationStep.vue";
 import ImportHistoryStep from "~/components/import/ImportHistoryStep.vue";
 
+definePageMeta({ layout: false });
 
 const runtimeConfig = useRuntimeConfig();
 const authStore = useAuthStore();
+const themeStore = useThemeStore();
 const router = useRouter();
 
 const isLoading = ref(true);
@@ -26,7 +30,7 @@ const currentIsPhoto = ref(false);
 const lastResults = ref<ImportResultDto[] | null>(null);
 const historyRefreshToken = ref(0);
 
-// Super Admin restaurante alvo
+// Super Admin seleciona restaurante alvo
 const isSuperAdmin = computed(() => authStore.currentUser?.role === "Admin" && !authStore.currentUser?.restaurantId);
 const targetRestaurantId = ref<number | null>(isSuperAdmin.value ? 1 : authStore.currentUser?.restaurantId ?? null);
 
@@ -291,61 +295,73 @@ onMounted(async () => {
     return;
   }
   targetRestaurantId.value = isSuperAdmin.value ? 1 : authStore.currentUser?.restaurantId ?? null;
-  const min = 400;
+  const min = 1200;
   const wait = Math.max(0, min - (Date.now() - start));
   setTimeout(() => (isLoading.value = false), wait);
 });
 </script>
 
 <template>
-  <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-8">
+  <div :class="['min-h-screen flex flex-col font-sans transition-colors duration-200', themeStore.isDark ? 'bg-zinc-950 text-zinc-100 selection:bg-zinc-800 selection:text-white' : 'bg-zinc-50 text-zinc-900 selection:bg-indigo-100 selection:text-indigo-900']">
     <AppLoader :visible="isLoading" />
 
-    <!-- Toast Notification -->
-    <Teleport to="body">
-      <Transition
-        enter-active-class="transition duration-300 ease-out transform"
-        enter-from-class="translate-y-4 opacity-0 scale-95"
-        enter-to-class="translate-y-0 opacity-100 scale-100"
-        leave-active-class="transition duration-200 ease-in transform"
-        leave-from-class="translate-y-0 opacity-100 scale-100"
-        leave-to-class="translate-y-4 opacity-0 scale-95"
-      >
-        <div
-          v-if="toastMessage"
-          class="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-zinc-900 border border-emerald-500/40 text-emerald-300 text-xs font-semibold shadow-2xl flex items-center gap-3 backdrop-blur-xl"
+    <header :class="['h-16 border-b backdrop-blur-xl sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between', themeStore.isDark ? 'border-zinc-800/80 bg-zinc-900/60' : 'border-zinc-200 bg-white/80']">
+      <div class="flex items-center gap-4">
+        <button
+          @click="toggleSidebar"
+          :class="['p-2 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2', themeStore.isDark ? 'text-zinc-300 hover:text-white hover:bg-zinc-800/80 focus:ring-zinc-600' : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 focus:ring-indigo-500/30']"
+          title="Abrir Menu Lateral"
         >
-          <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-          <span>{{ toastMessage }}</span>
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+        <div class="flex items-center gap-3">
+          <span :class="['font-bold text-lg tracking-tight', themeStore.isDark ? 'text-white' : 'text-zinc-900']">ISM</span>
+          <span :class="['hidden sm:inline-block text-xs uppercase tracking-widest font-mono border-l pl-3', themeStore.isDark ? 'text-zinc-400 border-zinc-700/60' : 'text-zinc-500 border-zinc-200']">
+            {{ runtimeConfig.public.appName }}
+          </span>
         </div>
-      </Transition>
-    </Teleport>
+      </div>
+      <div class="flex items-center gap-3">
+        <div v-if="authStore.isAuthenticated" class="flex items-center gap-3">
+          <span :class="['hidden md:inline-block text-xs font-medium', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-600']">
+            {{ authStore.currentUser?.name }} ({{ authStore.currentUser?.role }})
+          </span>
+          <button
+            @click="handleLogout"
+            :class="['px-4 py-2 text-xs font-semibold rounded-xl border transition-all duration-200 flex items-center gap-2', themeStore.isDark ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white border-zinc-700/60' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700 hover:text-zinc-900 border-zinc-200']"
+          >
+            <svg :class="['w-4 h-4', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-500']" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+            <span>Sair</span>
+          </button>
+        </div>
+      </div>
+    </header>
 
     <!-- Top Title & Tag Section -->
       <div class="space-y-2">
         <div class="inline-flex items-center px-3 py-1 rounded-full bg-zinc-900/90 border border-zinc-800 text-[11px] font-mono tracking-wider text-zinc-300 uppercase">
           INTEGRAÇÕES
         </div>
-        <h1 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">Conexões & importação</h1>
-        <p class="text-zinc-400 text-sm sm:text-base max-w-3xl leading-relaxed">
-          Conecte seus sistemas ou envie dados manualmente — o ISM consolida tudo num único cérebro.
-        </p>
       </div>
 
       <!-- Modo Super Admin -->
       <div v-if="isSuperAdmin" class="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/5 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
         <div class="flex items-start gap-3">
-          <div class="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+          <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 dark:text-amber-600 flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
           </div>
           <div>
-            <div class="text-xs font-semibold text-amber-300">Modo Super Admin</div>
-            <p class="text-[11px] text-zinc-400">Selecione o restaurante alvo para gerenciar conexões e cargas de dados.</p>
+            <div class="text-sm font-semibold text-amber-500 dark:text-amber-700">Modo Super Admin</div>
+            <p class="text-xs text-zinc-500">Selecione o restaurante alvo antes de importar arquivos.</p>
           </div>
         </div>
-        <label class="flex items-center gap-2">
-          <span class="text-xs text-zinc-400 font-mono">Restaurante:</span>
-          <select v-model.number="targetRestaurantId" class="bg-zinc-950 border border-zinc-700/80 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40">
+        <label class="flex flex-col gap-1 min-w-[240px]">
+          <span class="text-xs text-zinc-500 font-mono uppercase tracking-wider">Restaurante</span>
+          <select v-model.number="targetRestaurantId" :class="['border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 transition', themeStore.isDark ? 'bg-zinc-950/80 border-zinc-700/70 text-white focus:ring-amber-500/40 focus:border-amber-500/50' : 'bg-white border-zinc-200 text-zinc-900 focus:ring-amber-500/30 focus:border-amber-500/50']">
             <option :value="1">1 - Gourmet ISM Restaurant</option>
           </select>
         </label>
@@ -712,133 +728,3 @@ onMounted(async () => {
     </Teleport>
   </div>
 </template>
-
-<style scoped>
-.skills-grid {
-  perspective: 1000px;
-}
-
-.skill-card {
-  transition: transform 400ms cubic-bezier(0.4, 0, 0.2, 1),
-              filter 400ms cubic-bezier(0.4, 0, 0.2, 1),
-              border-color 200ms ease,
-              box-shadow 200ms ease;
-  will-change: transform, filter;
-}
-
-.skills-grid:hover > .skill-card:not(:hover) {
-  filter: blur(6px) opacity(0.5);
-  transform: scale(0.96);
-}
-
-.skill-card:hover {
-  transform: scale(1.04);
-  filter: blur(0px) opacity(1);
-  z-index: 10;
-}
-
-/* ESTILOS DA PASTA ANIMADA 3D COMPACTA (SEM FUNDO AZUL) */
-.folder-3d-wrapper {
-  position: relative;
-  width: 70px;
-  height: 52px;
-  margin: 0 auto 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.animated-folder {
-  position: relative;
-  width: 64px;
-  height: 42px;
-  animation: floatFolder 2.5s infinite ease-in-out;
-  transition: transform 350ms ease;
-}
-
-.animated-folder:hover,
-.dropzone-container:hover .animated-folder {
-  transform: scale(1.08);
-}
-
-.animated-folder .front-side,
-.animated-folder .back-side {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 64px;
-  height: 42px;
-  transition: transform 350ms cubic-bezier(0.4, 0, 0.2, 1);
-  transform-origin: bottom center;
-}
-
-.animated-folder .back-side::before,
-.animated-folder .back-side::after {
-  content: "";
-  display: block;
-  background-color: #ffffff;
-  opacity: 0.55;
-  width: 64px;
-  height: 42px;
-  position: absolute;
-  top: 0;
-  left: 0;
-  transform-origin: bottom center;
-  border-radius: 8px;
-  transition: transform 350ms cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 0;
-}
-
-.dropzone-container:hover .back-side::before,
-.folder-3d-wrapper:hover .back-side::before {
-  transform: rotateX(-8deg) skewX(6deg) translateY(-2px);
-}
-
-.dropzone-container:hover .back-side::after,
-.folder-3d-wrapper:hover .back-side::after {
-  transform: rotateX(-18deg) skewX(12deg) translateY(-4px);
-}
-
-.animated-folder .front-side {
-  z-index: 1;
-}
-
-.dropzone-container:hover .front-side,
-.folder-3d-wrapper:hover .front-side {
-  transform: rotateX(-38deg) skewX(14deg);
-}
-
-.animated-folder .tip {
-  background: linear-gradient(135deg, #ff9a56, #ff6f56);
-  width: 44px;
-  height: 12px;
-  border-radius: 6px 6px 0 0;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
-  position: absolute;
-  top: -6px;
-  left: 0;
-  z-index: 2;
-}
-
-.animated-folder .cover {
-  background: linear-gradient(135deg, #ffe563, #ffc663);
-  width: 64px;
-  height: 42px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
-  border-radius: 7px;
-}
-
-@keyframes floatFolder {
-  0% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-8px);
-  }
-  100% {
-    transform: translateY(0px);
-  }
-}
-</style>
-
