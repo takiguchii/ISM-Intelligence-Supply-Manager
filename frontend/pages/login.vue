@@ -393,28 +393,10 @@ const handleLogin = async () => {
               </button>
             </form>
 
-            <div class="mt-8 pt-6 border-t border-zinc-800">
-              <div class="flex items-center gap-3 p-3.5 rounded-xl bg-zinc-900/50 border border-zinc-800 relative overflow-hidden">
-                <div class="absolute inset-0 bg-gradient-to-r from-zinc-500/0 via-zinc-400/10 to-zinc-500/0 translate-x-[-100%] animate-[shimmer_3s_ease-in-out_infinite]"></div>
-                <div class="relative flex-shrink-0 w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center border border-zinc-700">
-                  <svg class="w-4.5 h-4.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div class="relative flex-1 min-w-0">
-                  <div class="text-[11px] font-medium text-zinc-500 mb-0.5 uppercase tracking-wider">Credenciais de demonstração</div>
-                  <div class="text-xs text-zinc-300 font-mono truncate">
-                    <span class="text-zinc-100 font-semibold">admin@ism.com.br</span>
-                    <span class="text-zinc-600 mx-1.5">/</span>
-                    <span class="text-zinc-100 font-semibold">admin123</span>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
-        <p class="mt-8 text-center text-xs text-zinc-600">
+        <p class="mt-10 text-center text-xs text-zinc-600">
           © {{ new Date().getFullYear() }} ISM — Todos os direitos reservados
         </p>
       </div>
