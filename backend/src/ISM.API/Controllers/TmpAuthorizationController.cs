@@ -36,11 +36,11 @@ public sealed class TmpAuthorizationController : ControllerBase
         [FromBody] CreateTmpAuthorizationRequest request,
         CancellationToken ct)
     {
-        if (_currentUser.IsSuperAdmin || !_currentUser.RestaurantId.HasValue || !_currentUser.UserId.HasValue)
+        if (_currentUser.IsSuperAdmin || !_currentUser.RestaurantId.HasValue || _currentUser.UserId <= 0)
             return BadRequest("Usuário inválido.");
         var result = await _service.CreateAsync(
             _currentUser.RestaurantId.Value,
-            _currentUser.UserId.Value,
+            _currentUser.UserId,
             request,
             ct);
         return CreatedAtAction(nameof(ListByRestaurant), result);
@@ -50,9 +50,9 @@ public sealed class TmpAuthorizationController : ControllerBase
     [Authorize(Policy = "RestaurantManagerOrAbove")]
     public async Task<ActionResult> Revoke([FromRoute] int id, CancellationToken ct)
     {
-        if (_currentUser.IsSuperAdmin || !_currentUser.RestaurantId.HasValue || !_currentUser.UserId.HasValue)
+        if (_currentUser.IsSuperAdmin || !_currentUser.RestaurantId.HasValue || _currentUser.UserId <= 0)
             return BadRequest("Usuário inválido.");
-        var ok = await _service.RevokeAsync(id, _currentUser.RestaurantId.Value, _currentUser.UserId.Value, ct);
+        var ok = await _service.RevokeAsync(id, _currentUser.RestaurantId.Value, _currentUser.UserId, ct);
         if (!ok) return NotFound();
         return NoContent();
     }
@@ -61,9 +61,9 @@ public sealed class TmpAuthorizationController : ControllerBase
     [Authorize(Policy = "RestaurantManagerOrAbove")]
     public async Task<ActionResult<TmpAuthorizationDto>> Rotate([FromRoute] int id, CancellationToken ct)
     {
-        if (_currentUser.IsSuperAdmin || !_currentUser.RestaurantId.HasValue || !_currentUser.UserId.HasValue)
+        if (_currentUser.IsSuperAdmin || !_currentUser.RestaurantId.HasValue || _currentUser.UserId <= 0)
             return BadRequest("Usuário inválido.");
-        var rotated = await _service.RotateAsync(id, _currentUser.RestaurantId.Value, _currentUser.UserId.Value, ct);
+        var rotated = await _service.RotateAsync(id, _currentUser.RestaurantId.Value, _currentUser.UserId, ct);
         if (rotated == null) return NotFound();
         return Ok(rotated);
     }

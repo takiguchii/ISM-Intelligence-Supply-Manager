@@ -6,6 +6,7 @@ using ISM.Infrastructure.Repositories.Stock;
 using ISM.Infrastructure.Repositories.Suppliers;
 using ISM.Infrastructure.Repositories.Tenants;
 using ISM.Infrastructure.Repositories.Users;
+using ISM.Infrastructure.Repositories;
 using ISM.Infrastructure.Repositories.DataImport;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
