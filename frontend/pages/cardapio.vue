@@ -1,12 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import AppSidebar from '~/components/layout/AppSidebar.vue'
 import AppLoader from '~/components/base/AppLoader.vue'
 import { useAuthStore } from '~/stores/auth'
-
-definePageMeta({
-  layout: false
-})
+import { menuService } from '~/services/modules/menu/menuService'
 
 interface Category {
   id: number
@@ -259,19 +255,17 @@ const getDishCategoryName = (dish: Dish) => {
   )
 }
 
+const getRestaurantId = (): number | undefined => {
+  return authStore.currentUser?.restaurantId ?? undefined
+}
+
 /*
    API - CATEGORIES
 */
 
 const fetchCategories = async () => {
-  const response = await $fetch(
-    `${API_BASE}/api/menu/categories`,
-    {
-      method: 'GET',
-      headers: getHeaders()
-    }
-  )
-
+  const restaurantId = getRestaurantId()
+  const response = await menuService.getCategories(restaurantId || undefined)
   categories.value = normalizeArrayResponse<Category>(response)
 }
 
@@ -287,18 +281,12 @@ const createCategory = async () => {
   errorMessage.value = ''
 
   try {
-    await $fetch(
-      `${API_BASE}/api/menu/categories`,
-      {
-        method: 'POST',
-        headers: getHeaders(),
-        body: {
-          name,
-          displayOrder: categoryForm.value.displayOrder,
-          isActive: categoryForm.value.isActive
-        }
-      }
-    )
+    await menuService.createCategory({
+      restaurantId: getRestaurantId() || 1,
+      name,
+      displayOrder: categoryForm.value.displayOrder,
+      isActive: categoryForm.value.isActive
+    })
 
     successMessage.value = 'Categoria criada com sucesso.'
 
@@ -328,18 +316,11 @@ const updateCategory = async () => {
   errorMessage.value = ''
 
   try {
-    await $fetch(
-      `${API_BASE}/api/menu/categories/${editingCategoryId.value}`,
-      {
-        method: 'PUT',
-        headers: getHeaders(),
-        body: {
-          name,
-          displayOrder: categoryForm.value.displayOrder,
-          isActive: categoryForm.value.isActive
-        }
-      }
-    )
+    await menuService.updateCategory(editingCategoryId.value, {
+      name,
+      displayOrder: categoryForm.value.displayOrder,
+      isActive: categoryForm.value.isActive
+    })
 
     successMessage.value = 'Categoria atualizada com sucesso.'
 
@@ -366,13 +347,7 @@ const deleteCategory = async (category: Category) => {
   errorMessage.value = ''
 
   try {
-    await $fetch(
-      `${API_BASE}/api/menu/categories/${category.id}`,
-      {
-        method: 'DELETE',
-        headers: getHeaders()
-      }
-    )
+    await menuService.deleteCategory(category.id)
 
     if (selectedCategory.value === category.id) {
       selectedCategory.value = null
@@ -397,37 +372,8 @@ const deleteCategory = async (category: Category) => {
 */
 
 const fetchDishes = async () => {
-  const params = new URLSearchParams()
-
-  const restaurantId =
-    (authStore as any).restaurantId ||
-    (authStore as any).restaurant?.id ||
-    (authStore as any).user?.restaurantId
-
-  if (restaurantId) {
-    params.set(
-      'restaurantId',
-      String(restaurantId)
-    )
-  }
-
-  if (selectedCategory.value) {
-    params.set(
-      'categoryId',
-      String(selectedCategory.value)
-    )
-  }
-
-  const query = params.toString()
-
-  const response = await $fetch(
-    `${API_BASE}/api/menu/dishes${query ? `?${query}` : ''}`,
-    {
-      method: 'GET',
-      headers: getHeaders()
-    }
-  )
-
+  const restaurantId = getRestaurantId()
+  const response = await menuService.getDishes(restaurantId || undefined)
   dishes.value = normalizeArrayResponse<Dish>(response)
 }
 
@@ -451,38 +397,22 @@ const createDish = async () => {
   errorMessage.value = ''
 
   try {
-    await $fetch(
-      `${API_BASE}/api/menu/dishes`,
-      {
-        method: 'POST',
-        headers: getHeaders(),
-        body: {
-          name: dishForm.value.name.trim(),
-          description:
-            dishForm.value.description.trim() || null,
-          categoryId: dishForm.value.categoryId,
-          price: Number(dishForm.value.price),
-          cost: Number(dishForm.value.cost),
-          isActive: dishForm.value.isActive,
-          highlight: dishForm.value.highlight,
-          urlImage:
-            dishForm.value.urlImage.trim() || null,
-          displayOrder: Number(
-            dishForm.value.displayOrder
-          ),
-          ingredients: dishForm.value.ingredients.map(
-            ingredient => ({
-              productId: Number(
-                ingredient.productId
-              ),
-              quantity: Number(
-                ingredient.quantity
-              )
-            })
-          )
-        }
-      }
-    )
+    await menuService.createDish({
+      restaurantId: getRestaurantId() || 1,
+      name: dishForm.value.name.trim(),
+      description: dishForm.value.description.trim() || undefined,
+      categoryId: dishForm.value.categoryId,
+      price: Number(dishForm.value.price),
+      cost: Number(dishForm.value.cost),
+      isActive: dishForm.value.isActive,
+      highlight: dishForm.value.highlight,
+      urlImage: dishForm.value.urlImage.trim() || undefined,
+      displayOrder: Number(dishForm.value.displayOrder),
+      ingredients: dishForm.value.ingredients.map(ingredient => ({
+        productId: Number(ingredient.productId),
+        quantity: Number(ingredient.quantity)
+      }))
+    })
 
     successMessage.value =
       'Prato criado com sucesso.'
@@ -521,38 +451,21 @@ const updateDish = async () => {
   errorMessage.value = ''
 
   try {
-    await $fetch(
-      `${API_BASE}/api/menu/dishes/${editingDishId.value}`,
-      {
-        method: 'PUT',
-        headers: getHeaders(),
-        body: {
-          name: dishForm.value.name.trim(),
-          description:
-            dishForm.value.description.trim() || null,
-          categoryId: dishForm.value.categoryId,
-          price: Number(dishForm.value.price),
-          cost: Number(dishForm.value.cost),
-          isActive: dishForm.value.isActive,
-          highlight: dishForm.value.highlight,
-          urlImage:
-            dishForm.value.urlImage.trim() || null,
-          displayOrder: Number(
-            dishForm.value.displayOrder
-          ),
-          ingredients: dishForm.value.ingredients.map(
-            ingredient => ({
-              productId: Number(
-                ingredient.productId
-              ),
-              quantity: Number(
-                ingredient.quantity
-              )
-            })
-          )
-        }
-      }
-    )
+    await menuService.updateDish(editingDishId.value, {
+      name: dishForm.value.name.trim(),
+      description: dishForm.value.description.trim() || undefined,
+      categoryId: dishForm.value.categoryId,
+      price: Number(dishForm.value.price),
+      cost: Number(dishForm.value.cost),
+      isActive: dishForm.value.isActive,
+      highlight: dishForm.value.highlight,
+      urlImage: dishForm.value.urlImage.trim() || undefined,
+      displayOrder: Number(dishForm.value.displayOrder),
+      ingredients: dishForm.value.ingredients.map(ingredient => ({
+        productId: Number(ingredient.productId),
+        quantity: Number(ingredient.quantity)
+      }))
+    })
 
     successMessage.value =
       'Prato atualizado com sucesso.'
@@ -580,13 +493,7 @@ const deleteDish = async (dish: Dish) => {
   errorMessage.value = ''
 
   try {
-    await $fetch(
-      `${API_BASE}/api/menu/dishes/${dish.id}`,
-      {
-        method: 'DELETE',
-        headers: getHeaders()
-      }
-    )
+    await menuService.deleteDish(dish.id)
 
     successMessage.value =
       'Prato excluído com sucesso.'
@@ -972,35 +879,11 @@ onMounted(loadPage)
 </script>
 
 <template>
-  <div class="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans">
+  <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
     <AppLoader :visible="isLoading" />
 
-    <!-- HEADER -->
-    <header
-      class="h-16 border-b border-zinc-800/80 bg-zinc-900/60 backdrop-blur-xl sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between">
-      <div class="flex items-center gap-4">
-        <button type="button" @click="toggleSidebar"
-          class="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-zinc-800/80 transition" aria-label="Abrir menu">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-
-        <span class="font-bold text-lg text-white tracking-tight">
-          ISM
-        </span>
-      </div>
-
-      <button type="button" @click="handleLogout"
-        class="px-4 py-2 text-xs font-semibold rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white border border-zinc-700/60 transition">
-        Sair
-      </button>
-    </header>
-
-    <AppSidebar :isOpen="isSidebarOpen" @close="isSidebarOpen = false" />
-
     <!-- MAIN -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
+    <main class="flex-1">
       <!-- PAGE HEADER -->
       <section
         class="p-6 sm:p-8 rounded-2xl bg-gradient-to-r from-zinc-900 via-zinc-900/90 to-zinc-950 border border-zinc-800 shadow-xl mb-6">
