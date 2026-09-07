@@ -23,7 +23,7 @@ public static class CsvParser
     {
         var rows = new List<Dictionary<string, string>>();
         var errors = new List<ImportErrorLog>();
-        using var reader = new StreamReader(stream, Encoding.UTF8);
+        using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 1024, leaveOpen: true);
 
         var headerLine = await reader.ReadLineAsync(ct).ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(headerLine))
