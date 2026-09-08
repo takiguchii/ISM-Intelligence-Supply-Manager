@@ -3,12 +3,12 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using ISM.Application.DTOs;
-using ISM.Application.Interfaces;
-using ISM.Domain.Entities;
+using ISM.Application.DTOs.Restaurant;
+using ISM.Application.Interfaces.Restaurant;
 using ISM.Domain.Interfaces;
+using RestaurantEntity = ISM.Domain.Entities.Restaurant;
 
-namespace ISM.Application.Services;
+namespace ISM.Application.Services.Restaurant;
 
 public sealed class RestaurantAiConfigService : IRestaurantAiConfigService
 {
@@ -113,7 +113,7 @@ public sealed class RestaurantAiConfigService : IRestaurantAiConfigService
 
         try
         {
-            Restaurant? restaurant = null;
+            RestaurantEntity? restaurant = null;
             try
             {
                 restaurant = await GetRestaurantOrThrowAsync(restaurantId, ct);
@@ -340,7 +340,7 @@ public sealed class RestaurantAiConfigService : IRestaurantAiConfigService
         };
     }
 
-    private async Task<Restaurant> GetRestaurantOrThrowAsync(int restaurantId, CancellationToken ct)
+    private async Task<RestaurantEntity> GetRestaurantOrThrowAsync(int restaurantId, CancellationToken ct)
     {
         var restaurant = await _restaurantRepository.GetRestaurantByIdAsync(restaurantId, ct);
         if (restaurant == null)

@@ -8,6 +8,7 @@ using ISM.Infrastructure.Repositories.Tenants;
 using ISM.Infrastructure.Repositories.Users;
 using ISM.Infrastructure.Repositories;
 using ISM.Infrastructure.Repositories.DataImport;
+using ISM.Infrastructure.Repositories.Restaurant;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 

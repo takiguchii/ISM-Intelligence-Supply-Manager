@@ -1,6 +1,12 @@
 export default defineNuxtConfig({
   compatibilityDate: "2025-01-01",
   devtools: { enabled: true },
+  components: [
+    {
+      path: "~/components",
+      pathPrefix: false
+    }
+  ],
   modules: ["@nuxtjs/tailwindcss", "@pinia/nuxt"],
   css: ["~/assets/styles/main.scss", "element-plus/dist/index.css"],
   runtimeConfig: {

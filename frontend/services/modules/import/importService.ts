@@ -121,6 +121,135 @@ const CATEGORY_IMPORT_ENDPOINTS: Record<string, string> = {
 /** Categorias ainda sem persistência no backend (exibidas como "em breve"). */
 const CATEGORY_FUTURE = new Set(["financas"]);
 
+// ===== Configuração de IA do Restaurante (chave própria por restaurante) =====
+
+export interface RestaurantAiPhotoConfigDto {
+  hasCustomKey: boolean;
+  keyLast4Digits?: string | null;
+  apiEndpoint?: string | null;
+  model?: string | null;
+  isUsingRestaurantConfig: boolean;
+  isUsingGlobalFallback: boolean;
+  warnings?: string[];
+}
+
+export interface TestRestaurantAiPhotoConfigResultDto {
+  success: boolean;
+  provider: string;
+  normalizedModel?: string | null;
+  normalizedEndpoint?: string | null;
+  warnings?: string[];
+  errorMessage?: string | null;
+  httpStatusFromProvider?: number | null;
+  latencyMs?: number | null;
+}
+
+export interface UpdateRestaurantAiPhotoConfigDto {
+  apiKey?: string | null;
+  apiEndpoint?: string | null;
+  model?: string | null;
+  clearKey?: boolean;
+}
+
+export interface TestRestaurantAiPhotoConfigRequestDto {
+  overrideApiKey?: string | null;
+  overrideEndpoint?: string | null;
+  overrideModel?: string | null;
+}
+
+export const GEMINI_DEFAULT_ENDPOINT = "https://generativelanguage.googleapis.com/v1";
+
+export const MODEL_PRESETS = [
+  { label: "Gemini 3.5 Flash Lite (recomendado · gratuito · rápido)", value: "gemini-3.5-flash-lite", tier: "Recomendado" }
+] as const;
+
+export type ModelPresetValue = (typeof MODEL_PRESETS)[number]["value"];
+
+export const GEMINI_MODEL_HINTS = [
+  "gemini-3.5-flash-lite (free tier melhor)",
+  "gemini-3.5-flash",
+  "gemini-1.5-flash-002",
+  "gemini-1.5-flash-8b",
+  "gemini-1.5-pro-002 (requer billing / conta paga)"
+];
+
+/** Remove automaticamente prefixos `google/` e `models/` e padroniza lowercase. */
+export function normalizeGeminiModelName(value?: string | null): string {
+  if (!value) return "";
+  let m = value.trim();
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    let changed = false;
+    if (m.toLowerCase().startsWith("models/")) {
+      m = m.slice("models/".length);
+      changed = true;
+    }
+    if (m.toLowerCase().startsWith("google/")) {
+      m = m.slice("google/".length);
+      changed = true;
+    }
+    if (!changed) break;
+  }
+  return m;
+}
+
+async function jsonAuthRequest<T = unknown>(
+  method: "GET" | "PUT" | "POST",
+  url: string,
+  body?: UpdateRestaurantAiPhotoConfigDto | TestRestaurantAiPhotoConfigRequestDto | null
+): Promise<T> {
+  const runtimeConfig = useRuntimeConfig();
+  const token = process.client ? localStorage.getItem("auth_token") : "";
+  const fullUrl = url.startsWith("http") ? url : `${runtimeConfig.public.apiBase}${url}`;
+  const hasBody = method !== "GET" && body !== undefined && body !== null;
+  return await $fetch<T>(fullUrl, {
+    method,
+    body: hasBody ? (body as Record<string, unknown>) : undefined,
+    headers: token
+      ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
+      : { "Content-Type": "application/json" }
+  });
+}
+
+export const aiConfigService = {
+  /** Carrega a config de IA do restaurante do usuário logado (manager/owner). */
+  getMyRestaurant(): Promise<RestaurantAiPhotoConfigDto> {
+    return jsonAuthRequest<RestaurantAiPhotoConfigDto>("GET", "/api/me/restaurant/ai-config");
+  },
+  /** Atualiza/limpa a config de IA do restaurante do usuário logado. */
+  updateMyRestaurant(dto: UpdateRestaurantAiPhotoConfigDto): Promise<void> {
+    return jsonAuthRequest<void>("PUT", "/api/me/restaurant/ai-config", dto);
+  },
+  /** Testa a config de IA do restaurante do usuário logado (PING no provedor, sem arquivo). */
+  testMyRestaurant(req?: TestRestaurantAiPhotoConfigRequestDto): Promise<TestRestaurantAiPhotoConfigResultDto> {
+    return jsonAuthRequest<TestRestaurantAiPhotoConfigResultDto>(
+      "POST",
+      "/api/me/restaurant/ai-config/test",
+      req ?? null
+    );
+  },
+  /** Carrega a config de IA de um restaurante específico (SuperAdmin). */
+  getByRestaurantId(restaurantId: number): Promise<RestaurantAiPhotoConfigDto> {
+    return jsonAuthRequest<RestaurantAiPhotoConfigDto>("GET", `/api/restaurants/${restaurantId}/ai-config`);
+  },
+  /** Atualiza/limpa a config de IA de um restaurante específico (SuperAdmin). */
+  updateByRestaurantId(restaurantId: number, dto: UpdateRestaurantAiPhotoConfigDto): Promise<void> {
+    return jsonAuthRequest<void>("PUT", `/api/restaurants/${restaurantId}/ai-config`, dto);
+  },
+  /** Testa a config de IA de um restaurante específico (SuperAdmin, PING sem arquivo). */
+  testByRestaurantId(
+    restaurantId: number,
+    req?: TestRestaurantAiPhotoConfigRequestDto
+  ): Promise<TestRestaurantAiPhotoConfigResultDto> {
+    return jsonAuthRequest<TestRestaurantAiPhotoConfigResultDto>(
+      "POST",
+      `/api/restaurants/${restaurantId}/ai-config/test`,
+      req ?? null
+    );
+  }
+};
+
+
 export const importService = {
   /** Analisa uma planilha (dry-run) sem gravar nada. */
   previewSpreadsheet(file: File, restaurantId?: number | null) {

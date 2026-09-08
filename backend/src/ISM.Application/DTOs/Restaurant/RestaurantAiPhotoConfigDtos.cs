@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace ISM.Application.DTOs;
+namespace ISM.Application.DTOs.Restaurant;
 
 public sealed class RestaurantAiPhotoConfigDto
 {

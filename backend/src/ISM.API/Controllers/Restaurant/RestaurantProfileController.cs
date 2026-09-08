@@ -4,7 +4,7 @@ using ISM.Application.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ISM.API.Controllers;
+namespace ISM.API.Controllers.Restaurant;
 
 [ApiController]
 [Authorize]

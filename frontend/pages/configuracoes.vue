@@ -9,7 +9,7 @@ import {
   type TestRestaurantAiPhotoConfigResultDto,
   type TestRestaurantAiPhotoConfigRequestDto,
   type UpdateRestaurantAiPhotoConfigDto
-} from "~/services/modules/importService";
+} from "~/services/modules/import/importService";
 import AppSidebar from "~/components/layout/AppSidebar.vue";
 import AppLoader from "~/components/base/AppLoader.vue";
 import { useThemeStore } from "~/stores/theme";

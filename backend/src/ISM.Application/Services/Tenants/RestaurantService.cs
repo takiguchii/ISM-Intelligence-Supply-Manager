@@ -1,7 +1,7 @@
 using ISM.Application.DTOs;
 using ISM.Application.Interfaces;
-using ISM.Domain.Entities;
 using ISM.Domain.Interfaces;
+using RestaurantEntity = ISM.Domain.Entities.Restaurant;
 
 namespace ISM.Application.Services.Tenants;
 
@@ -32,7 +32,7 @@ public sealed class RestaurantService : IRestaurantService
     public async Task<RestaurantDto> CreateRestaurantAsync(RestaurantDto dto, int? planId = null, CancellationToken cancellationToken = default)
     {
         var now = DateTime.UtcNow;
-        var restaurant = new Restaurant
+        var restaurant = new RestaurantEntity
         {
             Name = dto.Name,
             CNPJ = dto.CNPJ,
@@ -73,7 +73,7 @@ public sealed class RestaurantService : IRestaurantService
         return await _restaurantRepository.SaveChangesAsync(cancellationToken);
     }
 
-    private static RestaurantDto MapToDto(Restaurant restaurant)
+    private static RestaurantDto MapToDto(RestaurantEntity restaurant)
     {
         return new RestaurantDto
         {

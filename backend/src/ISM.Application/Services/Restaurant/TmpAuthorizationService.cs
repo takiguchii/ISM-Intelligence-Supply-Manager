@@ -1,11 +1,11 @@
 using System.Security.Cryptography;
 using System.Text;
-using ISM.Application.DTOs;
-using ISM.Application.Interfaces;
+using ISM.Application.DTOs.Restaurant;
+using ISM.Application.Interfaces.Restaurant;
 using ISM.Domain.Entities;
 using ISM.Domain.Interfaces;
 
-namespace ISM.Application.Services;
+namespace ISM.Application.Services.Restaurant;
 
 public sealed class TmpAuthorizationService : ITmpAuthorizationService
 {

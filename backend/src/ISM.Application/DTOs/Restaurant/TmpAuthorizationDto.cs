@@ -1,4 +1,4 @@
-namespace ISM.Application.DTOs;
+namespace ISM.Application.DTOs.Restaurant;
 
 public sealed class TmpAuthorizationDto
 {

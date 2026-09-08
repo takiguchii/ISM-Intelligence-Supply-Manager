@@ -1,10 +1,10 @@
-using ISM.Application.DTOs;
-using ISM.Application.Interfaces;
+using ISM.Application.DTOs.Restaurant;
+using ISM.Application.Interfaces.Restaurant;
 using ISM.Application.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ISM.API.Controllers;
+namespace ISM.API.Controllers.Restaurant;
 
 [ApiController]
 [Authorize]

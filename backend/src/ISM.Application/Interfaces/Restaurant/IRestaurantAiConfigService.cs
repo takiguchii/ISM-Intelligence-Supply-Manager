@@ -1,6 +1,6 @@
-using ISM.Application.DTOs;
+using ISM.Application.DTOs.Restaurant;
 
-namespace ISM.Application.Interfaces;
+namespace ISM.Application.Interfaces.Restaurant;
 
 public interface IRestaurantAiConfigService
 {

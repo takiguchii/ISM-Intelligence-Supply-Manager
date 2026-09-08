@@ -1,13 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import AppSidebar from '~/components/layout/AppSidebar.vue'
 import AppLoader from '~/components/base/AppLoader.vue'
 import { useAuthStore } from '~/stores/auth'
-import { useThemeStore } from '~/stores/theme'
-
-definePageMeta({
-  layout: false
-})
+import { menuService } from '~/services/modules/menu/menuService'
 
 interface Category {
   id: number
@@ -46,7 +41,6 @@ interface ApiError {
 }
 
 const authStore = useAuthStore()
-const themeStore = useThemeStore()
 const router = useRouter()
 const config = useRuntimeConfig()
 
@@ -261,19 +255,17 @@ const getDishCategoryName = (dish: Dish) => {
   )
 }
 
+const getRestaurantId = (): number | undefined => {
+  return authStore.currentUser?.restaurantId ?? undefined
+}
+
 /*
    API - CATEGORIES
 */
 
 const fetchCategories = async () => {
-  const response = await $fetch(
-    `${API_BASE}/api/menu/categories`,
-    {
-      method: 'GET',
-      headers: getHeaders()
-    }
-  )
-
+  const restaurantId = getRestaurantId()
+  const response = await menuService.getCategories(restaurantId || undefined)
   categories.value = normalizeArrayResponse<Category>(response)
 }
 
@@ -289,18 +281,12 @@ const createCategory = async () => {
   errorMessage.value = ''
 
   try {
-    await $fetch(
-      `${API_BASE}/api/menu/categories`,
-      {
-        method: 'POST',
-        headers: getHeaders(),
-        body: {
-          name,
-          displayOrder: categoryForm.value.displayOrder,
-          isActive: categoryForm.value.isActive
-        }
-      }
-    )
+    await menuService.createCategory({
+      restaurantId: getRestaurantId() || 1,
+      name,
+      displayOrder: categoryForm.value.displayOrder,
+      isActive: categoryForm.value.isActive
+    })
 
     successMessage.value = 'Categoria criada com sucesso.'
 
@@ -330,18 +316,11 @@ const updateCategory = async () => {
   errorMessage.value = ''
 
   try {
-    await $fetch(
-      `${API_BASE}/api/menu/categories/${editingCategoryId.value}`,
-      {
-        method: 'PUT',
-        headers: getHeaders(),
-        body: {
-          name,
-          displayOrder: categoryForm.value.displayOrder,
-          isActive: categoryForm.value.isActive
-        }
-      }
-    )
+    await menuService.updateCategory(editingCategoryId.value, {
+      name,
+      displayOrder: categoryForm.value.displayOrder,
+      isActive: categoryForm.value.isActive
+    })
 
     successMessage.value = 'Categoria atualizada com sucesso.'
 
@@ -368,13 +347,7 @@ const deleteCategory = async (category: Category) => {
   errorMessage.value = ''
 
   try {
-    await $fetch(
-      `${API_BASE}/api/menu/categories/${category.id}`,
-      {
-        method: 'DELETE',
-        headers: getHeaders()
-      }
-    )
+    await menuService.deleteCategory(category.id)
 
     if (selectedCategory.value === category.id) {
       selectedCategory.value = null
@@ -399,37 +372,8 @@ const deleteCategory = async (category: Category) => {
 */
 
 const fetchDishes = async () => {
-  const params = new URLSearchParams()
-
-  const restaurantId =
-    (authStore as any).restaurantId ||
-    (authStore as any).restaurant?.id ||
-    (authStore as any).user?.restaurantId
-
-  if (restaurantId) {
-    params.set(
-      'restaurantId',
-      String(restaurantId)
-    )
-  }
-
-  if (selectedCategory.value) {
-    params.set(
-      'categoryId',
-      String(selectedCategory.value)
-    )
-  }
-
-  const query = params.toString()
-
-  const response = await $fetch(
-    `${API_BASE}/api/menu/dishes${query ? `?${query}` : ''}`,
-    {
-      method: 'GET',
-      headers: getHeaders()
-    }
-  )
-
+  const restaurantId = getRestaurantId()
+  const response = await menuService.getDishes(restaurantId || undefined)
   dishes.value = normalizeArrayResponse<Dish>(response)
 }
 
@@ -453,38 +397,22 @@ const createDish = async () => {
   errorMessage.value = ''
 
   try {
-    await $fetch(
-      `${API_BASE}/api/menu/dishes`,
-      {
-        method: 'POST',
-        headers: getHeaders(),
-        body: {
-          name: dishForm.value.name.trim(),
-          description:
-            dishForm.value.description.trim() || null,
-          categoryId: dishForm.value.categoryId,
-          price: Number(dishForm.value.price),
-          cost: Number(dishForm.value.cost),
-          isActive: dishForm.value.isActive,
-          highlight: dishForm.value.highlight,
-          urlImage:
-            dishForm.value.urlImage.trim() || null,
-          displayOrder: Number(
-            dishForm.value.displayOrder
-          ),
-          ingredients: dishForm.value.ingredients.map(
-            ingredient => ({
-              productId: Number(
-                ingredient.productId
-              ),
-              quantity: Number(
-                ingredient.quantity
-              )
-            })
-          )
-        }
-      }
-    )
+    await menuService.createDish({
+      restaurantId: getRestaurantId() || 1,
+      name: dishForm.value.name.trim(),
+      description: dishForm.value.description.trim() || undefined,
+      categoryId: dishForm.value.categoryId,
+      price: Number(dishForm.value.price),
+      cost: Number(dishForm.value.cost),
+      isActive: dishForm.value.isActive,
+      highlight: dishForm.value.highlight,
+      urlImage: dishForm.value.urlImage.trim() || undefined,
+      displayOrder: Number(dishForm.value.displayOrder),
+      ingredients: dishForm.value.ingredients.map(ingredient => ({
+        productId: Number(ingredient.productId),
+        quantity: Number(ingredient.quantity)
+      }))
+    })
 
     successMessage.value =
       'Prato criado com sucesso.'
@@ -523,38 +451,21 @@ const updateDish = async () => {
   errorMessage.value = ''
 
   try {
-    await $fetch(
-      `${API_BASE}/api/menu/dishes/${editingDishId.value}`,
-      {
-        method: 'PUT',
-        headers: getHeaders(),
-        body: {
-          name: dishForm.value.name.trim(),
-          description:
-            dishForm.value.description.trim() || null,
-          categoryId: dishForm.value.categoryId,
-          price: Number(dishForm.value.price),
-          cost: Number(dishForm.value.cost),
-          isActive: dishForm.value.isActive,
-          highlight: dishForm.value.highlight,
-          urlImage:
-            dishForm.value.urlImage.trim() || null,
-          displayOrder: Number(
-            dishForm.value.displayOrder
-          ),
-          ingredients: dishForm.value.ingredients.map(
-            ingredient => ({
-              productId: Number(
-                ingredient.productId
-              ),
-              quantity: Number(
-                ingredient.quantity
-              )
-            })
-          )
-        }
-      }
-    )
+    await menuService.updateDish(editingDishId.value, {
+      name: dishForm.value.name.trim(),
+      description: dishForm.value.description.trim() || undefined,
+      categoryId: dishForm.value.categoryId,
+      price: Number(dishForm.value.price),
+      cost: Number(dishForm.value.cost),
+      isActive: dishForm.value.isActive,
+      highlight: dishForm.value.highlight,
+      urlImage: dishForm.value.urlImage.trim() || undefined,
+      displayOrder: Number(dishForm.value.displayOrder),
+      ingredients: dishForm.value.ingredients.map(ingredient => ({
+        productId: Number(ingredient.productId),
+        quantity: Number(ingredient.quantity)
+      }))
+    })
 
     successMessage.value =
       'Prato atualizado com sucesso.'
@@ -582,13 +493,7 @@ const deleteDish = async (dish: Dish) => {
   errorMessage.value = ''
 
   try {
-    await $fetch(
-      `${API_BASE}/api/menu/dishes/${dish.id}`,
-      {
-        method: 'DELETE',
-        headers: getHeaders()
-      }
-    )
+    await menuService.deleteDish(dish.id)
 
     successMessage.value =
       'Prato excluído com sucesso.'
@@ -974,44 +879,20 @@ onMounted(loadPage)
 </script>
 
 <template>
-  <div :class="['min-h-screen flex flex-col font-sans transition-colors duration-200', themeStore.isDark ? 'bg-zinc-950 text-zinc-100 selection:bg-zinc-800 selection:text-white' : 'bg-zinc-50 text-zinc-900 selection:bg-indigo-100 selection:text-indigo-900']">
+  <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
     <AppLoader :visible="isLoading" />
 
-    <!-- HEADER -->
-    <header
-      :class="['h-16 border-b backdrop-blur-xl sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between', themeStore.isDark ? 'border-zinc-800/80 bg-zinc-900/60' : 'border-zinc-200 bg-white/80']">
-      <div class="flex items-center gap-4">
-        <button type="button" @click="toggleSidebar"
-          :class="['p-2 rounded-xl transition', themeStore.isDark ? 'text-zinc-300 hover:text-white hover:bg-zinc-800/80' : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100']" aria-label="Abrir menu">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-
-        <span :class="['font-bold text-lg tracking-tight', themeStore.isDark ? 'text-white' : 'text-zinc-900']">
-          ISM
-        </span>
-      </div>
-
-      <button type="button" @click="handleLogout"
-        :class="['px-4 py-2 text-xs font-semibold rounded-xl border transition', themeStore.isDark ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white border-zinc-700/60' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700 hover:text-zinc-900 border-zinc-200']">
-        Sair
-      </button>
-    </header>
-
-    <AppSidebar :isOpen="isSidebarOpen" @close="isSidebarOpen = false" />
-
     <!-- MAIN -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
+    <main class="flex-1">
       <!-- PAGE HEADER -->
       <section
-        :class="['p-6 sm:p-8 rounded-2xl border shadow-xl mb-6', themeStore.isDark ? 'bg-gradient-to-r from-zinc-900 via-zinc-900/90 to-zinc-950 border-zinc-800' : 'bg-gradient-to-r from-white via-white/90 to-zinc-50 border-zinc-200']">
+        class="p-6 sm:p-8 rounded-2xl bg-gradient-to-r from-zinc-900 via-zinc-900/90 to-zinc-950 border border-zinc-800 shadow-xl mb-6">
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
           <div>
             <div class="flex items-center gap-3 mb-3">
               <span
-                :class="['inline-flex items-center justify-center w-10 h-10 rounded-xl border', themeStore.isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-zinc-100 border-zinc-200']">
-                <svg :class="['w-5 h-5', themeStore.isDark ? 'text-zinc-300' : 'text-zinc-600']" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700">
+                <svg class="w-5 h-5 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M12 8c-2.21 0-4 1.343-4 3s1.79 3 4 3 4-1.343 4-3-1.79-3-4-3Z" />
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1020,11 +901,11 @@ onMounted(loadPage)
               </span>
 
               <div>
-                <h1 :class="['text-3xl sm:text-4xl font-bold tracking-tight', themeStore.isDark ? 'text-white' : 'text-zinc-900']">
+                <h1 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">
                   Cardápio
                 </h1>
 
-                <p :class="['text-sm mt-1', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-600']">
+                <p class="text-zinc-400 text-sm mt-1">
                   Gerencie categorias, pratos,
                   custos e receitas.
                 </p>
@@ -1034,12 +915,12 @@ onMounted(loadPage)
 
           <div class="flex flex-col sm:flex-row gap-3">
             <button type="button" @click="openCreateCategoryModal"
-              :class="['px-4 py-2.5 rounded-xl border text-sm font-semibold transition', themeStore.isDark ? 'border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white' : 'border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 hover:text-zinc-900']">
+              class="px-4 py-2.5 rounded-xl border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white text-sm font-semibold transition">
               + Categoria
             </button>
 
             <button type="button" @click="openCreateDishModal"
-              :class="['px-4 py-2.5 rounded-xl text-sm font-semibold transition', themeStore.isDark ? 'bg-white text-zinc-950 hover:bg-zinc-200' : 'bg-indigo-600 text-white hover:bg-indigo-700']">
+              class="px-4 py-2.5 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 text-sm font-semibold transition">
               + Novo prato
             </button>
           </div>
@@ -1048,71 +929,71 @@ onMounted(loadPage)
 
       <!-- ALERTS -->
       <div v-if="errorMessage"
-        class="mb-5 p-4 rounded-xl border border-red-500/30 bg-red-500/5 text-red-600 dark:text-red-300 text-sm flex items-start justify-between gap-4">
+        class="mb-5 p-4 rounded-xl border border-red-900/60 bg-red-950/30 text-red-300 text-sm flex items-start justify-between gap-4">
         <span>{{ errorMessage }}</span>
 
-        <button type="button" @click="errorMessage = ''" class="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-200">
+        <button type="button" @click="errorMessage = ''" class="text-red-400 hover:text-red-200">
           ×
         </button>
       </div>
 
       <div v-if="successMessage"
-        class="mb-5 p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 text-emerald-600 dark:text-emerald-300 text-sm flex items-start justify-between gap-4">
+        class="mb-5 p-4 rounded-xl border border-emerald-900/60 bg-emerald-950/30 text-emerald-300 text-sm flex items-start justify-between gap-4">
         <span>{{ successMessage }}</span>
 
-        <button type="button" @click="successMessage = ''" class="text-emerald-500 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-200">
+        <button type="button" @click="successMessage = ''" class="text-emerald-400 hover:text-emerald-200">
           ×
         </button>
       </div>
 
       <!-- STATS -->
       <section class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div :class="['rounded-2xl border p-5', themeStore.isDark ? 'border-zinc-800 bg-zinc-900/70' : 'border-zinc-200 bg-white']">
+        <div class="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5">
           <p class="text-xs text-zinc-500 uppercase tracking-wider">
             Total de pratos
           </p>
 
-          <p :class="['text-3xl font-bold mt-2', themeStore.isDark ? 'text-white' : 'text-zinc-900']">
+          <p class="text-3xl font-bold text-white mt-2">
             {{ totalDishes }}
           </p>
         </div>
 
-        <div :class="['rounded-2xl border p-5', themeStore.isDark ? 'border-zinc-800 bg-zinc-900/70' : 'border-zinc-200 bg-white']">
+        <div class="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5">
           <p class="text-xs text-zinc-500 uppercase tracking-wider">
             Pratos ativos
           </p>
 
-          <p class="text-3xl font-bold text-emerald-500 dark:text-emerald-400 mt-2">
+          <p class="text-3xl font-bold text-emerald-400 mt-2">
             {{ activeDishes }}
           </p>
         </div>
 
-        <div :class="['rounded-2xl border p-5', themeStore.isDark ? 'border-zinc-800 bg-zinc-900/70' : 'border-zinc-200 bg-white']">
+        <div class="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5">
           <p class="text-xs text-zinc-500 uppercase tracking-wider">
             Destaques
           </p>
 
-          <p class="text-3xl font-bold text-amber-500 dark:text-amber-400 mt-2">
+          <p class="text-3xl font-bold text-amber-400 mt-2">
             {{ highlightedDishes }}
           </p>
         </div>
 
-        <div :class="['rounded-2xl border p-5', themeStore.isDark ? 'border-zinc-800 bg-zinc-900/70' : 'border-zinc-200 bg-white']">
+        <div class="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5">
           <p class="text-xs text-zinc-500 uppercase tracking-wider">
             Custo médio
           </p>
 
-          <p :class="['text-2xl font-bold mt-3', themeStore.isDark ? 'text-white' : 'text-zinc-900']">
+          <p class="text-2xl font-bold text-white mt-3">
             {{ formatCurrency(averageCost) }}
           </p>
         </div>
       </section>
 
       <!-- CATEGORIES -->
-      <section :class="['rounded-2xl border p-4 sm:p-5 mb-6', themeStore.isDark ? 'border-zinc-800 bg-zinc-900/70' : 'border-zinc-200 bg-white']">
+      <section class="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4 sm:p-5 mb-6">
         <div class="flex items-center justify-between gap-3 mb-4">
           <div>
-            <h2 :class="['text-sm font-semibold', themeStore.isDark ? 'text-white' : 'text-zinc-900']">
+            <h2 class="text-sm font-semibold text-white">
               Categorias
             </h2>
 
@@ -1122,7 +1003,7 @@ onMounted(loadPage)
           </div>
 
           <button type="button" @click="openCreateCategoryModal"
-            :class="['text-xs font-semibold transition', themeStore.isDark ? 'text-zinc-300 hover:text-white' : 'text-zinc-600 hover:text-zinc-900']">
+            class="text-xs font-semibold text-zinc-300 hover:text-white">
             Gerenciar
           </button>
         </div>
@@ -1131,30 +1012,30 @@ onMounted(loadPage)
           <button type="button" @click="handleCategoryChange(null)" :class="[
             'shrink-0 px-4 py-2 rounded-xl text-sm font-medium border transition',
             selectedCategory === null
-              ? (themeStore.isDark ? 'bg-white text-zinc-950 border-white' : 'bg-indigo-600 text-white border-indigo-600')
-              : (themeStore.isDark ? 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700' : 'bg-zinc-100 text-zinc-700 border-zinc-200 hover:bg-zinc-200')
+              ? 'bg-white text-zinc-950 border-white'
+              : 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700'
           ]">
             Todos
           </button>
 
           <div v-for="category in categories" :key="category.id"
-            :class="['shrink-0 flex items-center gap-1 rounded-xl border overflow-hidden', themeStore.isDark ? 'border-zinc-700 bg-zinc-800' : 'border-zinc-200 bg-zinc-100']">
+            class="shrink-0 flex items-center gap-1 rounded-xl border border-zinc-700 bg-zinc-800 overflow-hidden">
             <button type="button" @click="handleCategoryChange(category.id)" :class="[
               'px-4 py-2 text-sm font-medium transition',
               selectedCategory === category.id
-                ? (themeStore.isDark ? 'bg-white text-zinc-950' : 'bg-indigo-600 text-white')
-                : (themeStore.isDark ? 'text-zinc-300 hover:bg-zinc-700 hover:text-white' : 'text-zinc-700 hover:bg-zinc-200 hover:text-zinc-900')
+                ? 'bg-white text-zinc-950'
+                : 'text-zinc-300 hover:bg-zinc-700 hover:text-white'
             ]">
               {{ category.name }}
             </button>
 
-            <button type="button" @click="openEditCategoryModal(category)" :class="['px-2 transition', themeStore.isDark ? 'text-zinc-500 hover:text-white' : 'text-zinc-400 hover:text-zinc-900']"
+            <button type="button" @click="openEditCategoryModal(category)" class="px-2 text-zinc-500 hover:text-white"
               title="Editar categoria">
               ✎
             </button>
 
             <button type="button" @click="deleteCategory(category)" :disabled="isDeletingCategory === category.id
-              " :class="['px-2 pr-3 transition disabled:opacity-50', themeStore.isDark ? 'text-zinc-500 hover:text-red-400' : 'text-zinc-400 hover:text-red-600']" title="Excluir categoria">
+              " class="px-2 pr-3 text-zinc-500 hover:text-red-400 disabled:opacity-50" title="Excluir categoria">
               {{
                 isDeletingCategory === category.id
                   ? '...'
@@ -1166,7 +1047,7 @@ onMounted(loadPage)
       </section>
 
       <!-- FILTERS -->
-      <section :class="['rounded-2xl border p-4 mb-6', themeStore.isDark ? 'border-zinc-800 bg-zinc-900/70' : 'border-zinc-200 bg-white']">
+      <section class="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4 mb-6">
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
           <!-- SEARCH -->
           <div class="relative md:col-span-2 xl:col-span-1">
@@ -1177,12 +1058,12 @@ onMounted(loadPage)
             </svg>
 
             <input v-model="search" type="text" placeholder="Buscar prato..."
-              :class="['w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm outline-none', themeStore.isDark ? 'bg-zinc-950 border-zinc-800 text-white placeholder:text-zinc-600 focus:border-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500']" />
+              class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-zinc-600" />
           </div>
 
           <!-- STATUS -->
           <select v-model="statusFilter"
-            :class="['px-4 py-2.5 rounded-xl border text-sm outline-none', themeStore.isDark ? 'bg-zinc-950 border-zinc-800 text-zinc-300 focus:border-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500']">
+            class="px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-sm text-zinc-300 outline-none focus:border-zinc-600">
             <option value="all">
               Todos os status
             </option>
@@ -1198,7 +1079,7 @@ onMounted(loadPage)
 
           <!-- HIGHLIGHT -->
           <select v-model="highlightFilter"
-            :class="['px-4 py-2.5 rounded-xl border text-sm outline-none', themeStore.isDark ? 'bg-zinc-950 border-zinc-800 text-zinc-300 focus:border-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500']">
+            class="px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-sm text-zinc-300 outline-none focus:border-zinc-600">
             <option value="all">
               Todos os pratos
             </option>
@@ -1209,7 +1090,7 @@ onMounted(loadPage)
           </select>
 
           <button type="button" @click="clearFilters"
-            :class="['px-4 py-2.5 rounded-xl border text-sm font-semibold transition', themeStore.isDark ? 'bg-zinc-800 border-zinc-700 hover:bg-zinc-700 text-zinc-300 hover:text-white' : 'bg-zinc-100 border-zinc-200 hover:bg-zinc-200 text-zinc-700 hover:text-zinc-900']">
+            class="px-4 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 text-sm font-semibold text-zinc-300 hover:text-white transition">
             Limpar filtros
           </button>
         </div>
@@ -1219,7 +1100,7 @@ onMounted(loadPage)
       <section>
         <div class="flex items-center justify-between mb-4">
           <div>
-            <h2 :class="['text-lg font-bold', themeStore.isDark ? 'text-white' : 'text-zinc-900']">
+            <h2 class="text-lg font-bold text-white">
               Pratos
             </h2>
 
@@ -1232,16 +1113,16 @@ onMounted(loadPage)
 
         <!-- EMPTY -->
         <div v-if="filteredDishes.length === 0"
-          :class="['rounded-2xl border border-dashed py-16 text-center', themeStore.isDark ? 'border-zinc-800 bg-zinc-900/40' : 'border-zinc-300 bg-white/50']">
+          class="rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/40 py-16 text-center">
           <div
-            :class="['mx-auto w-14 h-14 rounded-2xl border flex items-center justify-center mb-4', themeStore.isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-100 border-zinc-200']">
-            <svg :class="['w-7 h-7', themeStore.isDark ? 'text-zinc-600' : 'text-zinc-400']" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            class="mx-auto w-14 h-14 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-4">
+            <svg class="w-7 h-7 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                 d="M12 8c-2.21 0-4 1.343-4 3s1.79 3 4 3 4-1.343 4-3-1.79-3-4-3Zm0 0V5m0 9v5m-7-8H2m20 0h-3" />
             </svg>
           </div>
 
-          <h3 :class="['font-semibold', themeStore.isDark ? 'text-white' : 'text-zinc-900']">
+          <h3 class="text-white font-semibold">
             Nenhum prato encontrado
           </h3>
 
@@ -1251,7 +1132,7 @@ onMounted(loadPage)
           </p>
 
           <button type="button" @click="openCreateDishModal"
-            :class="['mt-5 px-4 py-2 rounded-xl text-sm font-semibold transition', themeStore.isDark ? 'bg-white text-zinc-950 hover:bg-zinc-200' : 'bg-indigo-600 text-white hover:bg-indigo-700']">
+            class="mt-5 px-4 py-2 rounded-xl bg-white text-zinc-950 text-sm font-semibold hover:bg-zinc-200 transition">
             Criar primeiro prato
           </button>
         </div>
@@ -1259,14 +1140,14 @@ onMounted(loadPage)
         <!-- CARDS -->
         <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           <article v-for="dish in filteredDishes" :key="dish.id"
-            :class="['group overflow-hidden rounded-2xl border transition hover:shadow-md', themeStore.isDark ? 'border-zinc-800 bg-zinc-900/80 hover:border-zinc-700' : 'border-zinc-200 bg-white hover:border-zinc-300']">
+            class="group overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/80 hover:border-zinc-700 transition">
             <!-- IMAGE -->
-            <div :class="['h-48 relative overflow-hidden', themeStore.isDark ? 'bg-zinc-950' : 'bg-zinc-100']">
+            <div class="h-48 bg-zinc-950 relative overflow-hidden">
               <img v-if="dish.urlImage" :src="dish.urlImage" :alt="dish.name"
                 class="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
 
               <div v-else class="w-full h-full flex items-center justify-center">
-                <svg :class="['w-12 h-12', themeStore.isDark ? 'text-zinc-800' : 'text-zinc-300']" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-12 h-12 text-zinc-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.3"
                     d="M12 8c-2.21 0-4 1.343-4 3s1.79 3 4 3 4-1.343 4-3-1.79-3-4-3Zm0 0V5m0 9v5m-7-8H2m20 0h-3" />
                 </svg>
@@ -1277,8 +1158,8 @@ onMounted(loadPage)
                 <span :class="[
                   'px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider backdrop-blur-md border',
                   dish.isActive
-                    ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800/60 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-800/60'
-                    : 'bg-red-950/80 text-red-300 border-red-800/60 dark:bg-red-950/80 dark:text-red-300 dark:border-red-800/60'
+                    ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800/60'
+                    : 'bg-red-950/80 text-red-300 border-red-800/60'
                 ]">
                   {{
                     dish.isActive
@@ -1288,7 +1169,7 @@ onMounted(loadPage)
                 </span>
 
                 <span v-if="dish.highlight"
-                  class="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-amber-950/80 text-amber-300 border border-amber-800/60 backdrop-blur-md dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-800/60">
+                  class="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-amber-950/80 text-amber-300 border border-amber-800/60 backdrop-blur-md">
                   Destaque
                 </span>
               </div>
@@ -1302,12 +1183,12 @@ onMounted(loadPage)
                     {{ getDishCategoryName(dish) }}
                   </p>
 
-                  <h3 :class="['text-lg font-bold truncate', themeStore.isDark ? 'text-white' : 'text-zinc-900']">
+                  <h3 class="text-lg font-bold text-white truncate">
                     {{ dish.name }}
                   </h3>
                 </div>
 
-                <span :class="['shrink-0 text-lg font-bold', themeStore.isDark ? 'text-white' : 'text-zinc-900']">
+                <span class="shrink-0 text-lg font-bold text-white">
                   {{ formatCurrency(dish.price) }}
                 </span>
               </div>
@@ -1318,24 +1199,24 @@ onMounted(loadPage)
 
               <!-- COST -->
               <div class="grid grid-cols-2 gap-3 mt-5">
-                <div :class="['rounded-xl border p-3', themeStore.isDark ? 'bg-zinc-950 border-zinc-800' : 'bg-zinc-50 border-zinc-200']">
-                  <p class="text-[10px] uppercase tracking-wider text-zinc-500">
+                <div class="rounded-xl bg-zinc-950 border border-zinc-800 p-3">
+                  <p class="text-[10px] uppercase tracking-wider text-zinc-600">
                     Custo
                   </p>
 
-                  <p :class="['text-sm font-semibold mt-1', themeStore.isDark ? 'text-zinc-300' : 'text-zinc-700']">
+                  <p class="text-sm font-semibold text-zinc-300 mt-1">
                     {{ formatCurrency(dish.cost) }}
                   </p>
                 </div>
 
-                <div :class="['rounded-xl border p-3', themeStore.isDark ? 'bg-zinc-950 border-zinc-800' : 'bg-zinc-50 border-zinc-200']">
-                  <p class="text-[10px] uppercase tracking-wider text-zinc-500">
+                <div class="rounded-xl bg-zinc-950 border border-zinc-800 p-3">
+                  <p class="text-[10px] uppercase tracking-wider text-zinc-600">
                     Margem
                   </p>
 
                   <p :class="[
                     'text-sm font-semibold mt-1',
-                    getMarginClass(dish).replace('text-emerald-400', 'text-emerald-500 dark:text-emerald-400').replace('text-amber-400', 'text-amber-500 dark:text-amber-400').replace('text-red-400', 'text-red-500 dark:text-red-400')
+                    getMarginClass(dish)
                   ]">
                     {{ formatMargin(dish) }}
                   </p>
@@ -1343,15 +1224,15 @@ onMounted(loadPage)
               </div>
 
               <!-- ACTIONS -->
-              <div :class="['flex items-center gap-2 mt-5 pt-4 border-t', themeStore.isDark ? 'border-zinc-800' : 'border-zinc-200']">
+              <div class="flex items-center gap-2 mt-5 pt-4 border-t border-zinc-800">
                 <button type="button" @click="openEditDishModal(dish)"
-                  :class="['flex-1 px-3 py-2 rounded-xl border text-xs font-semibold transition', themeStore.isDark ? 'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-300 hover:text-white' : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-200 text-zinc-700 hover:text-zinc-900']">
+                  class="flex-1 px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-xs font-semibold text-zinc-300 hover:text-white transition">
                   Editar
                 </button>
 
                 <button type="button" @click="deleteDish(dish)" :disabled="isDeletingDish === dish.id
                   "
-                  :class="['px-3 py-2 rounded-xl border text-xs font-semibold transition disabled:opacity-50', themeStore.isDark ? 'bg-zinc-950 hover:bg-red-950/50 border-zinc-800 hover:border-red-900 text-zinc-500 hover:text-red-400' : 'bg-white hover:bg-red-50 border-zinc-200 hover:border-red-300 text-zinc-400 hover:text-red-600']">
+                  class="px-3 py-2 rounded-xl bg-zinc-950 hover:bg-red-950/50 border border-zinc-800 hover:border-red-900 text-xs font-semibold text-zinc-500 hover:text-red-400 transition disabled:opacity-50">
                   {{
                     isDeletingDish === dish.id
                       ? '...'
@@ -1373,12 +1254,12 @@ onMounted(loadPage)
         <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click="closeDishModal" />
 
         <div
-          :class="['relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border shadow-2xl', themeStore.isDark ? 'border-zinc-800 bg-zinc-950' : 'border-zinc-200 bg-white']">
+          class="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl">
           <!-- MODAL HEADER -->
           <div
-            :class="['sticky top-0 z-10 flex items-center justify-between px-6 py-5 border-b backdrop-blur-xl', themeStore.isDark ? 'border-zinc-800 bg-zinc-950/95' : 'border-zinc-200 bg-white/95']">
+            class="sticky top-0 z-10 flex items-center justify-between px-6 py-5 border-b border-zinc-800 bg-zinc-950/95 backdrop-blur-xl">
             <div>
-              <h2 :class="['text-xl font-bold', themeStore.isDark ? 'text-white' : 'text-zinc-900']">
+              <h2 class="text-xl font-bold text-white">
                 {{
                   isEditingDish
                     ? 'Editar prato'
@@ -1393,7 +1274,7 @@ onMounted(loadPage)
             </div>
 
             <button type="button" @click="closeDishModal"
-              :class="['w-9 h-9 rounded-xl border transition', themeStore.isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800' : 'bg-zinc-100 border-zinc-200 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200']">
+              class="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800">
               ×
             </button>
           </div>
@@ -1403,32 +1284,32 @@ onMounted(loadPage)
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <!-- NAME -->
               <div class="md:col-span-2">
-                <label :class="['block text-xs font-semibold mb-2', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-600']">
+                <label class="block text-xs font-semibold text-zinc-400 mb-2">
                   Nome do prato
                 </label>
 
                 <input v-model="dishForm.name" type="text" required placeholder="Ex.: Hambúrguer artesanal"
-                  :class="['w-full px-4 py-3 rounded-xl border text-sm outline-none', themeStore.isDark ? 'bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-600 focus:border-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500']" />
+                  class="w-full px-4 py-3 rounded-xl bg-zinc-900 border border-zinc-800 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-zinc-600" />
               </div>
 
               <!-- DESCRIPTION -->
               <div class="md:col-span-2">
-                <label :class="['block text-xs font-semibold mb-2', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-600']">
+                <label class="block text-xs font-semibold text-zinc-400 mb-2">
                   Descrição
                 </label>
 
                 <textarea v-model="dishForm.description" rows="3" placeholder="Descrição do prato..."
-                  :class="['w-full px-4 py-3 rounded-xl border text-sm outline-none resize-none', themeStore.isDark ? 'bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-600 focus:border-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500']" />
+                  class="w-full px-4 py-3 rounded-xl bg-zinc-900 border border-zinc-800 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-zinc-600 resize-none" />
               </div>
 
               <!-- CATEGORY -->
               <div>
-                <label :class="['block text-xs font-semibold mb-2', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-600']">
+                <label class="block text-xs font-semibold text-zinc-400 mb-2">
                   Categoria
                 </label>
 
                 <select v-model="dishForm.categoryId" required
-                  :class="['w-full px-4 py-3 rounded-xl border text-sm outline-none', themeStore.isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-300 focus:border-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500']">
+                  class="w-full px-4 py-3 rounded-xl bg-zinc-900 border border-zinc-800 text-sm text-zinc-300 outline-none focus:border-zinc-600">
                   <option :value="null">
                     Selecione
                   </option>
@@ -1441,62 +1322,62 @@ onMounted(loadPage)
 
               <!-- IMAGE -->
               <div>
-                <label :class="['block text-xs font-semibold mb-2', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-600']">
+                <label class="block text-xs font-semibold text-zinc-400 mb-2">
                   URL da imagem
                 </label>
 
                 <input v-model="dishForm.urlImage" type="url" placeholder="https://..."
-                  :class="['w-full px-4 py-3 rounded-xl border text-sm outline-none', themeStore.isDark ? 'bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-600 focus:border-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500']" />
+                  class="w-full px-4 py-3 rounded-xl bg-zinc-900 border border-zinc-800 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-zinc-600" />
               </div>
 
               <!-- PRICE -->
               <div>
-                <label :class="['block text-xs font-semibold mb-2', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-600']">
+                <label class="block text-xs font-semibold text-zinc-400 mb-2">
                   Preço de venda
                 </label>
 
                 <div class="relative">
-                  <span :class="['absolute left-4 top-1/2 -translate-y-1/2 text-sm', themeStore.isDark ? 'text-zinc-600' : 'text-zinc-400']">
+                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 text-sm">
                     R$
                   </span>
 
                   <input v-model.number="dishForm.price" type="number" min="0" step="0.01" required
-                    :class="['w-full pl-10 pr-4 py-3 rounded-xl border text-sm outline-none', themeStore.isDark ? 'bg-zinc-900 border-zinc-800 text-white focus:border-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500']" />
+                    class="w-full pl-10 pr-4 py-3 rounded-xl bg-zinc-900 border border-zinc-800 text-sm text-white outline-none focus:border-zinc-600" />
                 </div>
               </div>
 
               <!-- COST -->
               <div>
-                <label :class="['block text-xs font-semibold mb-2', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-600']">
+                <label class="block text-xs font-semibold text-zinc-400 mb-2">
                   Custo da receita
                 </label>
 
                 <div class="relative">
-                  <span :class="['absolute left-4 top-1/2 -translate-y-1/2 text-sm', themeStore.isDark ? 'text-zinc-600' : 'text-zinc-400']">
+                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 text-sm">
                     R$
                   </span>
 
                   <input v-model.number="dishForm.cost" type="number" min="0" step="0.01"
-                    :class="['w-full pl-10 pr-4 py-3 rounded-xl border text-sm outline-none', themeStore.isDark ? 'bg-zinc-900 border-zinc-800 text-white focus:border-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500']" />
+                    class="w-full pl-10 pr-4 py-3 rounded-xl bg-zinc-900 border border-zinc-800 text-sm text-white outline-none focus:border-zinc-600" />
                 </div>
               </div>
 
               <!-- DISPLAY ORDER -->
               <div>
-                <label :class="['block text-xs font-semibold mb-2', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-600']">
+                <label class="block text-xs font-semibold text-zinc-400 mb-2">
                   Ordem de exibição
                 </label>
 
                 <input v-model.number="dishForm.displayOrder" type="number" min="0"
-                  :class="['w-full px-4 py-3 rounded-xl border text-sm outline-none', themeStore.isDark ? 'bg-zinc-900 border-zinc-800 text-white focus:border-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500']" />
+                  class="w-full px-4 py-3 rounded-xl bg-zinc-900 border border-zinc-800 text-sm text-white outline-none focus:border-zinc-600" />
               </div>
 
               <!-- TOGGLES -->
               <div class="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label
-                  :class="['flex items-center justify-between gap-4 p-4 rounded-xl border cursor-pointer', themeStore.isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-50 border-zinc-200']">
+                  class="flex items-center justify-between gap-4 p-4 rounded-xl bg-zinc-900 border border-zinc-800 cursor-pointer">
                   <div>
-                    <p :class="['text-sm font-semibold', themeStore.isDark ? 'text-white' : 'text-zinc-900']">
+                    <p class="text-sm font-semibold text-white">
                       Prato ativo
                     </p>
 
@@ -1505,13 +1386,13 @@ onMounted(loadPage)
                     </p>
                   </div>
 
-                  <input v-model="dishForm.isActive" type="checkbox" :class="['w-5 h-5', themeStore.isDark ? 'accent-white' : 'accent-indigo-600']" />
+                  <input v-model="dishForm.isActive" type="checkbox" class="w-5 h-5 accent-white" />
                 </label>
 
                 <label
-                  :class="['flex items-center justify-between gap-4 p-4 rounded-xl border cursor-pointer', themeStore.isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-50 border-zinc-200']">
+                  class="flex items-center justify-between gap-4 p-4 rounded-xl bg-zinc-900 border border-zinc-800 cursor-pointer">
                   <div>
-                    <p :class="['text-sm font-semibold', themeStore.isDark ? 'text-white' : 'text-zinc-900']">
+                    <p class="text-sm font-semibold text-white">
                       Prato destaque
                     </p>
 
@@ -1520,16 +1401,16 @@ onMounted(loadPage)
                     </p>
                   </div>
 
-                  <input v-model="dishForm.highlight" type="checkbox" :class="['w-5 h-5', themeStore.isDark ? 'accent-white' : 'accent-indigo-600']" />
+                  <input v-model="dishForm.highlight" type="checkbox" class="w-5 h-5 accent-white" />
                 </label>
               </div>
             </div>
 
             <!-- INGREDIENTS -->
-            <div :class="['rounded-2xl border p-5', themeStore.isDark ? 'border-zinc-800 bg-zinc-900/50' : 'border-zinc-200 bg-zinc-50/50']">
+            <div class="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5">
               <div class="flex items-center justify-between gap-3 mb-4">
                 <div>
-                  <h3 :class="['text-sm font-bold', themeStore.isDark ? 'text-white' : 'text-zinc-900']">
+                  <h3 class="text-sm font-bold text-white">
                     Ingredientes
                   </h3>
 
@@ -1539,7 +1420,7 @@ onMounted(loadPage)
                   </p>
                 </div>
 
-                <span :class="['px-2.5 py-1 rounded-lg border text-xs', themeStore.isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-400' : 'bg-white border-zinc-200 text-zinc-600']">
+                <span class="px-2.5 py-1 rounded-lg bg-zinc-800 border border-zinc-700 text-xs text-zinc-400">
                   {{ dishForm.ingredients.length }}
                 </span>
               </div>
@@ -1547,14 +1428,14 @@ onMounted(loadPage)
               <!-- ADD INGREDIENT -->
               <div class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 mb-4">
                 <input v-model.number="newIngredient.productId" type="number" min="1" placeholder="Product ID"
-                  :class="['w-full px-3 py-2.5 rounded-xl border text-sm outline-none', themeStore.isDark ? 'bg-zinc-950 border-zinc-800 text-white placeholder:text-zinc-600 focus:border-zinc-600' : 'bg-white border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500']" />
+                  class="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-zinc-600" />
 
                 <input v-model.number="newIngredient.quantity" type="number" min="0" step="0.001"
                   placeholder="Quantidade"
-                  :class="['w-full px-3 py-2.5 rounded-xl border text-sm outline-none', themeStore.isDark ? 'bg-zinc-950 border-zinc-800 text-white placeholder:text-zinc-600 focus:border-zinc-600' : 'bg-white border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500']" />
+                  class="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-zinc-600" />
 
                 <button type="button" @click="addIngredient"
-                  :class="['px-4 py-2.5 rounded-xl border text-sm font-semibold transition', themeStore.isDark ? 'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-200' : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-200 text-zinc-700']">
+                  class="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-sm font-semibold text-zinc-200">
                   Adicionar
                 </button>
               </div>
@@ -1566,9 +1447,9 @@ onMounted(loadPage)
                 <div v-for="(
 ingredient, index
                   ) in dishForm.ingredients" :key="`${ingredient.productId}-${index}`"
-                  :class="['flex items-center justify-between gap-4 px-4 py-3 rounded-xl border', themeStore.isDark ? 'bg-zinc-950 border-zinc-800' : 'bg-white border-zinc-200']">
+                  class="flex items-center justify-between gap-4 px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-800">
                   <div>
-                    <p :class="['text-sm font-semibold', themeStore.isDark ? 'text-white' : 'text-zinc-900']">
+                    <p class="text-sm font-semibold text-white">
                       Produto #{{
                         ingredient.productId
                       }}
@@ -1584,14 +1465,14 @@ ingredient, index
 
                   <button type="button" @click="
                     removeIngredient(index)
-                    " :class="['text-xs font-semibold transition', themeStore.isDark ? 'text-zinc-500 hover:text-red-400' : 'text-zinc-400 hover:text-red-600']">
+                    " class="text-xs font-semibold text-zinc-500 hover:text-red-400">
                     Remover
                   </button>
                 </div>
               </div>
 
               <div v-else
-                :class="['py-6 text-center text-xs border border-dashed rounded-xl', themeStore.isDark ? 'text-zinc-600 border-zinc-800' : 'text-zinc-400 border-zinc-300']">
+                class="py-6 text-center text-xs text-zinc-600 border border-dashed border-zinc-800 rounded-xl">
                 Nenhum ingrediente adicionado.
               </div>
             </div>
@@ -1599,12 +1480,12 @@ ingredient, index
             <!-- ACTIONS -->
             <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2">
               <button type="button" @click="closeDishModal"
-                :class="['px-5 py-2.5 rounded-xl border text-sm font-semibold transition', themeStore.isDark ? 'bg-zinc-900 hover:bg-zinc-800 border-zinc-800 text-zinc-300' : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-200 text-zinc-700']">
+                class="px-5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-sm font-semibold text-zinc-300">
                 Cancelar
               </button>
 
               <button type="submit" :disabled="isSavingDish"
-                :class="['px-5 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed transition', themeStore.isDark ? 'bg-white hover:bg-zinc-200 text-zinc-950' : 'bg-indigo-600 hover:bg-indigo-700 text-white']">
+                class="px-5 py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed">
                 {{
                   isSavingDish
                     ? 'Salvando...'
@@ -1626,10 +1507,10 @@ ingredient, index
       <div v-if="showCategoryModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click="closeCategoryModal" />
 
-        <div :class="['relative w-full max-w-md rounded-2xl border shadow-2xl', themeStore.isDark ? 'border-zinc-800 bg-zinc-950' : 'border-zinc-200 bg-white']">
-          <div :class="['flex items-center justify-between px-6 py-5 border-b', themeStore.isDark ? 'border-zinc-800' : 'border-zinc-200']">
+        <div class="relative w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl">
+          <div class="flex items-center justify-between px-6 py-5 border-b border-zinc-800">
             <div>
-              <h2 :class="['text-xl font-bold', themeStore.isDark ? 'text-white' : 'text-zinc-900']">
+              <h2 class="text-xl font-bold text-white">
                 {{
                   isEditingCategory
                     ? 'Editar categoria'
@@ -1644,7 +1525,7 @@ ingredient, index
             </div>
 
             <button type="button" @click="closeCategoryModal"
-              :class="['w-9 h-9 rounded-xl border transition', themeStore.isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800' : 'bg-zinc-100 border-zinc-200 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200']">
+              class="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white">
               ×
             </button>
           </div>
@@ -1652,30 +1533,30 @@ ingredient, index
           <form @submit.prevent="submitCategory" class="p-6 space-y-5">
             <!-- NAME -->
             <div>
-              <label :class="['block text-xs font-semibold mb-2', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-600']">
+              <label class="block text-xs font-semibold text-zinc-400 mb-2">
                 Nome
               </label>
 
               <input v-model="categoryForm.name" type="text" required placeholder="Ex.: Hambúrgueres"
-                :class="['w-full px-4 py-3 rounded-xl border text-sm outline-none', themeStore.isDark ? 'bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-600 focus:border-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500']" />
+                class="w-full px-4 py-3 rounded-xl bg-zinc-900 border border-zinc-800 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-zinc-600" />
             </div>
 
             <!-- ORDER -->
             <div>
-              <label :class="['block text-xs font-semibold mb-2', themeStore.isDark ? 'text-zinc-400' : 'text-zinc-600']">
+              <label class="block text-xs font-semibold text-zinc-400 mb-2">
                 Ordem de exibição
               </label>
 
               <input v-model.number="categoryForm.displayOrder
                 " type="number" min="0"
-                :class="['w-full px-4 py-3 rounded-xl border text-sm outline-none', themeStore.isDark ? 'bg-zinc-900 border-zinc-800 text-white focus:border-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500']" />
+                class="w-full px-4 py-3 rounded-xl bg-zinc-900 border border-zinc-800 text-sm text-white outline-none focus:border-zinc-600" />
             </div>
 
             <!-- ACTIVE -->
             <label
-              :class="['flex items-center justify-between gap-4 p-4 rounded-xl border cursor-pointer', themeStore.isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-50 border-zinc-200']">
+              class="flex items-center justify-between gap-4 p-4 rounded-xl bg-zinc-900 border border-zinc-800 cursor-pointer">
               <div>
-                <p :class="['text-sm font-semibold', themeStore.isDark ? 'text-white' : 'text-zinc-900']">
+                <p class="text-sm font-semibold text-white">
                   Categoria ativa
                 </p>
 
@@ -1686,18 +1567,18 @@ ingredient, index
               </div>
 
               <input v-model="categoryForm.isActive
-                " type="checkbox" :class="['w-5 h-5', themeStore.isDark ? 'accent-white' : 'accent-indigo-600']" />
+                " type="checkbox" class="w-5 h-5 accent-white" />
             </label>
 
             <!-- ACTIONS -->
             <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2">
               <button type="button" @click="closeCategoryModal"
-                :class="['px-5 py-2.5 rounded-xl border text-sm font-semibold transition', themeStore.isDark ? 'bg-zinc-900 hover:bg-zinc-800 border-zinc-800 text-zinc-300' : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-200 text-zinc-700']">
+                class="px-5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-sm font-semibold text-zinc-300">
                 Cancelar
               </button>
 
               <button type="submit" :disabled="isSavingCategory"
-                :class="['px-5 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50 transition', themeStore.isDark ? 'bg-white hover:bg-zinc-200 text-zinc-950' : 'bg-indigo-600 hover:bg-indigo-700 text-white']">
+                class="px-5 py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 text-sm font-bold disabled:opacity-50">
                 {{
                   isSavingCategory
                     ? 'Salvando...'

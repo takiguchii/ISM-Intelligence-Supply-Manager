@@ -3,7 +3,7 @@ using ISM.Domain.Interfaces;
 using ISM.Infrastructure.Data.Context;
 using Microsoft.EntityFrameworkCore;
 
-namespace ISM.Infrastructure.Repositories;
+namespace ISM.Infrastructure.Repositories.Restaurant;
 
 public sealed class TmpAuthorizationRepository : ITmpAuthorizationRepository
 {
