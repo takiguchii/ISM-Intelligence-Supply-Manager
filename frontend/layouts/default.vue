@@ -13,7 +13,7 @@ const isSidebarOpen = ref(false);
     :class="[
       'min-h-screen flex flex-col font-sans transition-colors duration-200',
       themeStore.isDark
-        ? 'bg-abyss text-white selection:bg-zinc-800 selection:text-white'
+        ? 'bg-zinc-950 text-white selection:bg-zinc-800 selection:text-white'
         : 'bg-zinc-50 text-zinc-900 selection:bg-indigo-100 selection:text-indigo-950'
     ]"
   >

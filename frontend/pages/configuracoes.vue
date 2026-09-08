@@ -10,6 +10,7 @@ import {
   type TestRestaurantAiPhotoConfigRequestDto,
   type UpdateRestaurantAiPhotoConfigDto
 } from "~/services/modules/import/importService";
+import AppNavbar from "~/components/layout/AppNavbar.vue";
 import AppSidebar from "~/components/layout/AppSidebar.vue";
 import AppLoader from "~/components/base/AppLoader.vue";
 import { useThemeStore } from "~/stores/theme";
@@ -637,92 +638,7 @@ onMounted(async () => {
   >
     <AppLoader :visible="isLoading" />
 
-    <header
-      :class="[
-        'h-16 border-b sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between backdrop-blur-xl',
-        themeStore.isDark
-          ? 'border-zinc-800/80 bg-zinc-900/60'
-          : 'border-zinc-200 bg-white/80 shadow-sm'
-      ]"
-    >
-      <div class="flex items-center gap-4">
-        <button
-          @click="toggleSidebar()"
-          :class="[
-            'p-2 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2',
-            themeStore.isDark
-              ? 'text-zinc-300 hover:text-white hover:bg-zinc-800/80 focus:ring-zinc-600'
-              : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 focus:ring-zinc-300'
-          ]"
-          title="Abrir Menu Lateral"
-        >
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-          </svg>
-        </button>
-        <div class="flex items-center gap-3">
-          <span
-            :class="[
-              'font-bold text-lg tracking-tight',
-              themeStore.isDark ? 'text-white' : 'text-zinc-900'
-            ]"
-          >ISM</span>
-          <span
-            :class="[
-              'hidden sm:inline-block text-xs uppercase tracking-widest font-mono border-l pl-3',
-              themeStore.isDark
-                ? 'text-zinc-400 border-zinc-700/60'
-                : 'text-zinc-500 border-zinc-200'
-            ]"
-          >
-            Intelligence Supply
-          </span>
-        </div>
-      </div>
-
-      <nav class="hidden md:flex items-center gap-1">
-        <nuxt-link
-          to="/"
-          :class="[
-            'px-3 py-2 text-sm rounded-lg transition-colors',
-            themeStore.isDark
-              ? 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'
-              : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
-          ]"
-        >Início</nuxt-link>
-        <nuxt-link
-          to="/integracoes"
-          :class="[
-            'px-3 py-2 text-sm rounded-lg transition-colors',
-            themeStore.isDark
-              ? 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'
-              : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
-          ]"
-        >Integrações</nuxt-link>
-        <span
-          :class="[
-            'px-3 py-2 text-sm font-semibold rounded-lg',
-            themeStore.isDark
-              ? 'text-white bg-zinc-800/80'
-              : 'text-zinc-900 bg-zinc-200/80'
-          ]"
-        >Configurações</span>
-      </nav>
-
-      <div class="flex items-center gap-3">
-        <button
-          @click="authStore.logout()"
-          :class="[
-            'px-3 py-2 rounded-lg text-xs font-semibold tracking-wide uppercase border transition-all',
-            themeStore.isDark
-              ? 'text-zinc-300 hover:text-white hover:bg-zinc-800/60 border-zinc-700/60'
-              : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 border-zinc-300'
-          ]"
-        >
-          Sair
-        </button>
-      </div>
-    </header>
+    <AppNavbar @toggleSidebar="toggleSidebar()" />
 
     <AppSidebar :is-open="sidebarOpen" @close="toggleSidebar(false)" />
 

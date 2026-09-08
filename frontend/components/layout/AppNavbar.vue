@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from "vue";
 import { useAuthStore } from "~/stores/auth";
+import ThemeToggle from "~/components/base/ThemeToggle.vue";
 
 const emit = defineEmits<{
   (e: "toggleSidebar"): void;
@@ -82,6 +83,7 @@ onUnmounted(() => {
     </div>
 
     <div class="flex items-center gap-3">
+      <ThemeToggle />
       <div v-if="authStore.isAuthenticated" class="flex items-center gap-3">
         <span class="hidden md:inline-block text-xs text-zinc-400 font-medium">
           {{ authStore.currentUser?.name }} ({{ authStore.currentUser?.role }})

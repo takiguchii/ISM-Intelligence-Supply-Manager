@@ -177,15 +177,12 @@ const drawParticles = () => {
 const resizeCanvas = () => {
   const canvas = particlesCanvas.value;
   if (!canvas) return;
-  const dpr = window.devicePixelRatio || 1;
   const width = window.innerWidth;
   const height = window.innerHeight;
-  canvas.width = width * dpr;
-  canvas.height = height * dpr;
+  canvas.width = width;
+  canvas.height = height;
   canvas.style.width = `${width}px`;
   canvas.style.height = `${height}px`;
-  const ctx = canvas.getContext("2d");
-  if (ctx) ctx.scale(dpr, dpr);
   if (particles.value.length === 0) {
     initParticles(width, height);
   } else {
