@@ -46,7 +46,8 @@ public static class WebApplicationExtensions
             }
 
             await context.Database.MigrateAsync();
-            await DbSeeder.SeedAsync(context);
+            var seedDemoData = app.Configuration.GetValue<bool>("SEED_DEMO_DATA");
+            await DbSeeder.SeedAsync(context, seedDemoData, app.Configuration["SEED_PASSWORD"]);
         }
         catch (Exception ex)
         {

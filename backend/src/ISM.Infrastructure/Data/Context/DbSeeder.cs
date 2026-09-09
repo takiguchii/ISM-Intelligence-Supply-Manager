@@ -14,7 +14,10 @@ public static class DbSeeder
     private const int Pbkdf2Iterations = 100_000;
     private const byte FormatVersion = 0x01;
 
-    public static async Task SeedAsync(IsmDbContext context)
+    public static async Task SeedAsync(
+        IsmDbContext context,
+        bool seedDemoData,
+        string? initialPassword)
     {
         // 0. Planos SaaS (Free / Pro / Enterprise)
         if (!await context.Plans.AnyAsync())
@@ -61,6 +64,12 @@ public static class DbSeeder
 
         var planPro = await context.Plans.FirstOrDefaultAsync(p => p.Name == "Pro");
 
+        if (!seedDemoData)
+            return;
+
+        if (string.IsNullOrWhiteSpace(initialPassword))
+            throw new InvalidOperationException("SEED_PASSWORD deve ser informado quando SEED_DEMO_DATA=true.");
+
         // 1. Cadastra Restaurante padrão (se não existir)
         Restaurant? restaurant = await context.Restaurants.FirstOrDefaultAsync();
         if (restaurant is null)
@@ -82,7 +91,7 @@ public static class DbSeeder
         // 2. Usuários padrão por cargo (Admin, Manager, Chef, Waiter)
         if (!await context.Users.AnyAsync())
         {
-            var defaultPassword = HashPassword("admin123");
+            var defaultPassword = HashPassword(initialPassword);
             var users = new List<User>
             {
                 new()

@@ -80,8 +80,8 @@ public sealed class UserService : IUserService
                 if (user.RestaurantId != _currentUser.RestaurantId.Value)
                     throw new UnauthorizedAccessException("Você só pode editar usuários do seu próprio restaurante.");
 
-                // Nao pode mover user para outro restaurante
-                if (request.RestaurantId.HasValue && request.RestaurantId.Value != _currentUser.RestaurantId.Value)
+                // Não pode mover o usuário nem remover seu vínculo com o restaurante.
+                if (!request.RestaurantId.HasValue || request.RestaurantId.Value != _currentUser.RestaurantId.Value)
                     throw new UnauthorizedAccessException("Você não pode alterar o restaurante de um usuário.");
 
                 // Nao pode promover ninguem a SuperAdmin (RestaurantId null + Admin)
