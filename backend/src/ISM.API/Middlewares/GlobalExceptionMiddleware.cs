@@ -21,8 +21,8 @@ public sealed class GlobalExceptionMiddleware
         }
         catch (UnauthorizedAccessException exception)
         {
-            _logger.LogWarning(exception, "Unauthorized access attempt.");
-            await WriteErrorResponseAsync(context, StatusCodes.Status401Unauthorized, "Unauthorized", exception.Message);
+            _logger.LogWarning(exception, "Forbidden access attempt.");
+            await WriteErrorResponseAsync(context, StatusCodes.Status403Forbidden, "Forbidden", "Você não tem permissão para executar esta operação.");
         }
         catch (InvalidOperationException exception)
         {
@@ -32,7 +32,7 @@ public sealed class GlobalExceptionMiddleware
         catch (Exception exception)
         {
             _logger.LogError(exception, "Unhandled exception while processing request.");
-            await WriteErrorResponseAsync(context, StatusCodes.Status500InternalServerError, "Unexpected server error", exception.Message);
+            await WriteErrorResponseAsync(context, StatusCodes.Status500InternalServerError, "Unexpected server error", "Ocorreu um erro inesperado.");
         }
     }
 

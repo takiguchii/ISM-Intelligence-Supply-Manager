@@ -13,7 +13,7 @@ export function apiClient<T>(url: string, options?: FetchOptions) {
   }
 
   const mergedOptions: FetchOptions = {
-    baseURL: runtimeConfig.public.apiBase,
+    baseURL: import.meta.server ? runtimeConfig.apiBase : runtimeConfig.public.apiBase,
     headers: {
       ...defaultHeaders,
       ...(options?.headers || {})

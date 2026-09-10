@@ -1,16 +1,33 @@
 <script setup lang="ts">
 import { useAuthStore } from "~/stores/auth";
+import { useThemeStore } from "~/stores/theme";
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const themeStore = useThemeStore();
 
 const authReady = ref(false);
 
 onMounted(() => {
   authStore.initFromStorage();
+  themeStore.init();
   authReady.value = true;
 });
+
+watch(
+  () => route.path,
+  (newPath) => {
+    if (!process.client) return;
+    if (newPath === "/login") {
+      themeStore.force("dark");
+    } else if (authReady.value) {
+      themeStore.force(null);
+      themeStore.applyToDocument();
+    }
+  },
+  { immediate: true }
+);
 
 watchEffect(() => {
   if (!authReady.value) return;

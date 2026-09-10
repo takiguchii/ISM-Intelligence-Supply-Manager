@@ -3,11 +3,13 @@ using System.Security.Claims;
 using ISM.API.Security;
 using ISM.Application.Interfaces;
 using ISM.Application.Interfaces.DataImport;
+using ISM.Application.Interfaces.Restaurant;
 using ISM.Application.Options;
 using ISM.Application.Security;
 using ISM.Application.Services;
 using ISM.Application.Services.Auth;
 using ISM.Application.Services.Menu;
+using ISM.Application.Services.Restaurant;
 using ISM.Application.Services.Stock;
 using ISM.Application.Services.Suppliers;
 using ISM.Application.Services.Users;
@@ -29,6 +31,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddApiServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddHttpContextAccessor();
+        services.AddHttpClient();
 
         services.AddControllers();
         services.AddEndpointsApiExplorer();
@@ -153,6 +156,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IDevAuthService, DevAuthService>();
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<ITmpAuthorizationService, TmpAuthorizationService>();
+        services.AddScoped<IRestaurantAiConfigService, RestaurantAiConfigService>();
 
         services.AddScoped<IImportOrchestrator, ImportOrchestrator>();
         services.AddScoped<IFileImporter, CsvProductImporter>();

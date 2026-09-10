@@ -41,17 +41,13 @@ public static class WebApplicationExtensions
 
                 if (orphaned.Any())
                 {
-                    logger.LogWarning("Divergência de banco de dados detectada (banco possui migrations órfãs de outra branch: {Orphaned}). Recriando banco local de desenvolvimento...", string.Join(", ", orphaned));
-                    await context.Database.EnsureDeletedAsync();
-                    await context.Database.MigrateAsync();
-                    await DbSeeder.SeedAsync(context);
-                    logger.LogInformation("Banco de dados local recriado e populado com sucesso.");
-                    return;
+                    logger.LogWarning("Banco possui migrations órfãs ({Orphaned}). Mantendo banco atual e apenas aplicando migrations pendentes...", string.Join(", ", orphaned));
                 }
             }
 
             await context.Database.MigrateAsync();
-            await DbSeeder.SeedAsync(context);
+            var seedDemoData = app.Configuration.GetValue<bool>("SEED_DEMO_DATA");
+            await DbSeeder.SeedAsync(context, seedDemoData, app.Configuration["SEED_PASSWORD"]);
         }
         catch (Exception ex)
         {

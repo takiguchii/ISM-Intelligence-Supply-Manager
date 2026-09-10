@@ -41,6 +41,8 @@ services:
       ConnectionStrings__DefaultConnection: Server=mysql;Port=3306;Database=${MYSQL_DATABASE};User=${MYSQL_USER};Password=${MYSQL_PASSWORD};
       Database__Provider: MySql
       Cors__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://frontend:3000}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
+      SEED_PASSWORD: ${SEED_PASSWORD:-}
     depends_on:
       mysql:
         condition: service_healthy
