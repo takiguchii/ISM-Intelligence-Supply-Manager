@@ -1,9 +1,13 @@
 using System.Text;
 using System.Security.Claims;
+using ISM.API.HostedServices;
 using ISM.API.Security;
 using ISM.Application.Interfaces;
 using ISM.Application.Interfaces.DataImport;
 using ISM.Application.Interfaces.Restaurant;
+using ISM.Application.Interfaces.Stock;
+using ISM.Application.Interfaces.Suppliers;
+using ISM.Application.Interfaces.System;
 using ISM.Application.Options;
 using ISM.Application.Security;
 using ISM.Application.Services;
@@ -12,6 +16,7 @@ using ISM.Application.Services.Menu;
 using ISM.Application.Services.Restaurant;
 using ISM.Application.Services.Stock;
 using ISM.Application.Services.Suppliers;
+using ISM.Application.Services.System;
 using ISM.Application.Services.Users;
 using ISM.Application.Services.Tenants;
 using ISM.Application.Services.DataImport;
@@ -21,6 +26,7 @@ using ISM.Infrastructure.DependencyInjection;
 using ISM.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -182,6 +188,12 @@ public static class ServiceCollectionExtensions
         services.Configure<PhotoImportOptions>(configuration.GetSection(PhotoImportOptions.SectionName));
         services.AddHttpClient<IPhotoImportExtractor, LlmVisionPhotoExtractor>();
         services.AddScoped<IPhotoImportService, PhotoImportService>();
+
+        // Agentes autônomos (Estoque + Fornecedores)
+        services.AddScoped<IStockAgent, StockAgent>();
+        services.AddScoped<ISupplierAgent, SupplierAgent>();
+        services.AddScoped<ISystemAlertService, SystemAlertService>();
+        services.AddHostedService<AgentsBackgroundScheduler>();
 
         return services;
     }
