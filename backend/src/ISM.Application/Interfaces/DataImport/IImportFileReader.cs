@@ -11,7 +11,9 @@ namespace ISM.Application.Interfaces.DataImport;
 public sealed record ImportFileContent(
     IReadOnlyList<string> Headers,
     IReadOnlyList<Dictionary<string, string>> Rows,
-    IReadOnlyList<ImportErrorLog> Errors);
+    IReadOnlyList<ImportErrorLog> Errors,
+    IReadOnlyDictionary<string, string>? Metadata = null,
+    IReadOnlyList<Dictionary<string, object?>>? ExtendedRows = null);
 
 public interface IImportFileReader
 {
