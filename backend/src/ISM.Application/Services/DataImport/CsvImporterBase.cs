@@ -25,6 +25,8 @@ public abstract class CsvImporterBase : IFileImporter
     private readonly IImportAuditRepository _auditRepo;
     private readonly IImportFileReaderResolver _fileReaders;
 
+    protected ImportFileContent? LastReadContent { get; private set; }
+
     protected CsvImporterBase(IImportAuditRepository auditRepo, IImportFileReaderResolver fileReaders)
         => (_auditRepo, _fileReaders) = (auditRepo, fileReaders);
 
@@ -65,6 +67,18 @@ public abstract class CsvImporterBase : IFileImporter
         var content = await _fileReaders.ReadAsync(
             bufferedStream, context.OriginalFileName ?? string.Empty, contentType: null, ct);
 
+        LastReadContent = content;
+
+        try
+        {
+            await OnAfterFileReadAsync(context, audit.ImportId, content, ct);
+        }
+        catch (Exception)
+        {
+            // Erro no hook pós-leitura NÃO quebra a importação principal
+            // (ex.: falha ao gravar histórico de preços do fornecedor)
+        }
+
         audit.TotalRecordsInSource = content.Rows.Count;
 
         var errors = new List<ImportErrorLog>();
@@ -102,6 +116,16 @@ public abstract class CsvImporterBase : IFileImporter
             }
         }
 
+        try
+        {
+            await OnAfterRowsAsync(context, audit.ImportId, newOrUpdatedIds, lineage, ct);
+        }
+        catch (Exception)
+        {
+            // Erro no hook pós-processamento NÃO quebra a importação principal
+            // (ex.: falha ao gravar movimentos de estoque)
+        }
+
         if (errors.Count > 0)
             await _auditRepo.AppendErrorsAsync(audit.ImportId, errors, ct);
 
@@ -128,6 +152,18 @@ public abstract class CsvImporterBase : IFileImporter
         };
     }
 
+    /// <summary>
+    /// Hook executado logo após a leitura do arquivo, antes do loop de linhas.
+    /// Ideal para extrair metadados globais (ex.: fornecedor da NF-e) e gravar
+    /// históricos complementares SEM depender do resultado do upsert.
+    /// </summary>
+    protected virtual Task OnAfterFileReadAsync(
+        ImportContext context,
+        Guid importId,
+        ImportFileContent content,
+        CancellationToken ct)
+        => Task.CompletedTask;
+
     /// <summary>Hook executado antes do loop de linhas (ex: carregar entidades existentes).</summary>
     protected virtual Task OnBeforeRowsAsync(ImportContext context, CancellationToken ct) => Task.CompletedTask;
 
@@ -140,6 +176,18 @@ public abstract class CsvImporterBase : IFileImporter
 
     /// <summary>Valor-chave da linha para o log de erros (ex: nome). Retorna null quando ausente.</summary>
     protected abstract string? GetRowKeyValue(Dictionary<string, string> row);
+
+    /// <summary>
+    /// Hook executado após o loop de linhas, com a lista de ids criados/atualizados.
+    /// Ideal para gravar lote complementar (ex.: movimentos de estoque).
+    /// </summary>
+    protected virtual Task OnAfterRowsAsync(
+        ImportContext context,
+        Guid importId,
+        IReadOnlyList<int> newOrUpdatedIds,
+        IReadOnlyDictionary<int, int> lineageByRow,
+        CancellationToken ct)
+        => Task.CompletedTask;
 
     private static string ComputeSha256(byte[] bytes)
     {
