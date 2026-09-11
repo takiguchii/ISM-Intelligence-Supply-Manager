@@ -19,6 +19,10 @@ public sealed class Product : BaseEntity
     public string Unit { get; set; } = string.Empty;
     public decimal CurrentQuantity { get; set; }
     public decimal MinimumQuantity { get; set; }
+    public decimal MaximumQuantity { get; set; }
+    public decimal ReorderPoint { get; set; }
     public decimal AverageCost { get; set; }
+    public decimal MovingAverageConsumption { get; set; }
+    public DateTime? LastConsumptionRecalculatedAtUtc { get; set; }
     public bool IsActive { get; set; } = true;
 }
