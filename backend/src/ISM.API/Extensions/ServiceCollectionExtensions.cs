@@ -152,6 +152,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProductService, ProductService>();
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IDishService, DishService>();
+        services.AddScoped<IPricingCmvService, PricingCmvService>();
         services.AddScoped<IRestaurantService, RestaurantService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IDevAuthService, DevAuthService>();
@@ -182,6 +183,9 @@ public static class ServiceCollectionExtensions
         services.Configure<PhotoImportOptions>(configuration.GetSection(PhotoImportOptions.SectionName));
         services.AddHttpClient<IPhotoImportExtractor, LlmVisionPhotoExtractor>();
         services.AddScoped<IPhotoImportService, PhotoImportService>();
+        
+        // Criação do valor padrão de margem ideal para o preço de um produto
+        services.Configure<PricingOptions>(configuration.GetSection(PricingOptions.SectionName));
 
         return services;
     }
