@@ -1,5 +1,7 @@
+using ISM.Application.Interfaces.Menu;
 using ISM.Application.Interfaces.Stock;
 using ISM.Application.Interfaces.Suppliers;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -68,6 +70,7 @@ public sealed class AgentsBackgroundScheduler : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var stockAgent = scope.ServiceProvider.GetRequiredService<IStockAgent>();
         var supplierAgent = scope.ServiceProvider.GetRequiredService<ISupplierAgent>();
+        var pricingAgent = scope.ServiceProvider.GetRequiredService<IPricingAgent>();
 
         try
         {
@@ -102,5 +105,23 @@ public sealed class AgentsBackgroundScheduler : BackgroundService
         {
             _logger.LogError(ex, "Erro ao executar tick SupplierAgent");
         }
+
+        try
+        {
+            _logger.LogInformation("Iniciando tick PricingAgent");
+            var pricingSummary = await pricingAgent.RunAsync(null, ct);
+            _logger.LogInformation(
+                "PricingAgent finalizado: Restaurantes={Restaurantes} Entidades={Entidades} Alertas={Alertas} SkipDedup={SkipDedup} Duração={DuracaoMs}ms",
+                pricingSummary.RestaurantsProcessed,
+                pricingSummary.EntitiesEvaluated,
+                pricingSummary.AlertsCreated,
+                pricingSummary.AlertsSkippedByDedup,
+                pricingSummary.Duration.TotalMilliseconds);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao executar tick PricingAgent");
+        }
     }
 }
+

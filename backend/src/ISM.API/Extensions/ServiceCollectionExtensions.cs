@@ -4,6 +4,7 @@ using ISM.API.HostedServices;
 using ISM.API.Security;
 using ISM.Application.Interfaces;
 using ISM.Application.Interfaces.DataImport;
+using ISM.Application.Interfaces.Menu;
 using ISM.Application.Interfaces.Restaurant;
 using ISM.Application.Interfaces.Stock;
 using ISM.Application.Interfaces.Suppliers;
@@ -193,9 +194,10 @@ public static class ServiceCollectionExtensions
         // Criação do valor padrão de margem ideal para o preço de um produto
         services.Configure<PricingOptions>(configuration.GetSection(PricingOptions.SectionName));
 
-        // Agentes autônomos (Estoque + Fornecedores)
+        // Agentes autônomos (Estoque + Fornecedores + Precificação/CMV)
         services.AddScoped<IStockAgent, StockAgent>();
         services.AddScoped<ISupplierAgent, SupplierAgent>();
+        services.AddScoped<IPricingAgent, PricingCmvService>();
         services.AddScoped<ISystemAlertService, SystemAlertService>();
         services.AddHostedService<AgentsBackgroundScheduler>();
 

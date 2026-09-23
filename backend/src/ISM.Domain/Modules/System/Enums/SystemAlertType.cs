@@ -5,5 +5,7 @@ public enum SystemAlertType
     StockRuptureRisk48h = 0,
     StockBelowMinimum = 1,
     SupplierPriceSpike15Percent = 2,
-    SupplierBetterAlternative = 3
+    SupplierBetterAlternative = 3,
+    DishCmvDefasagem = 4
 }
+

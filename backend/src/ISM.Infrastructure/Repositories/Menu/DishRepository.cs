@@ -26,6 +26,7 @@ public sealed class DishRepository : IDishRepository
         var query = _dbContext.Dishes
             .AsNoTracking()
             .Include(dish => dish.Ingredients)
+            .ThenInclude(i => i.Product)
             .AsQueryable(); 
 
         if (restaurantId != null)
