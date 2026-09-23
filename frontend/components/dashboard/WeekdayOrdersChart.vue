@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import { Bar } from "vue-chartjs";
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip } from "chart.js";
+import { useChartTheme } from "~/composables/useChartTheme";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
 
@@ -12,6 +13,7 @@ const props = defineProps<{
 }>();
 
 const effectiveThreshold = computed(() => props.threshold ?? 120);
+const theme = useChartTheme();
 
 const chartData = computed(() => ({
     labels: props.data.map((d) => d.day),
@@ -20,7 +22,7 @@ const chartData = computed(() => ({
             label: "Pedidos",
             data: props.data.map((d) => d.pedidos),
             backgroundColor: props.data.map((d) =>
-                d.pedidos >= effectiveThreshold.value ? "rgb(251, 191, 36)" : "rgba(52, 211, 153, 0.55)"
+                d.pedidos >= effectiveThreshold.value ? `rgb(${theme.value.warning})` : `rgba(${theme.value.positive}, 0.55)`
             ),
             borderRadius: 6,
             barThickness: 28
@@ -28,17 +30,14 @@ const chartData = computed(() => ({
     ]
 }));
 
-const chartOptions = {
+const chartOptions = computed(() => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
         legend: { display: false },
         tooltip: {
-            backgroundColor: "rgb(24, 24, 27)",
-            borderColor: "rgb(63, 63, 70)",
+            ...theme.value.tooltip,
             borderWidth: 1,
-            titleColor: "rgb(228, 228, 231)",
-            bodyColor: "rgb(161, 161, 170)",
             padding: 10,
             cornerRadius: 8
         }
@@ -46,20 +45,20 @@ const chartOptions = {
     scales: {
         x: {
             grid: { display: false },
-            ticks: { color: "rgb(113, 113, 122)", font: { size: 11 } }
+            ticks: { color: theme.value.tick, font: { size: 11 } }
         },
         y: {
-            grid: { color: "rgba(63, 63, 70, 0.5)" },
-            ticks: { color: "rgb(113, 113, 122)", font: { size: 10 } }
+            grid: { color: theme.value.grid },
+            ticks: { color: theme.value.tick, font: { size: 10 } }
         }
     }
-};
+}));
 </script>
 
 <template>
-    <div class="p-6 rounded-2xl bg-zinc-900/80 border border-zinc-800/80 shadow-lg space-y-4 h-full">
+    <div class="p-6 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800/80 shadow-sm dark:shadow-lg space-y-4 h-full">
         <div>
-            <h3 class="text-sm font-semibold text-white">Pedidos por dia da semana</h3>
+            <h3 class="text-sm font-semibold text-zinc-900 dark:text-white">Pedidos por dia da semana</h3>
             <p class="text-xs text-zinc-500">Padrão das últimas 4 semanas</p>
         </div>
         <div class="h-64">

@@ -105,7 +105,7 @@ const buildMockData = (): DashboardMetrics => ({
       severity: "warning",
       title: "Margem baixa no Polvo Grelhado",
       description:
-        'Margem caiu para <strong class="text-white">31%</strong>. Sugiro ajuste de <strong class="text-white">R$ 78 → R$ 86</strong>.',
+        'Margem caiu para <strong class="text-zinc-900 dark:text-white">31%</strong>. Sugiro ajuste de <strong class="text-zinc-900 dark:text-white">R$ 78 → R$ 86</strong>.',
       primaryLabel: "Aplicar",
       primarySuccessMessage: "Novo preço aplicado",
       secondaryLabel: "Detalhes",
@@ -117,7 +117,7 @@ const buildMockData = (): DashboardMetrics => ({
       severity: "critical",
       title: "Compra urgente: Camarão",
       description:
-        'Estoque <strong class="text-white">2,1 kg</strong> · ruptura em <strong class="text-red-400">~18h</strong>.',
+        'Estoque <strong class="text-zinc-900 dark:text-white">2,1 kg</strong> · ruptura em <strong class="text-severity">~18h</strong>.',
       primaryLabel: "Gerar pedido",
       primarySuccessMessage: "Pedido enviado",
       secondaryLabel: "Adiar",
@@ -129,7 +129,7 @@ const buildMockData = (): DashboardMetrics => ({
       severity: "info",
       title: "Tiramisù em alta",
       description:
-        '<strong class="text-white">+38%</strong> em vendas com margem de <strong class="text-emerald-400">72%</strong>.',
+        '<strong class="text-zinc-900 dark:text-white">+38%</strong> em vendas com margem de <strong class="text-emerald-700 dark:text-emerald-400">72%</strong>.',
       primaryLabel: "Promover",
     },
   ],

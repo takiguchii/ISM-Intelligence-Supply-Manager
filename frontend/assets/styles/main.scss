@@ -17,6 +17,48 @@ html.light {
   color-scheme: light;
 }
 
+/*
+ * Severidade dos alertas dos agentes: Informativo, Atenção e Crítico.
+ * Aplique `severity-info`, `severity-warning` ou `severity-critical` em um container e use
+ * as utilities `text-severity`, `bg-severity`, `bg-severity-soft` e `border-severity-line`
+ * (tailwind.config.ts) nos elementos internos. Ver components/base/SeverityBadge.vue.
+ */
+.severity-info {
+  --ism-severity: #0369a1;
+  --ism-severity-soft: #f0f9ff;
+  --ism-severity-line: #bae6fd;
+}
+
+.severity-warning {
+  --ism-severity: #b45309;
+  --ism-severity-soft: #fffbeb;
+  --ism-severity-line: #fde68a;
+}
+
+.severity-critical {
+  --ism-severity: #b91c1c;
+  --ism-severity-soft: #fef2f2;
+  --ism-severity-line: #fecaca;
+}
+
+html.dark .severity-info {
+  --ism-severity: #38bdf8;
+  --ism-severity-soft: rgba(56, 189, 248, 0.1);
+  --ism-severity-line: rgba(56, 189, 248, 0.3);
+}
+
+html.dark .severity-warning {
+  --ism-severity: #fbbf24;
+  --ism-severity-soft: rgba(251, 191, 36, 0.1);
+  --ism-severity-line: rgba(251, 191, 36, 0.3);
+}
+
+html.dark .severity-critical {
+  --ism-severity: #f87171;
+  --ism-severity-soft: rgba(248, 113, 113, 0.1);
+  --ism-severity-line: rgba(248, 113, 113, 0.3);
+}
+
 html,
 body,
 #__nuxt {

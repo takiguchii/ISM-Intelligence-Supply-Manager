@@ -9,7 +9,13 @@ export default <Partial<Config>>{
         panel: "#10182b",
         ember: "#ff8c42",
         aqua: "#54f3d0",
-        mist: "#9eb0d1"
+        mist: "#9eb0d1",
+        // Valores definidos por tema em assets/styles/main.scss (.severity-info | -warning | -critical).
+        severity: {
+          DEFAULT: "var(--ism-severity)",
+          soft: "var(--ism-severity-soft)",
+          line: "var(--ism-severity-line)"
+        }
       },
       boxShadow: {
         glow: "0 0 40px rgba(84, 243, 208, 0.18)",

@@ -8,9 +8,9 @@ defineProps<{
   <Transition name="fade">
     <div
       v-if="visible"
-      class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-zinc-950/95 backdrop-blur-md"
+      class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-zinc-50/95 dark:bg-zinc-950/95 backdrop-blur-md"
     >
-      <div class="loader mb-6">
+      <div class="loader mb-6 [--color:theme(colors.zinc.500)] dark:[--color:hsl(0,0%,87%)]">
         <div class="circle">
           <div class="dot"></div>
           <div class="outline"></div>
@@ -28,7 +28,7 @@ defineProps<{
           <div class="outline"></div>
         </div>
       </div>
-      <p class="font-mono text-xs uppercase tracking-[0.3em] text-zinc-400 animate-pulse">
+      <p class="font-mono text-xs uppercase tracking-[0.3em] text-zinc-600 dark:text-zinc-400 animate-pulse">
         Carregando ISM...
       </p>
     </div>
@@ -50,7 +50,6 @@ defineProps<{
   display: flex;
   justify-content: center;
   align-items: center;
-  --color: hsl(0, 0%, 87%);
   --animation: 2s ease-in-out infinite;
 }
 

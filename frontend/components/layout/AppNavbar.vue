@@ -60,12 +60,12 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <header class="h-16 border-b border-zinc-800/80 bg-zinc-900/60 backdrop-blur-xl sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between">
+  <header class="h-16 border-b border-zinc-200 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-900/60 backdrop-blur-xl sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between">
     <div class="flex items-center gap-4">
       <button
         @click="emit('toggleSidebar')"
         type="button"
-        class="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-zinc-800/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-zinc-600"
+        class="p-2 rounded-xl text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-600"
         title="Abrir Menu Lateral"
         aria-label="Abrir Menu Lateral"
       >
@@ -75,8 +75,8 @@ onUnmounted(() => {
       </button>
 
       <NuxtLink to="/" class="flex items-center gap-3">
-        <span class="font-bold text-lg text-white tracking-tight">ISM</span>
-        <span class="hidden sm:inline-block text-xs uppercase tracking-widest text-zinc-400 font-mono border-l border-zinc-700/60 pl-3">
+        <span class="font-bold text-lg text-zinc-900 dark:text-white tracking-tight">ISM</span>
+        <span class="hidden sm:inline-block text-xs uppercase tracking-widest text-zinc-600 dark:text-zinc-400 font-mono border-l border-zinc-300 dark:border-zinc-700/60 pl-3">
           {{ runtimeConfig.public.appName }}
         </span>
       </NuxtLink>
@@ -85,7 +85,7 @@ onUnmounted(() => {
     <div class="flex items-center gap-3">
       <ThemeToggle />
       <div v-if="authStore.isAuthenticated" class="flex items-center gap-3">
-        <span class="hidden md:inline-block text-xs text-zinc-400 font-medium">
+        <span class="hidden md:inline-block text-xs text-zinc-600 dark:text-zinc-400 font-medium">
           {{ authStore.currentUser?.name }} ({{ authStore.currentUser?.role }})
         </span>
         <button
@@ -106,9 +106,9 @@ onUnmounted(() => {
       <NuxtLink
         v-else
         to="/login"
-        class="px-4 py-2 text-xs font-semibold rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white border border-zinc-700/60 transition-all duration-200 flex items-center gap-2"
+        class="px-4 py-2 text-xs font-semibold rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white border border-zinc-300 dark:border-zinc-700/60 transition-all duration-200 flex items-center gap-2"
       >
-        <svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-4 h-4 text-zinc-600 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
         </svg>
         <span>Login</span>

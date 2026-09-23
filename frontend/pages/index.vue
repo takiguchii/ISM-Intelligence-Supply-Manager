@@ -58,8 +58,8 @@ onMounted(async () => {
     <!-- Main Content Area -->
     <main class="flex-1 space-y-8">
       <!-- Cabeçalho da página -->
-      <div class="p-8 rounded-2xl bg-gradient-to-r from-zinc-900 via-zinc-900/90 to-zinc-950 border border-zinc-800 shadow-xl relative overflow-hidden">
-        <div class="absolute -right-20 -bottom-20 w-80 h-80 bg-zinc-700/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="bg-white dark:bg-transparent p-8 rounded-2xl dark:bg-gradient-to-r dark:from-zinc-900 dark:via-zinc-900/90 dark:to-zinc-950 border border-zinc-200 dark:border-zinc-800 shadow-sm dark:shadow-xl relative overflow-hidden">
+        <div class="absolute -right-20 -bottom-20 w-80 h-80 bg-zinc-100 dark:bg-zinc-700/10 rounded-full blur-3xl pointer-events-none"></div>
         <div class="relative z-10">
           <PageHeader
             eyebrow="Painel Geral"
@@ -69,7 +69,7 @@ onMounted(async () => {
             <template #actions>
               <button
                 @click="handleRefreshAll"
-                class="px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-xl text-xs sm:text-sm border border-zinc-700/60 transition-all duration-200 flex items-center gap-2"
+                class="px-5 py-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white font-medium rounded-xl text-xs sm:text-sm border border-zinc-300 dark:border-zinc-700/60 transition-all duration-200 flex items-center gap-2"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
@@ -84,7 +84,7 @@ onMounted(async () => {
       <!-- Indicadores Principais -->
       <section class="space-y-5">
         <div class="flex items-center justify-between">
-          <h2 class="text-lg font-semibold text-white tracking-tight">Indicadores Principais</h2>
+          <h2 class="text-lg font-semibold text-zinc-900 dark:text-white tracking-tight">Indicadores Principais</h2>
           <span v-if="metricsPending" class="text-xs font-mono text-zinc-500 flex items-center gap-2">
             <span class="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-pulse"></span>
             Atualizando…
