@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted } from "vue";
 import { useAuthStore } from "~/stores/auth";
 import ThemeToggle from "~/components/base/ThemeToggle.vue";
+import NotificationDrawer from "~/components/layout/NotificationDrawer.vue";
 
 const emit = defineEmits<{
   (e: "toggleSidebar"): void;
@@ -10,6 +11,9 @@ const emit = defineEmits<{
 const runtimeConfig = useRuntimeConfig();
 const authStore = useAuthStore();
 const router = useRouter();
+
+const isNotificationOpen = ref(false);
+const drawerRef = ref<InstanceType<typeof NotificationDrawer> | null>(null);
 
 const isLogoutExpanded = ref(false);
 let collapseTimeout: any = null;
@@ -83,6 +87,24 @@ onUnmounted(() => {
     </div>
 
     <div class="flex items-center gap-3">
+      <!-- Botão Central de Notificações -->
+      <button
+        v-if="authStore.isAuthenticated"
+        @click="isNotificationOpen = true"
+        type="button"
+        class="relative p-2.5 rounded-xl text-zinc-300 hover:text-white hover:bg-zinc-800/80 transition-all duration-200"
+        title="Notificações dos Agentes"
+        aria-label="Notificações dos Agentes"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+        </svg>
+        <span
+          v-if="drawerRef?.unreadCount"
+          class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-indigo-500 animate-pulse"
+        ></span>
+      </button>
+
       <ThemeToggle />
       <div v-if="authStore.isAuthenticated" class="flex items-center gap-3">
         <span class="hidden md:inline-block text-xs text-zinc-400 font-medium">
@@ -114,8 +136,16 @@ onUnmounted(() => {
         <span>Login</span>
       </NuxtLink>
     </div>
+
+    <!-- Central de Notificações Drawer -->
+    <NotificationDrawer
+      ref="drawerRef"
+      :is-open="isNotificationOpen"
+      @close="isNotificationOpen = false"
+    />
   </header>
 </template>
+
 
 <style scoped>
 .Btn {
