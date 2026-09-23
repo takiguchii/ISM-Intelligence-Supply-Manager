@@ -8,9 +8,18 @@
 
 ## Commits
 
-- Use English commit messages.
+- Use Portuguese commit messages.
 - Keep messages short and descriptive.
-- Prefixes: `feat:`, `fix:`, `mod:`, `css:`, `test:`, `doc:`, `hotfix:`, `refactor:`
+- Prefixes: `feat:`, `fix:`, `mod:`, `css:`, `test:`, `doc:`, `hotfix:`, `refactor:` (ex: `feat: adiciona endpoint de produtos`).
+
+## Git Hooks
+
+To enable automatic local validation (merge conflict markers and EF Core migration immutability checks):
+
+```bash
+chmod +x scripts/*.sh .githooks/*
+git config core.hooksPath .githooks/
+```
 
 ## Pull Requests
 
@@ -23,3 +32,4 @@
 - Prefer `docker compose up` for daily development
 - Keep secrets only in local `.env`
 - Do not version `.codex`, `.agents`, caches or IDE files
+
