@@ -1,0 +1,36 @@
+{
+  "evento": "pedido_finalizado",
+  "origem": "ERP-ContaAzul",
+  "restauranteId": 1,
+  "pedidos": [
+    {
+      "externalOrderId": "PDV-2025-08-01-001",
+      "orderedAtUtc": "2025-08-01T18:32:00Z",
+      "canal": "balcao",
+      "status": "Paid",
+      "itens": [
+        { "prato": "Prato Feito", "quantidade": 12, "valorUnitario": 28.00 },
+        { "prato": "Refrigerante Lata", "quantidade": 15, "valorUnitario": 6.00 }
+      ]
+    },
+    {
+      "externalOrderId": "IFD-99881",
+      "orderedAtUtc": "2025-08-01T20:15:00Z",
+      "canal": "ifood",
+      "status": "Paid",
+      "itens": [
+        { "prato": "Pizza Margherita", "quantidade": 4, "valorUnitario": 42.00 }
+      ],
+      "taxaEntrega": 24.80
+    },
+    {
+      "externalOrderId": "PDV-2025-08-02-007",
+      "orderedAtUtc": "2025-08-02T19:05:00Z",
+      "canal": "balcao",
+      "status": "Canceled",
+      "itens": [
+        { "prato": "Prato Feito", "quantidade": 2, "valorUnitario": 28.00 }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<NFe xmlns="http://www.portalfiscal.inf.br/nfe">
+  <infNFe Id="NFe35250812345678000190550010000012341234567890" versao="4.00">
+    <ide>
+      <cUF>35</cUF>
+      <natOp>Venda de mercadoria</natOp>
+      <mod>55</mod>
+      <serie>1</serie>
+      <nNF>1234</nNF>
+      <dhEmi>2025-08-18T10:30:00-03:00</dhEmi>
+    </ide>
+    <emit>
+      <CNPJ>12345678000190</CNPJ>
+      <xNome>Distribuidora Alimentos Já Ltda</xNome>
+      <enderEmit>
+        <xLgr>Av das Indústrias</xLgr>
+        <nro>1500</nro>
+        <xMun>São Paulo</xMun>
+        <UF>SP</UF>
+      </enderEmit>
+      <fone>1133331001</fone>
+      <email>contato@alimentosja.com.br</email>
+    </emit>
+    <det nItem="1">
+      <prod>
+        <cProd>ARZ001</cProd>
+        <xProd>Arroz Tipo 1 Pacote 5kg</xProd>
+        <uCom>un</uCom>
+        <qCom>20.0000</qCom>
+        <vUnCom>28.9000</vUnCom>
+      </prod>
+    </det>
+    <det nItem="2">
+      <prod>
+        <cProd>OLO002</cProd>
+        <xProd>Oleo de Soja 900ml</xProd>
+        <uCom>un</uCom>
+        <qCom>48.0000</qCom>
+        <vUnCom>6.2000</vUnCom>
+      </prod>
+    </det>
+    <det nItem="3">
+      <prod>
+        <cProd>FJT003</cProd>
+        <xProd>Feijao Carioca 1kg</xProd>
+        <uCom>un</uCom>
+        <qCom>30.0000</qCom>
+        <vUnCom>6.8000</vUnCom>
+      </prod>
+    </det>
+  </infNFe>
+</NFe>

@@ -1,0 +1,5 @@
+Nome,Unidade,QuantidadeAtual,Email
+Arroz,kg,50,contato@arroz.com.br
+,Litros,30,faltou-o-nome@teste.com
+Refrigerante,,24,email-invalido-sem-arroba
+Suco de Uva,un,não-é-número,suco@ok.com

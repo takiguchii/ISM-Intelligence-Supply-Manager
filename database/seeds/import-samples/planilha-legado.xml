@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Planilha exportada em formato SpreadsheetML (abre no Excel) -->
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+          xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+  <Worksheet ss:Name="Estoque">
+    <Table>
+      <Row><Cell><Data ss:Type="String">Nome</Data></Cell><Cell><Data ss:Type="String">Unidade</Data></Cell><Cell><Data ss:Type="String">QuantidadeAtual</Data></Cell><Cell><Data ss:Type="String">QuantidadeMinima</Data></Cell><Cell><Data ss:Type="String">CustoMedio</Data></Cell></Row>
+      <Row><Cell><Data ss:Type="String">Arroz Tipo 1</Data></Cell><Cell><Data ss:Type="String">kg</Data></Cell><Cell><Data ss:Type="Number">60</Data></Cell><Cell><Data ss:Type="Number">10</Data></Cell><Cell><Data ss:Type="Number">5.85</Data></Cell></Row>
+      <Row><Cell><Data ss:Type="String">Açúcar Refinado</Data></Cell><Cell><Data ss:Type="String">kg</Data></Cell><Cell><Data ss:Type="Number">30</Data></Cell><Cell><Data ss:Type="Number">5</Data></Cell><Cell><Data ss:Type="Number">4.05</Data></Cell></Row>
+      <Row><Cell><Data ss:Type="String">Leite Integral</Data></Cell><Cell><Data ss:Type="String">L</Data></Cell><Cell><Data ss:Type="Number">45</Data></Cell><Cell><Data ss:Type="Number">12</Data></Cell><Cell><Data ss:Type="Number">4.79</Data></Cell></Row>
+    </Table>
+  </Worksheet>
+</Workbook>
