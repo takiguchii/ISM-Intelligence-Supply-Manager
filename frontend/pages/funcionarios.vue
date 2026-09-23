@@ -349,10 +349,10 @@ onMounted(async () => {
     <!-- Feedback -->
     <div
       v-if="successMessage"
-      class="px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm flex items-center justify-between gap-4"
+      class="px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-sm flex items-center justify-between gap-4"
     >
       <span>{{ successMessage }}</span>
-      <button type="button" @click="successMessage = ''" class="text-emerald-400 hover:text-emerald-200 font-bold">
+      <button type="button" @click="successMessage = ''" class="text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-200 font-bold">
         ✕
       </button>
     </div>
@@ -360,11 +360,11 @@ onMounted(async () => {
     <!-- Cabeçalho -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-zinc-800 bg-zinc-900/80 text-[11px] font-bold uppercase tracking-widest text-zinc-400 mb-2">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/80 text-[11px] font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-400 mb-2">
           Equipe
         </div>
-        <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white tracking-tight">Funcionários</h1>
-        <p class="text-sm text-zinc-400 mt-1">
+        <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-zinc-900 dark:text-white tracking-tight">Funcionários</h1>
+        <p class="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
           Equipe vinculada ao restaurante, com cargos e acesso ao sistema.
         </p>
       </div>
@@ -373,7 +373,7 @@ onMounted(async () => {
         v-if="canManage"
         type="button"
         @click="openCreateModal"
-        class="shrink-0 px-4 py-2.5 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 text-sm font-semibold transition self-start sm:self-auto shadow-lg shadow-white/5 flex items-center gap-2 active:scale-95"
+        class="shrink-0 px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-sm font-semibold transition self-start sm:self-auto shadow-lg shadow-white/5 flex items-center gap-2 active:scale-95"
       >
         <span class="text-base leading-none font-bold">+</span>
         Adicionar funcionário
@@ -397,7 +397,7 @@ onMounted(async () => {
             v-model="search"
             type="search"
             placeholder="Buscar por nome, e-mail ou cargo"
-            class="w-full pl-9 pr-3 py-2.5 bg-zinc-900/60 border border-zinc-800 rounded-lg text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-600 transition"
+            class="w-full pl-9 pr-3 py-2.5 bg-white dark:bg-zinc-900/60 border border-zinc-300 dark:border-zinc-800 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 transition"
           />
         </div>
 
@@ -408,14 +408,14 @@ onMounted(async () => {
       </div>
 
       <!-- Lista -->
-      <div class="rounded-lg border border-zinc-800 bg-zinc-900/40 overflow-hidden">
+      <div class="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 overflow-hidden">
         <!-- Erro ao carregar -->
         <div v-if="listError" class="px-4 py-10 text-center">
-          <p class="text-sm text-red-300">{{ listError }}</p>
+          <p class="text-sm text-red-700 dark:text-red-300">{{ listError }}</p>
           <button
             type="button"
             @click="loadEmployees"
-            class="mt-4 px-4 py-2 rounded-lg border border-zinc-700 text-xs font-semibold text-zinc-200 hover:bg-zinc-800 transition"
+            class="mt-4 px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 text-xs font-semibold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
           >
             Tentar novamente
           </button>
@@ -431,11 +431,11 @@ onMounted(async () => {
 
         <!-- Sem resultados na busca -->
         <div v-else-if="filteredEmployees.length === 0 && search.trim()" class="px-4 py-12 text-center">
-          <p class="text-sm text-zinc-400">Nenhum funcionário encontrado para "{{ search.trim() }}".</p>
+          <p class="text-sm text-zinc-600 dark:text-zinc-400">Nenhum funcionário encontrado para "{{ search.trim() }}".</p>
           <button
             type="button"
             @click="search = ''"
-            class="mt-3 text-xs font-semibold text-zinc-300 hover:text-white underline underline-offset-4"
+            class="mt-3 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white underline underline-offset-4"
           >
             Limpar busca
           </button>
@@ -443,12 +443,12 @@ onMounted(async () => {
 
         <!-- Lista vazia -->
         <div v-else-if="filteredEmployees.length === 0" class="px-4 py-12 text-center">
-          <p class="text-sm text-zinc-400">Nenhum funcionário cadastrado.</p>
+          <p class="text-sm text-zinc-600 dark:text-zinc-400">Nenhum funcionário cadastrado.</p>
           <button
             v-if="canManage"
             type="button"
             @click="openCreateModal"
-            class="mt-3 text-xs font-semibold text-zinc-300 hover:text-white underline underline-offset-4"
+            class="mt-3 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white underline underline-offset-4"
           >
             Adicionar o primeiro funcionário
           </button>
@@ -458,7 +458,7 @@ onMounted(async () => {
           <div class="overflow-x-auto">
             <table class="w-full min-w-[720px] text-sm">
               <thead>
-                <tr class="text-left text-[11px] uppercase tracking-wider text-zinc-500 border-b border-zinc-800">
+                <tr class="text-left text-[11px] uppercase tracking-wider text-zinc-500 border-b border-zinc-200 dark:border-zinc-800">
                   <th class="px-4 py-3 font-semibold">Nome</th>
                   <th class="px-4 py-3 font-semibold">E-mail</th>
                   <th class="px-4 py-3 font-semibold">Cargo</th>
@@ -472,16 +472,16 @@ onMounted(async () => {
                 <tr
                   v-for="employee in pagedEmployees"
                   :key="employee.id"
-                  class="border-b border-zinc-800/60 last:border-b-0 hover:bg-zinc-900/60 transition-colors"
+                  class="border-b border-zinc-200 dark:border-zinc-800/60 last:border-b-0 hover:bg-zinc-50 dark:hover:bg-zinc-900/60 transition-colors"
                 >
-                  <td class="px-4 py-3 font-medium text-zinc-100">{{ employee.name }}</td>
-                  <td class="px-4 py-3 text-zinc-400">{{ employee.email }}</td>
-                  <td class="px-4 py-3 text-zinc-300">{{ roleLabel(employee.role) }}</td>
+                  <td class="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-100">{{ employee.name }}</td>
+                  <td class="px-4 py-3 text-zinc-600 dark:text-zinc-400">{{ employee.email }}</td>
+                  <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">{{ roleLabel(employee.role) }}</td>
                   <td class="px-4 py-3">
-                    <span class="inline-flex items-center gap-2 text-zinc-300">
+                    <span class="inline-flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
                       <span
                         class="w-1.5 h-1.5 rounded-full"
-                        :class="employee.isActive ? 'bg-emerald-400' : 'bg-zinc-600'"
+                        :class="employee.isActive ? 'bg-emerald-400' : 'bg-zinc-300 dark:bg-zinc-600'"
                       ></span>
                       {{ employee.isActive ? "Ativo" : "Inativo" }}
                     </span>
@@ -492,14 +492,14 @@ onMounted(async () => {
                       <button
                         type="button"
                         @click="openEditModal(employee)"
-                        class="text-xs font-semibold text-zinc-300 hover:text-white transition"
+                        class="text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition"
                       >
                         Editar
                       </button>
                       <button
                         type="button"
                         @click="openDeleteModal(employee)"
-                        class="text-xs font-semibold text-red-400 hover:text-red-300 transition"
+                        class="text-xs font-semibold text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition"
                       >
                         Excluir
                       </button>
@@ -512,7 +512,7 @@ onMounted(async () => {
 
           <!-- Paginação -->
           <div
-            class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3 border-t border-zinc-800 text-xs text-zinc-500"
+            class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3 border-t border-zinc-200 dark:border-zinc-800 text-xs text-zinc-500"
           >
             <span>
               Mostrando {{ rangeStart }}–{{ rangeEnd }} de {{ filteredEmployees.length }}
@@ -523,16 +523,16 @@ onMounted(async () => {
                 type="button"
                 :disabled="page === 1"
                 @click="goToPage(page - 1)"
-                class="px-3 py-1.5 rounded-xl border border-zinc-700/60 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white disabled:opacity-40 disabled:hover:bg-transparent transition text-xs font-semibold"
+                class="px-3 py-1.5 rounded-xl border border-zinc-300 dark:border-zinc-700/60 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-white disabled:opacity-40 disabled:hover:bg-transparent dark:disabled:hover:bg-transparent transition text-xs font-semibold"
               >
                 Anterior
               </button>
-              <span class="px-2 text-zinc-400 text-xs">Página {{ page }} de {{ totalPages }}</span>
+              <span class="px-2 text-zinc-600 dark:text-zinc-400 text-xs">Página {{ page }} de {{ totalPages }}</span>
               <button
                 type="button"
                 :disabled="page === totalPages"
                 @click="goToPage(page + 1)"
-                class="px-3 py-1.5 rounded-xl border border-zinc-700/60 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white disabled:opacity-40 disabled:hover:bg-transparent transition text-xs font-semibold"
+                class="px-3 py-1.5 rounded-xl border border-zinc-300 dark:border-zinc-700/60 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-white disabled:opacity-40 disabled:hover:bg-transparent dark:disabled:hover:bg-transparent transition text-xs font-semibold"
               >
                 Próxima
               </button>
@@ -544,18 +544,18 @@ onMounted(async () => {
     <!-- Modal: adicionar / editar -->
     <div
       v-if="showFormModal"
-      class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+      class="fixed inset-0 z-50 bg-zinc-950/40 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
       @click.self="closeFormModal"
     >
-      <div class="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden">
-        <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
-          <h2 class="text-base font-bold text-white">
+      <div class="w-full max-w-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800">
+          <h2 class="text-base font-bold text-zinc-900 dark:text-white">
             {{ editingEmployee ? "Editar funcionário" : "Adicionar funcionário" }}
           </h2>
           <button
             type="button"
             @click="closeFormModal"
-            class="text-zinc-500 hover:text-white transition"
+            class="text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition"
             aria-label="Fechar"
           >
             ✕
@@ -564,29 +564,29 @@ onMounted(async () => {
 
         <form class="px-6 py-5 space-y-4" @submit.prevent="saveEmployee">
           <div>
-            <label for="employee-name" class="block text-xs font-semibold text-zinc-400 mb-1.5">Nome</label>
+            <label for="employee-name" class="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">Nome</label>
             <input
               id="employee-name"
               v-model="form.name"
               type="text"
               autocomplete="off"
-              class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white focus:outline-none focus:border-zinc-600 transition"
+              class="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-xl text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 transition"
             />
           </div>
 
           <div>
-            <label for="employee-email" class="block text-xs font-semibold text-zinc-400 mb-1.5">E-mail</label>
+            <label for="employee-email" class="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">E-mail</label>
             <input
               id="employee-email"
               v-model="form.email"
               type="email"
               autocomplete="off"
-              class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white focus:outline-none focus:border-zinc-600 transition"
+              class="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-xl text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 transition"
             />
           </div>
 
           <div v-if="!editingEmployee">
-            <label for="employee-password" class="block text-xs font-semibold text-zinc-400 mb-1.5">
+            <label for="employee-password" class="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">
               Senha de acesso
             </label>
             <input
@@ -594,18 +594,18 @@ onMounted(async () => {
               v-model="form.password"
               type="password"
               autocomplete="new-password"
-              class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white focus:outline-none focus:border-zinc-600 transition"
+              class="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-xl text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 transition"
             />
             <p class="mt-1.5 text-[11px] text-zinc-500">Mínimo de 6 caracteres.</p>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label for="employee-role" class="block text-xs font-semibold text-zinc-400 mb-1.5">Cargo</label>
+              <label for="employee-role" class="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">Cargo</label>
               <select
                 id="employee-role"
                 v-model="form.role"
-                class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white focus:outline-none focus:border-zinc-600 transition"
+                class="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-xl text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 transition"
               >
                 <option v-for="role in EMPLOYEE_ROLES" :key="role" :value="role">
                   {{ ROLE_LABELS[role] }}
@@ -614,11 +614,11 @@ onMounted(async () => {
             </div>
 
             <div v-if="editingEmployee">
-              <label for="employee-status" class="block text-xs font-semibold text-zinc-400 mb-1.5">Status</label>
+              <label for="employee-status" class="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">Status</label>
               <select
                 id="employee-status"
                 v-model="form.isActive"
-                class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white focus:outline-none focus:border-zinc-600 transition"
+                class="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-xl text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 transition"
               >
                 <option :value="true">Ativo</option>
                 <option :value="false">Inativo</option>
@@ -626,22 +626,22 @@ onMounted(async () => {
             </div>
           </div>
 
-          <p v-if="formError" class="px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-300">
+          <p v-if="formError" class="px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-700 dark:text-red-300">
             {{ formError }}
           </p>
 
-          <div class="flex items-center justify-end gap-3 pt-3 border-t border-zinc-800">
+          <div class="flex items-center justify-end gap-3 pt-3 border-t border-zinc-200 dark:border-zinc-800">
             <button
               type="button"
               @click="closeFormModal"
-              class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/60 transition"
+              class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700/60 transition"
             >
               Cancelar
             </button>
             <button
               type="submit"
               :disabled="isSaving"
-              class="px-5 py-2.5 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 text-xs sm:text-sm font-semibold transition shadow-lg shadow-white/5 disabled:opacity-50"
+              class="px-5 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-xs sm:text-sm font-semibold transition shadow-lg shadow-white/5 disabled:opacity-50"
             >
               {{ isSaving ? "Salvando..." : editingEmployee ? "Salvar alterações" : "Cadastrar" }}
             </button>
@@ -653,28 +653,28 @@ onMounted(async () => {
     <!-- Modal: confirmar exclusão -->
     <div
       v-if="employeeToDelete"
-      class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+      class="fixed inset-0 z-50 bg-zinc-950/40 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
       @click.self="closeDeleteModal"
     >
-      <div class="w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl p-6 space-y-4">
-        <h2 class="text-base font-bold text-white">Excluir funcionário</h2>
-        <p class="text-sm text-zinc-400">
-          <strong class="text-zinc-200">{{ employeeToDelete.name }}</strong> perderá o acesso ao sistema.
+      <div class="w-full max-w-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl p-6 space-y-4">
+        <h2 class="text-base font-bold text-zinc-900 dark:text-white">Excluir funcionário</h2>
+        <p class="text-sm text-zinc-600 dark:text-zinc-400">
+          <strong class="text-zinc-800 dark:text-zinc-200">{{ employeeToDelete.name }}</strong> perderá o acesso ao sistema.
           Esta ação não pode ser desfeita.
         </p>
 
         <p
           v-if="deleteError"
-          class="px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-300"
+          class="px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-700 dark:text-red-300"
         >
           {{ deleteError }}
         </p>
 
-        <div class="flex items-center justify-end gap-3 pt-3 border-t border-zinc-800">
+        <div class="flex items-center justify-end gap-3 pt-3 border-t border-zinc-200 dark:border-zinc-800">
           <button
             type="button"
             @click="closeDeleteModal"
-            class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/60 transition"
+            class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700/60 transition"
           >
             Cancelar
           </button>

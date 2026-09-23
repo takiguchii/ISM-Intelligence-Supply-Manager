@@ -53,21 +53,21 @@ const formatCurrency = (value: number) => {
     <main class="flex-1">
       <!-- Hero -->
       <section
-        class="p-8 rounded-2xl bg-gradient-to-r from-zinc-900 via-zinc-900/90 to-zinc-950 border border-zinc-800 shadow-xl mb-8">
+        class="bg-white dark:bg-transparent p-8 rounded-2xl dark:bg-gradient-to-r dark:from-zinc-900 dark:via-zinc-900/90 dark:to-zinc-950 border border-zinc-200 dark:border-zinc-800 shadow-sm dark:shadow-xl mb-8">
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div>
             <div
-              class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-800/80 border border-zinc-700/60 text-zinc-300 text-xs font-medium mb-4">
+              class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-300 dark:border-zinc-700/60 text-zinc-700 dark:text-zinc-300 text-xs font-medium mb-4">
               <span class="w-2 h-2 rounded-full bg-amber-400"></span>
 
               Módulo financeiro
             </div>
 
-            <h1 class="text-3xl sm:text-4xl font-bold text-white tracking-tight mb-3">
+            <h1 class="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-white tracking-tight mb-3">
               Financeiro
             </h1>
 
-            <p class="text-zinc-400 text-sm sm:text-base max-w-2xl">
+            <p class="text-zinc-600 dark:text-zinc-400 text-sm sm:text-base max-w-2xl">
               Acompanhe o faturamento, despesas, contas a pagar,
               contas a receber e os principais indicadores financeiros
               do negócio.
@@ -76,12 +76,12 @@ const formatCurrency = (value: number) => {
 
           <div class="flex items-center gap-3">
             <button
-              class="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/60 text-sm font-semibold text-zinc-200 transition">
+              class="px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700/60 text-sm font-semibold text-zinc-800 dark:text-zinc-200 transition">
               Exportar
             </button>
 
             <button
-              class="px-4 py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 text-sm font-semibold transition">
+              class="px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 text-sm font-semibold transition">
               + Nova movimentação
             </button>
           </div>
@@ -92,7 +92,7 @@ const formatCurrency = (value: number) => {
       <section class="mb-8">
         <div class="flex items-center justify-between mb-4">
           <div>
-            <h2 class="text-lg font-semibold text-white">
+            <h2 class="text-lg font-semibold text-zinc-900 dark:text-white">
               Resumo financeiro
             </h2>
 
@@ -101,24 +101,24 @@ const formatCurrency = (value: number) => {
             </p>
           </div>
 
-          <span class="text-xs px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400">
+          <span class="text-xs px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400">
             Este mês
           </span>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           <!-- Faturamento -->
-          <div class="p-5 rounded-2xl bg-zinc-900/80 border border-zinc-800 hover:border-zinc-700 transition">
+          <div class="p-5 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition">
             <div class="flex items-center justify-between mb-5">
               <div
                 class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
 
-              <span class="text-xs font-medium text-emerald-400">
+              <span class="text-xs font-medium text-emerald-700 dark:text-emerald-400">
                 Receita
               </span>
             </div>
@@ -127,22 +127,22 @@ const formatCurrency = (value: number) => {
               Faturamento
             </p>
 
-            <p class="text-2xl font-bold text-white">
+            <p class="text-2xl font-bold text-zinc-900 dark:text-white">
               {{ formatCurrency(financialSummary.revenue) }}
             </p>
           </div>
 
           <!-- Despesas -->
-          <div class="p-5 rounded-2xl bg-zinc-900/80 border border-zinc-800 hover:border-zinc-700 transition">
+          <div class="p-5 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition">
             <div class="flex items-center justify-between mb-5">
               <div class="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
-                <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2m4-6h-6m0 0l3-3m-3 3l3 3" />
                 </svg>
               </div>
 
-              <span class="text-xs font-medium text-red-400">
+              <span class="text-xs font-medium text-red-600 dark:text-red-400">
                 Saídas
               </span>
             </div>
@@ -151,23 +151,23 @@ const formatCurrency = (value: number) => {
               Despesas
             </p>
 
-            <p class="text-2xl font-bold text-white">
+            <p class="text-2xl font-bold text-zinc-900 dark:text-white">
               {{ formatCurrency(financialSummary.expenses) }}
             </p>
           </div>
 
           <!-- A receber -->
-          <div class="p-5 rounded-2xl bg-zinc-900/80 border border-zinc-800 hover:border-zinc-700 transition">
+          <div class="p-5 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition">
             <div class="flex items-center justify-between mb-5">
               <div
                 class="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M3 10h18M7 15h1m4 0h1m-9 4h16a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               </div>
 
-              <span class="text-xs font-medium text-blue-400">
+              <span class="text-xs font-medium text-blue-600 dark:text-blue-400">
                 Entrada
               </span>
             </div>
@@ -176,23 +176,23 @@ const formatCurrency = (value: number) => {
               A receber
             </p>
 
-            <p class="text-2xl font-bold text-white">
+            <p class="text-2xl font-bold text-zinc-900 dark:text-white">
               {{ formatCurrency(financialSummary.accountsReceivable) }}
             </p>
           </div>
 
           <!-- A pagar -->
-          <div class="p-5 rounded-2xl bg-zinc-900/80 border border-zinc-800 hover:border-zinc-700 transition">
+          <div class="p-5 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition">
             <div class="flex items-center justify-between mb-5">
               <div
                 class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-                <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
 
-              <span class="text-xs font-medium text-amber-400">
+              <span class="text-xs font-medium text-amber-700 dark:text-amber-400">
                 Pendências
               </span>
             </div>
@@ -201,7 +201,7 @@ const formatCurrency = (value: number) => {
               A pagar
             </p>
 
-            <p class="text-2xl font-bold text-white">
+            <p class="text-2xl font-bold text-zinc-900 dark:text-white">
               {{ formatCurrency(financialSummary.accountsPayable) }}
             </p>
           </div>
@@ -211,10 +211,10 @@ const formatCurrency = (value: number) => {
       <!-- Resultado + Movimentações -->
       <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <!-- Resultado -->
-        <div class="lg:col-span-1 p-6 rounded-2xl bg-zinc-900/80 border border-zinc-800">
+        <div class="lg:col-span-1 p-6 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
           <div class="flex items-center justify-between mb-6">
             <div>
-              <h2 class="text-lg font-semibold text-white">
+              <h2 class="text-lg font-semibold text-zinc-900 dark:text-white">
                 Resultado
               </h2>
 
@@ -223,8 +223,8 @@ const formatCurrency = (value: number) => {
               </p>
             </div>
 
-            <div class="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center">
-              <svg class="w-5 h-5 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+              <svg class="w-5 h-5 text-zinc-700 dark:text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -232,7 +232,7 @@ const formatCurrency = (value: number) => {
           </div>
 
           <div class="mb-6">
-            <p class="text-3xl font-bold text-white">
+            <p class="text-3xl font-bold text-zinc-900 dark:text-white">
               {{ formatCurrency(balance) }}
             </p>
 
@@ -244,32 +244,32 @@ const formatCurrency = (value: number) => {
           <div class="space-y-4">
             <div>
               <div class="flex justify-between text-sm mb-2">
-                <span class="text-zinc-400">
+                <span class="text-zinc-600 dark:text-zinc-400">
                   Entradas
                 </span>
 
-                <span class="text-emerald-400 font-medium">
+                <span class="text-emerald-700 dark:text-emerald-400 font-medium">
                   {{ formatCurrency(financialSummary.revenue) }}
                 </span>
               </div>
 
-              <div class="h-2 rounded-full bg-zinc-800 overflow-hidden">
+              <div class="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
                 <div class="h-full rounded-full bg-emerald-500 w-0"></div>
               </div>
             </div>
 
             <div>
               <div class="flex justify-between text-sm mb-2">
-                <span class="text-zinc-400">
+                <span class="text-zinc-600 dark:text-zinc-400">
                   Saídas
                 </span>
 
-                <span class="text-red-400 font-medium">
+                <span class="text-red-600 dark:text-red-400 font-medium">
                   {{ formatCurrency(financialSummary.expenses) }}
                 </span>
               </div>
 
-              <div class="h-2 rounded-full bg-zinc-800 overflow-hidden">
+              <div class="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
                 <div class="h-full rounded-full bg-red-500 w-0"></div>
               </div>
             </div>
@@ -277,10 +277,10 @@ const formatCurrency = (value: number) => {
         </div>
 
         <!-- Movimentações -->
-        <div class="lg:col-span-2 p-6 rounded-2xl bg-zinc-900/80 border border-zinc-800">
+        <div class="lg:col-span-2 p-6 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
             <div>
-              <h2 class="text-lg font-semibold text-white">
+              <h2 class="text-lg font-semibold text-zinc-900 dark:text-white">
                 Movimentações recentes
               </h2>
 
@@ -289,22 +289,22 @@ const formatCurrency = (value: number) => {
               </p>
             </div>
 
-            <button class="text-xs font-semibold text-zinc-300 hover:text-white transition">
+            <button class="text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition">
               Ver todas →
             </button>
           </div>
 
           <!-- Empty state -->
           <div
-            class="min-h-[220px] flex flex-col items-center justify-center text-center border border-dashed border-zinc-800 rounded-xl">
-            <div class="w-12 h-12 rounded-xl bg-zinc-800/80 flex items-center justify-center mb-4">
+            class="min-h-[220px] flex flex-col items-center justify-center text-center border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl">
+            <div class="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 flex items-center justify-center mb-4">
               <svg class="w-6 h-6 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h10a2 2 0 012 2v12a2 2 0 01-2 2z" />
               </svg>
             </div>
 
-            <h3 class="text-sm font-semibold text-zinc-300">
+            <h3 class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
               Nenhuma movimentação encontrada
             </h3>
 
@@ -319,7 +319,7 @@ const formatCurrency = (value: number) => {
       <!-- Contas -->
       <section class="mb-8">
         <div class="mb-4">
-          <h2 class="text-lg font-semibold text-white">
+          <h2 class="text-lg font-semibold text-zinc-900 dark:text-white">
             Contas
           </h2>
 
@@ -330,20 +330,20 @@ const formatCurrency = (value: number) => {
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <!-- Contas a pagar -->
-          <div class="p-6 rounded-2xl bg-zinc-900/80 border border-zinc-800">
+          <div class="p-6 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
             <div class="flex items-start justify-between mb-6">
               <div>
                 <div class="flex items-center gap-3">
                   <div
                     class="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
-                    <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2m4-6h-6m0 0l3-3m-3 3l3 3" />
                     </svg>
                   </div>
 
                   <div>
-                    <h3 class="font-semibold text-white">
+                    <h3 class="font-semibold text-zinc-900 dark:text-white">
                       Contas a pagar
                     </h3>
 
@@ -354,7 +354,7 @@ const formatCurrency = (value: number) => {
                 </div>
               </div>
 
-              <span class="text-xs px-2.5 py-1 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20">
+              <span class="text-xs px-2.5 py-1 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
                 0 pendentes
               </span>
             </div>
@@ -365,33 +365,33 @@ const formatCurrency = (value: number) => {
                   Total pendente
                 </p>
 
-                <p class="text-2xl font-bold text-white">
+                <p class="text-2xl font-bold text-zinc-900 dark:text-white">
                   {{ formatCurrency(financialSummary.accountsPayable) }}
                 </p>
               </div>
 
               <button
-                class="px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/60 text-xs font-semibold text-zinc-300 hover:text-white transition">
+                class="px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700/60 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition">
                 Gerenciar
               </button>
             </div>
           </div>
 
           <!-- Contas a receber -->
-          <div class="p-6 rounded-2xl bg-zinc-900/80 border border-zinc-800">
+          <div class="p-6 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
             <div class="flex items-start justify-between mb-6">
               <div>
                 <div class="flex items-center gap-3">
                   <div
                     class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                    <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M3 10h18M7 15h1m4 0h1m-9 4h16a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                   </div>
 
                   <div>
-                    <h3 class="font-semibold text-white">
+                    <h3 class="font-semibold text-zinc-900 dark:text-white">
                       Contas a receber
                     </h3>
 
@@ -403,7 +403,7 @@ const formatCurrency = (value: number) => {
               </div>
 
               <span
-                class="text-xs px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                class="text-xs px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
                 0 pendentes
               </span>
             </div>
@@ -414,13 +414,13 @@ const formatCurrency = (value: number) => {
                   Total a receber
                 </p>
 
-                <p class="text-2xl font-bold text-white">
+                <p class="text-2xl font-bold text-zinc-900 dark:text-white">
                   {{ formatCurrency(financialSummary.accountsReceivable) }}
                 </p>
               </div>
 
               <button
-                class="px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/60 text-xs font-semibold text-zinc-300 hover:text-white transition">
+                class="px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700/60 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition">
                 Gerenciar
               </button>
             </div>
@@ -429,10 +429,10 @@ const formatCurrency = (value: number) => {
       </section>
 
       <!-- DRE -->
-      <section class="p-6 rounded-2xl bg-zinc-900/80 border border-zinc-800">
+      <section class="p-6 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
-            <h2 class="text-lg font-semibold text-white">
+            <h2 class="text-lg font-semibold text-zinc-900 dark:text-white">
               DRE
             </h2>
 
@@ -441,47 +441,47 @@ const formatCurrency = (value: number) => {
             </p>
           </div>
 
-          <span class="text-xs px-3 py-1.5 rounded-full bg-zinc-800/80 border border-zinc-700/60 text-zinc-400">
+          <span class="text-xs px-3 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-300 dark:border-zinc-700/60 text-zinc-600 dark:text-zinc-400">
             Em desenvolvimento
           </span>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div class="p-4 rounded-xl bg-zinc-950/60 border border-zinc-800">
+          <div class="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800">
             <p class="text-xs text-zinc-500 mb-2">
               Receita operacional
             </p>
 
-            <p class="text-lg font-bold text-zinc-200">
+            <p class="text-lg font-bold text-zinc-800 dark:text-zinc-200">
               {{ formatCurrency(financialSummary.revenue) }}
             </p>
           </div>
 
-          <div class="p-4 rounded-xl bg-zinc-950/60 border border-zinc-800">
+          <div class="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800">
             <p class="text-xs text-zinc-500 mb-2">
               Custos e despesas
             </p>
 
-            <p class="text-lg font-bold text-zinc-200">
+            <p class="text-lg font-bold text-zinc-800 dark:text-zinc-200">
               {{ formatCurrency(financialSummary.expenses) }}
             </p>
           </div>
 
-          <div class="p-4 rounded-xl bg-zinc-950/60 border border-zinc-800">
+          <div class="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800">
             <p class="text-xs text-zinc-500 mb-2">
               Resultado líquido
             </p>
 
             <p class="text-lg font-bold" :class="balance >= 0
-              ? 'text-emerald-400'
-              : 'text-red-400'
+              ? 'text-emerald-700 dark:text-emerald-400'
+              : 'text-red-600 dark:text-red-400'
               ">
               {{ formatCurrency(balance) }}
             </p>
           </div>
         </div>
 
-        <div class="mt-5 p-4 rounded-xl bg-zinc-950/40 border border-dashed border-zinc-800">
+        <div class="mt-5 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-950/40 border border-dashed border-zinc-200 dark:border-zinc-800">
           <p class="text-xs text-zinc-500 leading-relaxed">
             O detalhamento da DRE será disponibilizado após a
             integração com os dados financeiros da empresa.

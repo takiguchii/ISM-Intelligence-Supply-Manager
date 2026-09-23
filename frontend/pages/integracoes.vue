@@ -313,7 +313,7 @@ onMounted(async () => {
       >
         <div
           v-if="toastMessage"
-          class="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-zinc-900 border border-emerald-500/40 text-emerald-300 text-xs font-semibold shadow-2xl flex items-center gap-3 backdrop-blur-xl"
+          class="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-white dark:bg-zinc-900 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-xs font-semibold shadow-2xl flex items-center gap-3 backdrop-blur-xl"
         >
           <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
           <span>{{ toastMessage }}</span>
@@ -323,11 +323,11 @@ onMounted(async () => {
 
     <!-- Top Title & Tag Section -->
       <div class="space-y-2">
-        <div class="inline-flex items-center px-3 py-1 rounded-full bg-zinc-900/90 border border-zinc-800 text-[11px] font-mono tracking-wider text-zinc-300 uppercase">
+        <div class="inline-flex items-center px-3 py-1 rounded-full bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono tracking-wider text-zinc-700 dark:text-zinc-300 uppercase">
           INTEGRAÇÕES
         </div>
-        <h1 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">Conexões & importação</h1>
-        <p class="text-zinc-400 text-sm sm:text-base max-w-3xl leading-relaxed">
+        <h1 class="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-white tracking-tight">Conexões & importação</h1>
+        <p class="text-zinc-600 dark:text-zinc-400 text-sm sm:text-base max-w-3xl leading-relaxed">
           Conecte seus sistemas ou envie dados manualmente — o ISM consolida tudo num único cérebro.
         </p>
       </div>
@@ -335,31 +335,31 @@ onMounted(async () => {
       <!-- Modo Super Admin -->
       <div v-if="isSuperAdmin" class="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/5 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
         <div class="flex items-start gap-3">
-          <div class="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+          <div class="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
           </div>
           <div>
-            <div class="text-xs font-semibold text-amber-300">Modo Super Admin</div>
-            <p class="text-[11px] text-zinc-400">Selecione o restaurante alvo para gerenciar conexões e cargas de dados.</p>
+            <div class="text-xs font-semibold text-amber-700 dark:text-amber-300">Modo Super Admin</div>
+            <p class="text-[11px] text-zinc-600 dark:text-zinc-400">Selecione o restaurante alvo para gerenciar conexões e cargas de dados.</p>
           </div>
         </div>
         <label class="flex items-center gap-2">
-          <span class="text-xs text-zinc-400 font-mono">Restaurante:</span>
-          <select v-model.number="targetRestaurantId" class="bg-zinc-950 border border-zinc-700/80 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40">
+          <span class="text-xs text-zinc-600 dark:text-zinc-400 font-mono">Restaurante:</span>
+          <select v-model.number="targetRestaurantId" class="bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700/80 rounded-xl px-3 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40">
             <option :value="1">1 - Gourmet ISM Restaurant</option>
           </select>
         </label>
       </div>
 
       <!-- Navigation Tabs (Permite alternar entre Conexões, Confirmação e Histórico) -->
-      <div v-if="currentPreview || lastResults || activeTab !== 'skills'" class="flex items-center gap-2 border-b border-zinc-800 pb-2">
+      <div v-if="currentPreview || lastResults || activeTab !== 'skills'" class="flex items-center gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
         <button
           @click="activeTab = 'skills'"
           :class="[
             'px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2',
             activeTab === 'skills'
-              ? 'bg-zinc-800 text-white border border-zinc-700'
-              : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'
+              ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white border border-zinc-300 dark:border-zinc-700'
+              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-900'
           ]"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
@@ -372,8 +372,8 @@ onMounted(async () => {
           :class="[
             'px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2',
             activeTab === 'confirmacao'
-              ? 'bg-indigo-600/30 text-indigo-200 border border-indigo-500/40'
-              : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'
+              ? 'bg-indigo-50 dark:bg-indigo-600/30 text-indigo-800 dark:text-indigo-200 border border-indigo-500/40'
+              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-900'
           ]"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -386,8 +386,8 @@ onMounted(async () => {
           :class="[
             'px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2',
             activeTab === 'historico'
-              ? 'bg-zinc-800 text-white border border-zinc-700'
-              : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'
+              ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white border border-zinc-300 dark:border-zinc-700'
+              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-900'
           ]"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -399,10 +399,10 @@ onMounted(async () => {
       <div v-if="activeTab === 'skills'" class="space-y-8">
         
         <!-- CARD PRINCIPAL: Carga diária de dados -->
-        <div id="dropzone-card" class="rounded-2xl bg-[#121214] border border-zinc-800/80 p-6 sm:p-8 space-y-6 shadow-2xl relative overflow-hidden">
+        <div id="dropzone-card" class="rounded-2xl bg-white dark:bg-[#121214] border border-zinc-200 dark:border-zinc-800/80 p-6 sm:p-8 space-y-6 shadow-sm dark:shadow-2xl relative overflow-hidden">
           <div>
-            <h2 class="text-lg font-bold text-white tracking-tight">Carga diária de dados</h2>
-            <p class="text-xs sm:text-sm text-zinc-400 mt-1">
+            <h2 class="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">Carga diária de dados</h2>
+            <p class="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-1">
               Arraste sua planilha de cardápio, histórico de pedidos ou inventário. Calculamos giro e margem automaticamente.
             </p>
           </div>
@@ -418,7 +418,7 @@ onMounted(async () => {
               'dropzone-container border-2 border-dashed rounded-2xl p-8 sm:p-10 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center group relative overflow-hidden',
               dragging
                 ? 'border-indigo-500 bg-indigo-500/10 scale-[0.99]'
-                : 'border-zinc-800 bg-[#09090b]/50 hover:border-zinc-700/90 hover:bg-[#09090b]'
+                : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#09090b]/50 hover:border-zinc-300 dark:hover:border-zinc-700/90 hover:bg-zinc-100 dark:hover:bg-[#09090b]'
             ]"
           >
             <!-- PASTA ANIMADA 3D COMPACTA (SEM FUNDO AZUL) -->
@@ -433,16 +433,16 @@ onMounted(async () => {
             </div>
 
             <!-- Título & Formatos -->
-            <p class="text-base font-bold text-white tracking-tight mb-1">Importe sua carga diária</p>
-            <p class="text-xs text-zinc-400 mb-5 font-normal">Formatos aceitos: .xlsx, .csv, .xls, .json — até 25MB.</p>
+            <p class="text-base font-bold text-zinc-900 dark:text-white tracking-tight mb-1">Importe sua carga diária</p>
+            <p class="text-xs text-zinc-600 dark:text-zinc-400 mb-5 font-normal">Formatos aceitos: .xlsx, .csv, .xls, .json — até 25MB.</p>
 
             <!-- Botão Selecionar Arquivo -->
             <button
               type="button"
               @click.stop="triggerFileSelect"
-              class="px-6 py-2.5 rounded-lg bg-[#18181b] hover:bg-zinc-800 border border-zinc-700/80 text-xs font-semibold text-zinc-200 hover:text-white transition-all shadow-sm flex items-center gap-2"
+              class="px-6 py-2.5 rounded-lg bg-white dark:bg-[#18181b] hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700/80 text-xs font-semibold text-zinc-800 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white transition-all shadow-sm flex items-center gap-2"
             >
-              <svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4 text-zinc-600 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
               </svg>
               <span>Selecionar arquivo</span>
@@ -460,12 +460,12 @@ onMounted(async () => {
           <!-- Estado de Análise -->
           <div v-else class="rounded-2xl p-12 text-center border border-indigo-500/30 bg-indigo-500/5 space-y-3">
             <div class="inline-block w-8 h-8 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
-            <p class="text-sm font-semibold text-indigo-200">Analisando estrutura do arquivo com inteligência de dados...</p>
-            <p v-if="lastFileName" class="text-xs text-zinc-400 font-mono">{{ lastFileName }}</p>
+            <p class="text-sm font-semibold text-indigo-800 dark:text-indigo-200">Analisando estrutura do arquivo com inteligência de dados...</p>
+            <p v-if="lastFileName" class="text-xs text-zinc-600 dark:text-zinc-400 font-mono">{{ lastFileName }}</p>
           </div>
 
           <!-- Mensagem de Erro de Upload -->
-          <div v-if="uploadError" class="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-300 flex items-center gap-2">
+          <div v-if="uploadError" class="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-700 dark:text-red-300 flex items-center gap-2">
             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             <span>{{ uploadError }}</span>
           </div>
@@ -477,42 +477,42 @@ onMounted(async () => {
           <div
             v-for="skill in skills"
             :key="skill.id"
-            class="skill-card rounded-2xl bg-[#121214] border border-zinc-800/80 p-5 flex flex-col justify-between hover:border-zinc-700/90 shadow-lg group relative"
+            class="skill-card rounded-2xl bg-white dark:bg-[#121214] border border-zinc-200 dark:border-zinc-800/80 p-5 flex flex-col justify-between hover:border-zinc-300 dark:hover:border-zinc-700/90 shadow-sm dark:shadow-lg group relative"
           >
             <!-- Card Content Header -->
             <div>
               <div class="flex items-start justify-between gap-3 mb-4">
                 <!-- Icon container -->
-                <div class="w-11 h-11 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0 group-hover:border-zinc-700 transition-colors">
+                <div class="w-11 h-11 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center shrink-0 group-hover:border-zinc-300 dark:group-hover:border-zinc-700 transition-colors">
                   <!-- iFood / Restaurant -->
-                  <svg v-if="skill.icon === 'ifood'" class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg v-if="skill.icon === 'ifood'" class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 3h18v18H3z"></path>
                   </svg>
 
                   <!-- 99 Food / Delivery -->
-                  <svg v-else-if="skill.icon === '99food'" class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg v-else-if="skill.icon === '99food'" class="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                   </svg>
 
                   <!-- Cardápio Digital / Menu -->
-                  <svg v-else-if="skill.icon === 'menu'" class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg v-else-if="skill.icon === 'menu'" class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                   </svg>
 
                   <!-- Stone / Card -->
-                  <svg v-else-if="skill.icon === 'stone'" class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg v-else-if="skill.icon === 'stone'" class="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
                   </svg>
 
                   <!-- Fornecedores / Truck -->
-                  <svg v-else-if="skill.icon === 'supplier'" class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg v-else-if="skill.icon === 'supplier'" class="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"></path>
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8h4l3 3v5h-2m-6 0h2"></path>
                   </svg>
 
                   <!-- Planilhas / Sheet -->
-                  <svg v-else class="w-5 h-5 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg v-else class="w-5 h-5 text-zinc-700 dark:text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 17v-6e1 0-2 2-2h2m0 0h2a2 2 0 012 2v6m-6 0h6M3 3h18v18H3V3z"></path>
                   </svg>
                 </div>
@@ -522,8 +522,8 @@ onMounted(async () => {
                   :class="[
                     'px-2.5 py-1 rounded-full text-[11px] font-medium flex items-center gap-1.5 border',
                     skill.status === 'ativo'
-                      ? 'bg-emerald-950/60 border-emerald-500/30 text-emerald-400'
-                      : 'bg-zinc-800/80 border-zinc-700/60 text-zinc-400'
+                      ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
+                      : 'bg-zinc-100 dark:bg-zinc-800/80 border-zinc-300 dark:border-zinc-700/60 text-zinc-600 dark:text-zinc-400'
                   ]"
                 >
                   <span v-if="skill.status === 'ativo'" class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -532,8 +532,8 @@ onMounted(async () => {
               </div>
 
               <!-- Title & Description -->
-              <h3 class="font-bold text-white text-base tracking-tight">{{ skill.name }}</h3>
-              <p class="text-xs text-zinc-400 mt-1 line-clamp-2 leading-relaxed">{{ skill.description }}</p>
+              <h3 class="font-bold text-zinc-900 dark:text-white text-base tracking-tight">{{ skill.name }}</h3>
+              <p class="text-xs text-zinc-600 dark:text-zinc-400 mt-1 line-clamp-2 leading-relaxed">{{ skill.description }}</p>
             </div>
 
             <!-- Card Bottom Action Button (Exatamente como o protótipo) -->
@@ -542,7 +542,7 @@ onMounted(async () => {
               <button
                 v-if="skill.status === 'ativo'"
                 @click="openSkillModal(skill)"
-                class="w-full py-2.5 rounded-xl border border-zinc-800 bg-[#18181b] hover:bg-zinc-800 hover:border-zinc-700 text-xs font-semibold text-zinc-200 hover:text-white transition-all flex items-center justify-center gap-2 shadow-sm"
+                class="w-full py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-xs font-semibold text-zinc-800 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white transition-all flex items-center justify-center gap-2 shadow-sm"
               >
                 <span>Gerenciar</span>
               </button>
@@ -551,7 +551,7 @@ onMounted(async () => {
               <button
                 v-else
                 @click="openSkillModal(skill)"
-                class="w-full py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+                class="w-full py-2.5 rounded-xl bg-zinc-900 dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
               >
                 <span>Conectar</span>
               </button>
@@ -578,14 +578,14 @@ onMounted(async () => {
       <!-- ABA 3: HISTÓRICO DE IMPORTAÇÕES -->
       <section v-else-if="activeTab === 'historico'" class="space-y-6">
         <div v-if="lastResults && lastResults.length > 0" class="p-5 rounded-2xl border bg-emerald-500/5 border-emerald-500/30 space-y-2">
-          <div class="text-sm font-semibold text-emerald-300 flex items-center gap-2">
+          <div class="text-sm font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             Importação concluída com sucesso!
           </div>
-          <ul class="text-xs text-zinc-300 space-y-1">
+          <ul class="text-xs text-zinc-700 dark:text-zinc-300 space-y-1">
             <li v-for="r in lastResults" :key="r.importId">
-              <span class="font-medium text-white">{{ r.dataSourceName }}</span> — {{ r.recordsSucceeded }} registro(s) importado(s),
-              <span :class="r.recordsFailed > 0 ? 'text-amber-300' : 'text-emerald-300'">{{ r.recordsFailed }} falha(s)</span>.
+              <span class="font-medium text-zinc-900 dark:text-white">{{ r.dataSourceName }}</span> — {{ r.recordsSucceeded }} registro(s) importado(s),
+              <span :class="r.recordsFailed > 0 ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300'">{{ r.recordsFailed }} falha(s)</span>.
             </li>
           </ul>
         </div>
@@ -597,25 +597,25 @@ onMounted(async () => {
     <Teleport to="body">
       <div
         v-if="isSkillModalOpen && selectedSkill"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/40 dark:bg-black/80 backdrop-blur-sm p-4"
         @click.self="closeSkillModal"
       >
-        <div class="w-full max-w-lg bg-[#121214] rounded-3xl border border-zinc-800 shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+        <div class="w-full max-w-lg bg-white dark:bg-[#121214] rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
           
           <!-- Modal Header -->
-          <div class="p-6 border-b border-zinc-800/80 flex items-center justify-between">
+          <div class="p-6 border-b border-zinc-200 dark:border-zinc-800/80 flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-white">
-                <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-900 dark:text-white">
+                <svg class="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                 </svg>
               </div>
               <div>
-                <h3 class="font-bold text-white text-lg tracking-tight">{{ selectedSkill.name }}</h3>
-                <p class="text-xs text-zinc-400">Configuração de Plug & Play Skill</p>
+                <h3 class="font-bold text-zinc-900 dark:text-white text-lg tracking-tight">{{ selectedSkill.name }}</h3>
+                <p class="text-xs text-zinc-600 dark:text-zinc-400">Configuração de Plug & Play Skill</p>
               </div>
             </div>
-            <button @click="closeSkillModal" class="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+            <button @click="closeSkillModal" class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
           </div>
@@ -624,18 +624,18 @@ onMounted(async () => {
           <div class="p-6 space-y-6 overflow-y-auto max-h-[70vh]">
             
             <!-- Status Plug & Play Switch -->
-            <div class="p-4 rounded-2xl bg-zinc-950/80 border border-zinc-800 flex items-center justify-between">
+            <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
               <div>
-                <div class="text-xs font-semibold text-white">Status da Conexão</div>
-                <div class="text-[11px] text-zinc-400">Ative ou pause o fluxo de dados em tempo real.</div>
+                <div class="text-xs font-semibold text-zinc-900 dark:text-white">Status da Conexão</div>
+                <div class="text-[11px] text-zinc-600 dark:text-zinc-400">Ative ou pause o fluxo de dados em tempo real.</div>
               </div>
               <button
                 @click="toggleSkillStatus"
                 :class="[
                   'px-3 py-1.5 rounded-full text-xs font-bold transition-all border flex items-center gap-1.5',
                   selectedSkill.status === 'ativo'
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                    : 'bg-zinc-800 border-zinc-700 text-zinc-400'
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
+                    : 'bg-zinc-100 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400'
                 ]"
               >
                 <span :class="['w-2 h-2 rounded-full', selectedSkill.status === 'ativo' ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500']"></span>
@@ -646,20 +646,20 @@ onMounted(async () => {
             <!-- Campos de Configuração -->
             <div class="space-y-4 text-xs">
               <label class="flex flex-col gap-1.5">
-                <span class="text-zinc-400 font-medium">Chave de API / Access Token</span>
+                <span class="text-zinc-600 dark:text-zinc-400 font-medium">Chave de API / Access Token</span>
                 <input
                   v-model="selectedSkill.config.apiKey"
                   type="password"
                   placeholder="Insira a chave fornecida pelo sistema..."
-                  class="bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                  class="bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
                 />
               </label>
 
               <label class="flex flex-col gap-1.5">
-                <span class="text-zinc-400 font-medium">Frequência de Sincronização</span>
+                <span class="text-zinc-600 dark:text-zinc-400 font-medium">Frequência de Sincronização</span>
                 <select
                   v-model="selectedSkill.config.syncInterval"
-                  class="bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                  class="bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
                 >
                   <option value="Tempo real (SWS WebSocket)">Tempo real (WebSocket)</option>
                   <option value="A cada 5 minutos">A cada 5 minutos</option>
@@ -668,8 +668,8 @@ onMounted(async () => {
                 </select>
               </label>
 
-              <div class="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800/80 space-y-1">
-                <div class="text-[11px] text-zinc-400 font-medium">Informações do Cérebro ISM:</div>
+              <div class="p-3.5 rounded-xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800/80 space-y-1">
+                <div class="text-[11px] text-zinc-600 dark:text-zinc-400 font-medium">Informações do Cérebro ISM:</div>
                 <p class="text-[11px] text-zinc-500">
                   Os dados recebidos via {{ selectedSkill.name }} alimentam automaticamente a curva ABC, o custo de mercadoria vendida (CMV) e os alertas de estoque.
                 </p>
@@ -679,29 +679,29 @@ onMounted(async () => {
           </div>
 
           <!-- Modal Footer -->
-          <div class="p-6 border-t border-zinc-800/80 bg-zinc-950/60 flex items-center justify-between gap-3">
+          <div class="p-6 border-t border-zinc-200 dark:border-zinc-800/80 bg-zinc-50 dark:bg-zinc-950/60 flex items-center justify-between gap-3">
             <button
               @click="testConnection"
               :disabled="isTestingSkill"
-              class="px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs font-semibold text-zinc-300 hover:text-white transition-all disabled:opacity-40 flex items-center gap-2"
+              class="px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-all disabled:opacity-40 flex items-center gap-2"
             >
-              <span v-if="isTestingSkill" class="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              <span v-if="isTestingSkill" class="w-3 h-3 border-2 border-zinc-900 dark:border-white border-t-transparent dark:border-t-transparent rounded-full animate-spin"></span>
               <span>Testar Conexão</span>
             </button>
 
             <div class="flex items-center gap-2">
               <button
                 @click="closeSkillModal"
-                class="px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-xs font-semibold border border-zinc-800 transition-all"
+                class="px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold border border-zinc-200 dark:border-zinc-800 transition-all"
               >
                 Cancelar
               </button>
               <button
                 @click="saveSkillConfig"
                 :disabled="isSavingSkill"
-                class="px-5 py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-bold transition-all shadow-md flex items-center gap-2"
+                class="px-5 py-2.5 rounded-xl bg-zinc-900 dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 text-xs font-bold transition-all shadow-md flex items-center gap-2"
               >
-                <span v-if="isSavingSkill" class="w-3 h-3 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin"></span>
+                <span v-if="isSavingSkill" class="w-3 h-3 border-2 border-white dark:border-zinc-950 border-t-transparent dark:border-t-transparent rounded-full animate-spin"></span>
                 <span>Salvar & Ativar</span>
               </button>
             </div>

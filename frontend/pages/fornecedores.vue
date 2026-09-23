@@ -232,14 +232,14 @@ onMounted(async () => {
     <AppLoader :visible="isLoading" />
 
     <!-- Notifications Alert -->
-    <div v-if="successMessage" class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs sm:text-sm flex items-center justify-between">
+    <div v-if="successMessage" class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs sm:text-sm flex items-center justify-between">
       <span>{{ successMessage }}</span>
-      <button @click="successMessage = ''" class="text-emerald-400 hover:text-emerald-200 font-bold ml-4">✕</button>
+      <button @click="successMessage = ''" class="text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-200 font-bold ml-4">✕</button>
     </div>
 
-    <div v-if="errorMessage" class="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs sm:text-sm flex items-center justify-between">
+    <div v-if="errorMessage" class="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 text-xs sm:text-sm flex items-center justify-between">
       <span>{{ errorMessage }}</span>
-      <button @click="errorMessage = ''" class="text-red-400 hover:text-red-200 font-bold ml-4">✕</button>
+      <button @click="errorMessage = ''" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 font-bold ml-4">✕</button>
     </div>
 
       <!-- ========================================================= -->
@@ -247,13 +247,13 @@ onMounted(async () => {
       <!-- ========================================================= -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-zinc-800 bg-zinc-900/80 text-[11px] font-bold uppercase tracking-widest text-zinc-400 mb-2">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/80 text-[11px] font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-400 mb-2">
             Fornecedores
           </div>
-          <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+          <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-zinc-900 dark:text-white tracking-tight">
             Gestão de fornecedores
           </h1>
-          <p class="text-zinc-400 text-xs sm:text-sm mt-1 max-w-2xl">
+          <p class="text-zinc-600 dark:text-zinc-400 text-xs sm:text-sm mt-1 max-w-2xl">
             Centralize parceiros, analise notas e envie automaticamente os insumos para o estoque e para os agentes.
           </p>
         </div>
@@ -261,7 +261,7 @@ onMounted(async () => {
         <div class="flex items-center gap-3 self-start sm:self-center">
           <button
             @click="openCreateModal"
-            class="bg-white text-zinc-950 hover:bg-zinc-200 font-semibold px-4 py-2.5 rounded-xl text-xs sm:text-sm transition-all duration-200 shadow-lg shadow-white/5 flex items-center gap-2 active:scale-95"
+            class="bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200 font-semibold px-4 py-2.5 rounded-xl text-xs sm:text-sm transition-all duration-200 shadow-lg shadow-white/5 flex items-center gap-2 active:scale-95"
           >
             <span class="text-base leading-none font-bold">+</span>
             Novo fornecedor
@@ -272,14 +272,14 @@ onMounted(async () => {
       <!-- ========================================================= -->
       <!-- BANNER DO AGENTE (APENAS ÍCONE CAMINHÃO E MENSAGEM SIMPLIFICADA) -->
       <!-- ========================================================= -->
-      <div class="rounded-2xl bg-zinc-900/70 border border-zinc-800/80 p-4 sm:p-5 mb-8 border-l-4 border-l-cyan-500 shadow-xl flex items-center gap-3.5">
-        <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0">
+      <div class="rounded-2xl bg-white dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800/80 p-4 sm:p-5 mb-8 border-l-4 border-l-cyan-500 dark:border-l-cyan-500 shadow-sm dark:shadow-xl flex items-center gap-3.5">
+        <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8h4l3 3v5h-2m-6 0h2" />
           </svg>
         </div>
-        <span class="text-sm font-semibold text-zinc-200">
+        <span class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
           Agente de Fornecedores em construção
         </span>
       </div>
@@ -295,8 +295,8 @@ onMounted(async () => {
           <!-- Column Header -->
           <div class="flex items-center justify-between px-1">
             <div>
-              <h2 class="text-base font-bold text-white tracking-tight">Parceiros ativos</h2>
-              <p class="text-xs text-zinc-400">{{ filteredSuppliers.length }} fornecedores</p>
+              <h2 class="text-base font-bold text-zinc-900 dark:text-white tracking-tight">Parceiros ativos</h2>
+              <p class="text-xs text-zinc-600 dark:text-zinc-400">{{ filteredSuppliers.length }} fornecedores</p>
             </div>
           </div>
 
@@ -314,7 +314,7 @@ onMounted(async () => {
               v-model="listSearch"
               type="text"
               placeholder="Filtrar por nome ou categoria..."
-              class="w-full pl-9 pr-3 py-2 bg-zinc-900/60 border border-zinc-800/80 rounded-xl text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-700 transition"
+              class="w-full pl-9 pr-3 py-2 bg-white dark:bg-zinc-900/60 border border-zinc-300 dark:border-zinc-800/80 rounded-xl text-xs text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-700 transition"
             />
           </div>
 
@@ -327,13 +327,13 @@ onMounted(async () => {
               :class="[
                 'p-4 rounded-xl border transition-all duration-200 cursor-pointer flex items-center justify-between gap-3',
                 selectedSupplier?.id === supplier.id
-                  ? 'border-cyan-500/80 bg-zinc-900/90 shadow-md ring-1 ring-cyan-500/30'
-                  : 'border-zinc-800/80 bg-zinc-900/40 hover:bg-zinc-900/80 hover:border-zinc-700'
+                  ? 'border-cyan-500/80 bg-white dark:bg-zinc-900/90 shadow-md ring-1 ring-cyan-500/30'
+                  : 'border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 hover:bg-zinc-50 dark:hover:bg-zinc-900/80 hover:border-zinc-300 dark:hover:border-zinc-700'
               ]"
             >
               <div class="flex items-center gap-3.5 min-w-0">
                 <!-- Icon -->
-                <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0">
+                <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8h4l3 3v5h-2m-6 0h2" />
@@ -342,10 +342,10 @@ onMounted(async () => {
 
                 <!-- Info -->
                 <div class="min-w-0">
-                  <h4 class="text-sm font-bold text-white truncate leading-tight">
+                  <h4 class="text-sm font-bold text-zinc-900 dark:text-white truncate leading-tight">
                     {{ supplier.name }}
                   </h4>
-                  <p class="text-xs text-zinc-400 truncate mt-0.5">
+                  <p class="text-xs text-zinc-600 dark:text-zinc-400 truncate mt-0.5">
                     {{ supplier.email }}
                   </p>
                   <p class="text-[11px] text-zinc-500 truncate mt-0.5">
@@ -356,7 +356,7 @@ onMounted(async () => {
 
               <!-- Category Badge -->
               <div class="shrink-0">
-                <span class="px-2.5 py-1 rounded-full bg-zinc-800/90 border border-zinc-700/60 text-[10px] font-bold text-zinc-300 uppercase tracking-wider">
+                <span class="px-2.5 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-300 dark:border-zinc-700/60 text-[10px] font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
                   {{ supplier.category }}
                 </span>
               </div>
@@ -365,7 +365,7 @@ onMounted(async () => {
             <!-- Empty List State -->
             <div
               v-if="filteredSuppliers.length === 0"
-              class="p-8 text-center rounded-xl bg-zinc-900/30 border border-zinc-800/60 text-zinc-400 text-xs"
+              class="p-8 text-center rounded-xl bg-white dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800/60 text-zinc-600 dark:text-zinc-400 text-xs"
             >
               Nenhum fornecedor encontrado.
             </div>
@@ -374,34 +374,34 @@ onMounted(async () => {
 
         <!-- RIGHT COLUMN: DETALHES DO FORNECEDOR -->
         <div class="lg:col-span-7">
-          <div class="h-full rounded-2xl bg-zinc-900/40 border border-zinc-800/80 p-6 sm:p-8 flex flex-col justify-between min-h-[500px]">
+          <div class="h-full rounded-2xl bg-white dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800/80 p-6 sm:p-8 flex flex-col justify-between min-h-[500px]">
             
             <!-- State: With Selected Supplier -->
             <div v-if="selectedSupplier" class="space-y-6">
               
               <!-- Header Info & Actions -->
-              <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-6 border-b border-zinc-800/80">
+              <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-6 border-b border-zinc-200 dark:border-zinc-800/80">
                 <div>
                   <div class="flex items-center gap-2 mb-1.5">
-                    <span class="px-2.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-[10px] font-bold text-cyan-400 uppercase tracking-wider">
+                    <span class="px-2.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-[10px] font-bold text-cyan-700 dark:text-cyan-400 uppercase tracking-wider">
                       {{ selectedSupplier.category }}
                     </span>
                     <span
                       :class="[
                         'px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider',
                         selectedSupplier.isActive
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                          : 'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                          ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
+                          : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-zinc-700'
                       ]"
                     >
                       {{ selectedSupplier.isActive ? "Ativo" : "Inativo" }}
                     </span>
                   </div>
 
-                  <h2 class="text-xl sm:text-2xl font-bold text-white">
+                  <h2 class="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
                     {{ selectedSupplier.name }}
                   </h2>
-                  <p class="text-xs sm:text-sm text-zinc-400 mt-1">
+                  <p class="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-1">
                     {{ selectedSupplier.description || "Nenhuma observação cadastrada." }}
                   </p>
                 </div>
@@ -410,7 +410,7 @@ onMounted(async () => {
                 <div class="flex items-center gap-2 shrink-0">
                   <button
                     @click="openEditModal(selectedSupplier)"
-                    class="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white text-xs font-semibold border border-zinc-700/60 transition flex items-center gap-1.5"
+                    class="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white text-xs font-semibold border border-zinc-300 dark:border-zinc-700/60 transition flex items-center gap-1.5"
                   >
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -420,7 +420,7 @@ onMounted(async () => {
 
                   <button
                     @click="showDeleteConfirm = true"
-                    class="px-3 py-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/60 text-red-400 hover:text-red-300 text-xs font-semibold border border-red-800/40 transition flex items-center gap-1.5"
+                    class="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-xs font-semibold border border-red-200 dark:border-red-800/40 transition flex items-center gap-1.5"
                   >
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -432,47 +432,47 @@ onMounted(async () => {
 
               <!-- Information Grid -->
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div class="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
+                <div class="p-4 rounded-xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800/80">
                   <span class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider block">E-mail Comercial</span>
-                  <span class="text-sm font-medium text-zinc-200 mt-1 block truncate">{{ selectedSupplier.email }}</span>
+                  <span class="text-sm font-medium text-zinc-800 dark:text-zinc-200 mt-1 block truncate">{{ selectedSupplier.email }}</span>
                 </div>
 
-                <div class="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
+                <div class="p-4 rounded-xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800/80">
                   <span class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider block">Telefone / Contato</span>
-                  <span class="text-sm font-medium text-zinc-200 mt-1 block">{{ selectedSupplier.phone }}</span>
+                  <span class="text-sm font-medium text-zinc-800 dark:text-zinc-200 mt-1 block">{{ selectedSupplier.phone }}</span>
                 </div>
 
-                <div class="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
+                <div class="p-4 rounded-xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800/80">
                   <span class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider block">Categoria Principal</span>
-                  <span class="text-sm font-medium text-zinc-200 mt-1 block">{{ selectedSupplier.category }}</span>
+                  <span class="text-sm font-medium text-zinc-800 dark:text-zinc-200 mt-1 block">{{ selectedSupplier.category }}</span>
                 </div>
 
-                <div class="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
+                <div class="p-4 rounded-xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800/80">
                   <span class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider block">Identificador ID</span>
-                  <span class="text-sm font-mono font-medium text-zinc-200 mt-1 block">#{{ selectedSupplier.id }}</span>
+                  <span class="text-sm font-mono font-medium text-zinc-800 dark:text-zinc-200 mt-1 block">#{{ selectedSupplier.id }}</span>
                 </div>
               </div>
 
               <!-- Additional Panel -->
-              <div class="p-4 rounded-xl bg-zinc-950/60 border border-zinc-800/60 text-xs text-zinc-400 space-y-2">
+              <div class="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800/60 text-xs text-zinc-600 dark:text-zinc-400 space-y-2">
                 <div class="flex items-center justify-between">
                   <span>Integração de Notas e Pedidos:</span>
-                  <span class="text-emerald-400 font-semibold">Pronto para cotação</span>
+                  <span class="text-emerald-700 dark:text-emerald-400 font-semibold">Pronto para cotação</span>
                 </div>
                 <div class="flex items-center justify-between">
                   <span>Insumos Vinculados:</span>
-                  <NuxtLink to="/estoque" class="text-cyan-400 hover:underline">Ver no estoque →</NuxtLink>
+                  <NuxtLink to="/estoque" class="text-cyan-700 dark:text-cyan-400 hover:underline">Ver no estoque →</NuxtLink>
                 </div>
               </div>
             </div>
 
             <!-- State: Empty (No Supplier Selected) -->
             <div v-else class="my-auto text-center py-12 flex flex-col items-center justify-center">
-              <svg class="w-16 h-16 text-zinc-700 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-16 h-16 text-zinc-300 dark:text-zinc-700 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8h4l3 3v5h-2m-6 0h2" />
               </svg>
-              <p class="text-sm text-zinc-400 max-w-xs">
+              <p class="text-sm text-zinc-600 dark:text-zinc-400 max-w-xs">
                 Selecione um fornecedor para ver os detalhes e analisar insumos.
               </p>
             </div>
@@ -486,17 +486,17 @@ onMounted(async () => {
     <!-- ========================================================= -->
     <div
       v-if="showSupplierModal"
-      class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      class="fixed inset-0 bg-zinc-950/40 dark:bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4"
     >
-      <div class="w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6">
+      <div class="w-full max-w-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6">
         
-        <div class="flex items-center justify-between border-b border-zinc-800 pb-4">
-          <h3 class="text-lg font-bold text-white">
+        <div class="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-4">
+          <h3 class="text-lg font-bold text-zinc-900 dark:text-white">
             {{ isEditing ? "Editar Fornecedor" : "Novo Fornecedor" }}
           </h3>
           <button
             @click="showSupplierModal = false"
-            class="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800"
+            class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"
           >
             ✕
           </button>
@@ -504,7 +504,7 @@ onMounted(async () => {
 
         <form @submit.prevent="saveSupplier" class="space-y-4">
           <div>
-            <label class="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
+            <label class="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5">
               Nome do Fornecedor / Empresa *
             </label>
             <input
@@ -512,18 +512,18 @@ onMounted(async () => {
               type="text"
               required
               placeholder="Ex: Pescados Marítimos SP"
-              class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white focus:outline-none focus:border-cyan-500 transition"
+              class="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-xl text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-cyan-500 dark:focus:border-cyan-500 transition"
             />
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
+              <label class="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5">
                 Categoria *
               </label>
               <select
                 v-model="supplierForm.category"
-                class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white focus:outline-none focus:border-cyan-500 transition"
+                class="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-xl text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-cyan-500 dark:focus:border-cyan-500 transition"
               >
                 <option v-for="cat in categoriesList" :key="cat" :value="cat">
                   {{ cat }}
@@ -532,7 +532,7 @@ onMounted(async () => {
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
+              <label class="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5">
                 Telefone / Celular *
               </label>
               <input
@@ -540,13 +540,13 @@ onMounted(async () => {
                 type="text"
                 required
                 placeholder="(11) 99999-9999"
-                class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white focus:outline-none focus:border-cyan-500 transition"
+                class="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-xl text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-cyan-500 dark:focus:border-cyan-500 transition"
               />
             </div>
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
+            <label class="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5">
               E-mail Comercial *
             </label>
             <input
@@ -554,27 +554,27 @@ onMounted(async () => {
               type="email"
               required
               placeholder="comercial@fornecedor.com.br"
-              class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white focus:outline-none focus:border-cyan-500 transition"
+              class="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-xl text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-cyan-500 dark:focus:border-cyan-500 transition"
             />
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
+            <label class="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5">
               Descrição / Observações
             </label>
             <textarea
               v-model="supplierForm.description"
               rows="3"
               placeholder="Informações adicionais, prazos de entrega, condições de pagamento..."
-              class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white focus:outline-none focus:border-cyan-500 transition resize-none"
+              class="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-xl text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-cyan-500 dark:focus:border-cyan-500 transition resize-none"
             ></textarea>
           </div>
 
-          <div class="flex items-center justify-end gap-3 pt-4 border-t border-zinc-800">
+          <div class="flex items-center justify-end gap-3 pt-4 border-t border-zinc-200 dark:border-zinc-800">
             <button
               type="button"
               @click="showSupplierModal = false"
-              class="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800 transition"
+              class="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
             >
               Cancelar
             </button>
@@ -582,7 +582,7 @@ onMounted(async () => {
             <button
               type="submit"
               :disabled="isSaving"
-              class="px-5 py-2.5 rounded-xl bg-white text-zinc-950 font-bold text-xs hover:bg-zinc-200 transition shadow disabled:opacity-50"
+              class="px-5 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 font-bold text-xs hover:bg-zinc-800 dark:hover:bg-zinc-200 transition shadow disabled:opacity-50"
             >
               {{ isSaving ? "Salvando..." : isEditing ? "Salvar Alterações" : "Cadastrar Fornecedor" }}
             </button>
@@ -596,19 +596,19 @@ onMounted(async () => {
     <!-- ========================================================= -->
     <div
       v-if="showDeleteConfirm"
-      class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      class="fixed inset-0 bg-zinc-950/40 dark:bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4"
     >
-      <div class="w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-2xl space-y-4">
-        <h3 class="text-base font-bold text-white">Excluir Fornecedor</h3>
-        <p class="text-xs text-zinc-400">
+      <div class="w-full max-w-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-2xl space-y-4">
+        <h3 class="text-base font-bold text-zinc-900 dark:text-white">Excluir Fornecedor</h3>
+        <p class="text-xs text-zinc-600 dark:text-zinc-400">
           Tem certeza que deseja remover <strong>{{ selectedSupplier?.name }}</strong>? Esta ação não pode ser desfeita.
         </p>
 
-        <div class="flex items-center justify-end gap-3 pt-3 border-t border-zinc-800">
+        <div class="flex items-center justify-end gap-3 pt-3 border-t border-zinc-200 dark:border-zinc-800">
           <button
             type="button"
             @click="showDeleteConfirm = false"
-            class="px-3.5 py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white transition"
+            class="px-3.5 py-2 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition"
           >
             Cancelar
           </button>

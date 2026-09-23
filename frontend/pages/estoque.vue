@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { productService } from '~/services/modules/stock/productService'
 import AppLoader from '~/components/base/AppLoader.vue'
+import SeverityBadge from '~/components/base/SeverityBadge.vue'
 
 // ==================== CONFIGURAÇÃO ====================
 const PAGE_SIZE = 8
@@ -254,15 +255,15 @@ onMounted(() => {
     <AppLoader :visible="isLoading" />
 
     <!-- ==================== HEADER ==================== -->
-    <section class="p-6 sm:p-8 rounded-2xl bg-gradient-to-r from-zinc-900 via-zinc-900/90 to-zinc-950 border border-zinc-800 shadow-xl flex flex-col md:flex-row md:items-start justify-between gap-6">
+    <section class="bg-white dark:bg-transparent p-6 sm:p-8 rounded-2xl dark:bg-gradient-to-r dark:from-zinc-900 dark:via-zinc-900/90 dark:to-zinc-950 border border-zinc-200 dark:border-zinc-800 shadow-sm dark:shadow-xl flex flex-col md:flex-row md:items-start justify-between gap-6">
       <div>
-        <span class="inline-flex items-center px-3 py-1 rounded-full border border-zinc-800 bg-zinc-900/80 text-[11px] font-bold text-zinc-400 mb-4 tracking-wider uppercase">
+        <span class="inline-flex items-center px-3 py-1 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/80 text-[11px] font-bold text-zinc-600 dark:text-zinc-400 mb-4 tracking-wider uppercase">
           Estoque de Produtos
         </span>
         <div class="flex items-center gap-3">
-          <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white tracking-tight">Controle de Insumos</h1>
+          <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-zinc-900 dark:text-white tracking-tight">Controle de Insumos</h1>
         </div>
-        <p class="text-zinc-400 text-xs sm:text-sm mt-2 max-w-2xl">
+        <p class="text-zinc-600 dark:text-zinc-400 text-xs sm:text-sm mt-2 max-w-2xl">
           Gerencie quantidades, monitore níveis mínimos e evite rupturas no seu inventário com apoio da inteligência artificial.
         </p>
       </div>
@@ -280,13 +281,13 @@ onMounted(() => {
           @keyup.esc="mostrarHistorico = false"
           type="text"
           placeholder="Buscar insumos..."
-          class="w-full bg-zinc-950/80 text-sm text-zinc-200 border border-zinc-800 rounded-xl pl-10 pr-4 py-2.5 focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 outline-none transition-all placeholder-zinc-500"
+          class="w-full bg-zinc-50 dark:bg-zinc-950/80 text-sm text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-800 rounded-xl pl-10 pr-4 py-2.5 focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 outline-none transition-all placeholder-zinc-400 dark:placeholder-zinc-500"
         />
 
-        <div v-if="mostrarHistorico && historicoBusca.length" class="absolute z-20 mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl overflow-hidden">
+        <div v-if="mostrarHistorico && historicoBusca.length" class="absolute z-20 mt-2 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xl overflow-hidden">
           <div class="flex items-center justify-between px-4 pt-3 pb-2">
             <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Buscas recentes</span>
-            <button @mousedown.prevent="limparHistorico" class="text-[10px] font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-300 transition-colors">
+            <button @mousedown.prevent="limparHistorico" class="text-[10px] font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
               Limpar
             </button>
           </div>
@@ -294,7 +295,7 @@ onMounted(() => {
             v-for="termo in historicoBusca"
             :key="termo"
             @mousedown.prevent="aplicarBusca(termo)"
-            class="w-full text-left px-4 py-2.5 text-sm text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors flex items-center gap-2.5"
+            class="w-full text-left px-4 py-2.5 text-sm text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-colors flex items-center gap-2.5"
           >
             <svg class="w-3.5 h-3.5 text-zinc-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             <span class="truncate">{{ termo }}</span>
@@ -304,25 +305,26 @@ onMounted(() => {
     </section>
 
     <!-- ==================== ERRO DA API ==================== -->
-    <div v-if="errorMessage" class="bg-red-500/10 border border-red-500/30 text-red-300 px-4 py-3 rounded-xl text-sm font-medium flex items-center justify-between shadow-sm">
+    <div v-if="errorMessage" class="bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 px-4 py-3 rounded-xl text-sm font-medium flex items-center justify-between shadow-sm">
       <span>{{ errorMessage }}</span>
-      <button @click="errorMessage = ''" class="text-red-400 hover:text-red-200 font-bold ml-4">&times;</button>
+      <button @click="errorMessage = ''" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 font-bold ml-4">&times;</button>
     </div>
 
     <!-- ==================== ALERTA DE CRÍTICOS ==================== -->
-    <div v-if="!isLoading && itensCriticos.length > 0" class="border border-red-500/30 bg-red-500/10 rounded-2xl p-6 shadow-xl transition-all relative overflow-hidden">
+    <div v-if="!isLoading && itensCriticos.length > 0" class="severity-critical border border-severity-line bg-severity-soft rounded-2xl p-6 shadow-sm dark:shadow-xl transition-all relative overflow-hidden">
       <div class="flex items-start justify-between flex-col sm:flex-row gap-4">
         <div class="flex items-start gap-4">
-          <div class="p-3 bg-red-500/20 rounded-xl text-red-400 text-xl border border-red-500/30 shrink-0">
+          <div class="p-3 rounded-xl text-severity text-xl border border-severity-line shrink-0">
             🚨
           </div>
           <div>
             <div class="flex items-center gap-2 mb-1">
-              <span class="text-red-400 text-[11px] font-bold tracking-widest uppercase">✦ Agente de Estoque (IA)</span>
+              <span class="text-severity text-[11px] font-bold tracking-widest uppercase">✦ Agente de Estoque (IA)</span>
+              <SeverityBadge severity="critical" />
             </div>
-            <h3 class="text-lg font-bold text-white mb-2">{{ itensCriticos.length }} itens em estado crítico</h3>
-            <p class="text-zinc-300 text-sm max-w-2xl leading-relaxed">
-              Os seguintes itens atingiram ou estão abaixo do nível mínimo tolerável: <span class="text-white font-semibold">{{ nomesItensCriticos }}</span>. Deseja disparar a ordem de compra?
+            <h3 class="text-lg font-bold text-zinc-900 dark:text-white mb-2">{{ itensCriticos.length }} itens em estado crítico</h3>
+            <p class="text-zinc-700 dark:text-zinc-300 text-sm max-w-2xl leading-relaxed">
+              Os seguintes itens atingiram ou estão abaixo do nível mínimo tolerável: <span class="text-zinc-900 dark:text-white font-semibold">{{ nomesItensCriticos }}</span>. Deseja disparar a ordem de compra?
             </p>
           </div>
         </div>
@@ -333,22 +335,22 @@ onMounted(() => {
     </div>
 
     <!-- ==================== TABELA ==================== -->
-    <section class="bg-zinc-900/40 border border-zinc-800 rounded-2xl shadow-xl overflow-hidden">
-      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-6 gap-4 border-b border-zinc-800 bg-zinc-900/70">
+    <section class="bg-white dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm dark:shadow-xl overflow-hidden">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-6 gap-4 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70">
         <div class="flex items-center gap-3">
-          <div class="p-2 border border-zinc-800 rounded-xl bg-zinc-950">
-            <svg class="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+          <div class="p-2 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-zinc-50 dark:bg-zinc-950">
+            <svg class="w-5 h-5 text-zinc-600 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
           </div>
           <div>
-            <h3 class="text-base font-bold text-white">Itens Cadastrados</h3>
-            <p v-if="!isLoading" class="text-xs text-zinc-400 mt-0.5">{{ totalFiltrado }} registros encontrados</p>
+            <h3 class="text-base font-bold text-zinc-900 dark:text-white">Itens Cadastrados</h3>
+            <p v-if="!isLoading" class="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5">{{ totalFiltrado }} registros encontrados</p>
             <p v-else class="text-xs text-zinc-500 mt-0.5 animate-pulse">Carregando registros...</p>
           </div>
         </div>
         <button
           @click="abrirModal()"
           :disabled="isLoading"
-          class="bg-white text-zinc-950 hover:bg-zinc-200 font-semibold px-4 py-2.5 rounded-xl text-xs sm:text-sm transition-all duration-200 shadow-lg shadow-white/5 flex items-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+          class="bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200 font-semibold px-4 py-2.5 rounded-xl text-xs sm:text-sm transition-all duration-200 shadow-lg shadow-white/5 flex items-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <span class="text-base leading-none font-bold">+</span>
           Novo item
@@ -357,7 +359,7 @@ onMounted(() => {
 
       <div class="overflow-x-auto">
         <table class="w-full text-left text-sm">
-          <thead class="text-xs text-zinc-400 uppercase bg-zinc-900/80 border-b border-zinc-800 tracking-wider">
+          <thead class="text-xs text-zinc-600 dark:text-zinc-400 uppercase bg-zinc-50 dark:bg-zinc-900/80 border-b border-zinc-200 dark:border-zinc-800 tracking-wider">
             <tr>
               <th class="px-6 py-4 font-semibold">Insumo</th>
               <th class="px-6 py-4 font-semibold">Unidade</th>
@@ -367,35 +369,35 @@ onMounted(() => {
               <th class="px-6 py-4 font-semibold text-right">Ações</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-zinc-800/60">
+          <tbody class="divide-y divide-zinc-200 dark:divide-zinc-800/60">
             <template v-if="isLoading">
-              <tr v-for="n in PAGE_SIZE" :key="n" class="animate-pulse bg-zinc-900/20">
-                <td class="px-6 py-5"><div class="h-4 bg-zinc-800 rounded w-3/4"></div></td>
-                <td class="px-6 py-5"><div class="h-4 bg-zinc-800 rounded w-1/2"></div></td>
-                <td class="px-6 py-5"><div class="h-4 bg-zinc-800 rounded w-1/2"></div></td>
-                <td class="px-6 py-5"><div class="h-4 bg-zinc-800 rounded w-1/2"></div></td>
-                <td class="px-6 py-5"><div class="h-6 bg-zinc-800 rounded-full w-20"></div></td>
-                <td class="px-6 py-5 text-right"><div class="h-4 bg-zinc-800 rounded w-12 ml-auto"></div></td>
+              <tr v-for="n in PAGE_SIZE" :key="n" class="animate-pulse bg-white dark:bg-zinc-900/20">
+                <td class="px-6 py-5"><div class="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-3/4"></div></td>
+                <td class="px-6 py-5"><div class="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-1/2"></div></td>
+                <td class="px-6 py-5"><div class="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-1/2"></div></td>
+                <td class="px-6 py-5"><div class="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-1/2"></div></td>
+                <td class="px-6 py-5"><div class="h-6 bg-zinc-200 dark:bg-zinc-800 rounded-full w-20"></div></td>
+                <td class="px-6 py-5 text-right"><div class="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-12 ml-auto"></div></td>
               </tr>
             </template>
 
             <tr v-else-if="itensFiltrados.length === 0">
-              <td colspan="6" class="px-6 py-12 text-center text-zinc-400 text-sm">
+              <td colspan="6" class="px-6 py-12 text-center text-zinc-600 dark:text-zinc-400 text-sm">
                 Nenhum insumo corresponde à sua busca ou cadastrado no banco de dados.
               </td>
             </tr>
 
-            <tr v-else v-for="item in itensFiltrados" :key="item.id" class="hover:bg-zinc-800/30 transition-colors group">
-              <td class="px-6 py-4 font-semibold text-zinc-100">{{ item.name || item.nome }}</td>
-              <td class="px-6 py-4 text-zinc-400">{{ item.unit || item.unidade }}</td>
-              <td class="px-6 py-4 font-bold text-zinc-100">{{ item.currentQuantity ?? item.quantidade }}</td>
-              <td class="px-6 py-4 text-zinc-400">{{ item.minimumQuantity ?? item.minimo }}</td>
+            <tr v-else v-for="item in itensFiltrados" :key="item.id" class="hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors group">
+              <td class="px-6 py-4 font-semibold text-zinc-900 dark:text-zinc-100">{{ item.name || item.nome }}</td>
+              <td class="px-6 py-4 text-zinc-600 dark:text-zinc-400">{{ item.unit || item.unidade }}</td>
+              <td class="px-6 py-4 font-bold text-zinc-900 dark:text-zinc-100">{{ item.currentQuantity ?? item.quantidade }}</td>
+              <td class="px-6 py-4 text-zinc-600 dark:text-zinc-400">{{ item.minimumQuantity ?? item.minimo }}</td>
               <td class="px-6 py-4">
                 <span
                   class="px-3 py-1 rounded-full text-[11px] font-bold border inline-block tracking-wider uppercase"
                   :class="verificarStatus(item) === 'Crítico'
-                    ? 'border-red-500/30 text-red-400 bg-red-500/10'
-                    : 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10'"
+                    ? 'border-red-500/30 text-red-600 dark:text-red-400 bg-red-500/10'
+                    : 'border-emerald-500/30 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10'"
                 >
                   {{ verificarStatus(item) }}
                 </span>
@@ -404,14 +406,14 @@ onMounted(() => {
                 <div class="flex items-center justify-end gap-2">
                   <button
                     @click="abrirModal(item)"
-                    class="p-2 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700/40 transition-colors"
+                    class="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white border border-zinc-300 dark:border-zinc-700/40 transition-colors"
                     title="Editar"
                   >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                   </button>
                   <button
                     @click="deletarItem(item.id)"
-                    class="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/20 transition-colors"
+                    class="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 border border-red-500/20 transition-colors"
                     title="Excluir"
                   >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
@@ -424,15 +426,15 @@ onMounted(() => {
       </div>
 
       <!-- PAGINAÇÃO -->
-      <div v-if="!isLoading && totalPaginas > 1" class="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t border-zinc-800 bg-zinc-900/60">
-        <p class="text-xs text-zinc-400">
-          Página <span class="text-white font-semibold">{{ currentPage }}</span> de {{ totalPaginas }} · {{ totalFiltrado }} itens no total
+      <div v-if="!isLoading && totalPaginas > 1" class="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60">
+        <p class="text-xs text-zinc-600 dark:text-zinc-400">
+          Página <span class="text-zinc-900 dark:text-white font-semibold">{{ currentPage }}</span> de {{ totalPaginas }} · {{ totalFiltrado }} itens no total
         </p>
         <div class="flex items-center gap-1.5">
           <button
             @click="irParaPagina(currentPage - 1)"
             :disabled="currentPage === 1"
-            class="px-3 py-1.5 rounded-xl text-xs font-semibold text-zinc-300 border border-zinc-700/60 bg-zinc-800 hover:bg-zinc-700 hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            class="px-3 py-1.5 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700/60 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Anterior
           </button>
@@ -442,15 +444,15 @@ onMounted(() => {
             @click="irParaPagina(p)"
             class="w-8 h-8 rounded-xl text-xs font-bold border transition-all flex items-center justify-center"
             :class="p === currentPage
-              ? 'bg-white text-zinc-950 border-white font-extrabold'
-              : 'text-zinc-400 border-zinc-800 bg-zinc-900 hover:text-white hover:border-zinc-700'"
+              ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 border-zinc-900 dark:border-white font-extrabold'
+              : 'text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-300 dark:hover:border-zinc-700'"
           >
             {{ p }}
           </button>
           <button
             @click="irParaPagina(currentPage + 1)"
             :disabled="currentPage === totalPaginas"
-            class="px-3 py-1.5 rounded-xl text-xs font-semibold text-zinc-300 border border-zinc-700/60 bg-zinc-800 hover:bg-zinc-700 hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            class="px-3 py-1.5 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700/60 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Próxima
           </button>
@@ -459,21 +461,21 @@ onMounted(() => {
     </section>
 
     <!-- ==================== MODAL ==================== -->
-    <div v-if="isModalOpen" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative space-y-4">
-        <h3 class="text-lg font-bold text-white border-b border-zinc-800 pb-4">
+    <div v-if="isModalOpen" class="fixed inset-0 bg-zinc-950/40 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative space-y-4">
+        <h3 class="text-lg font-bold text-zinc-900 dark:text-white border-b border-zinc-200 dark:border-zinc-800 pb-4">
           {{ isEditing ? 'Editar Insumo' : 'Novo Insumo' }}
         </h3>
 
         <form @submit.prevent="salvarItem" class="space-y-4">
           <!-- NOME -->
           <div>
-            <label class="block text-[11px] font-bold text-zinc-400 mb-2 uppercase tracking-wider">Nome do Insumo</label>
+            <label class="block text-[11px] font-bold text-zinc-600 dark:text-zinc-400 mb-2 uppercase tracking-wider">Nome do Insumo</label>
             <input
               v-model="formData.nome"
               type="text"
               required
-              class="w-full bg-zinc-950 text-zinc-100 border border-zinc-800 rounded-xl px-4 py-2.5 focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 outline-none transition-all placeholder-zinc-600 text-sm"
+              class="w-full bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-800 rounded-xl px-4 py-2.5 focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 outline-none transition-all placeholder-zinc-400 dark:placeholder-zinc-600 text-sm"
               placeholder="Ex: Filé Mignon"
             />
           </div>
@@ -481,22 +483,22 @@ onMounted(() => {
           <!-- QUANTIDADE + UNIDADE -->
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-[11px] font-bold text-zinc-400 mb-2 uppercase tracking-wider">Quantidade</label>
+              <label class="block text-[11px] font-bold text-zinc-600 dark:text-zinc-400 mb-2 uppercase tracking-wider">Quantidade</label>
               <input
                 v-model.number="formData.quantidade"
                 type="number"
                 step="0.01"
                 min="0"
                 required
-                class="no-spinner w-full bg-zinc-950 text-zinc-100 border border-zinc-800 rounded-xl px-4 py-2.5 focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 outline-none transition-all text-sm"
+                class="no-spinner w-full bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-800 rounded-xl px-4 py-2.5 focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 outline-none transition-all text-sm"
               />
             </div>
             <div>
-              <label class="block text-[11px] font-bold text-zinc-400 mb-2 uppercase tracking-wider">Unidade</label>
+              <label class="block text-[11px] font-bold text-zinc-600 dark:text-zinc-400 mb-2 uppercase tracking-wider">Unidade</label>
               <select
                 v-model="formData.unidade"
                 required
-                class="w-full bg-zinc-950 text-zinc-100 border border-zinc-800 rounded-xl px-4 py-2.5 focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 outline-none transition-all text-sm"
+                class="w-full bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-800 rounded-xl px-4 py-2.5 focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 outline-none transition-all text-sm"
               >
                 <option value="g">g</option>
                 <option value="kg">kg</option>
@@ -510,24 +512,24 @@ onMounted(() => {
           <!-- ESTOQUE MÍNIMO -->
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-[11px] font-bold text-zinc-400 mb-2 uppercase tracking-wider">Estoque Mínimo</label>
+              <label class="block text-[11px] font-bold text-zinc-600 dark:text-zinc-400 mb-2 uppercase tracking-wider">Estoque Mínimo</label>
               <input
                 v-model.number="formData.minimo"
                 type="number"
                 step="0.01"
                 min="0"
                 required
-                class="no-spinner w-full bg-zinc-950 text-zinc-100 border border-zinc-800 rounded-xl px-4 py-2.5 focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 outline-none transition-all text-sm"
+                class="no-spinner w-full bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-800 rounded-xl px-4 py-2.5 focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 outline-none transition-all text-sm"
               />
             </div>
             <div>
-              <label class="block text-[11px] font-bold text-zinc-400 mb-2 uppercase tracking-wider">Unidade</label>
+              <label class="block text-[11px] font-bold text-zinc-600 dark:text-zinc-400 mb-2 uppercase tracking-wider">Unidade</label>
               <div
                 aria-readonly="true"
-                class="w-full bg-zinc-950/50 text-zinc-500 border border-zinc-800/60 rounded-xl px-4 py-2.5 flex items-center justify-between select-none cursor-not-allowed text-sm"
+                class="w-full bg-zinc-50 dark:bg-zinc-950/50 text-zinc-500 border border-zinc-200 dark:border-zinc-800/60 rounded-xl px-4 py-2.5 flex items-center justify-between select-none cursor-not-allowed text-sm"
               >
                 <span>{{ formData.unidade || '—' }}</span>
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-zinc-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <rect x="3" y="11" width="18" height="11" rx="2" />
                   <path d="M7 11V7a5 5 0 0110 0v4" />
                 </svg>
@@ -535,18 +537,18 @@ onMounted(() => {
             </div>
           </div>
 
-          <div class="flex justify-end gap-3 pt-4 border-t border-zinc-800">
+          <div class="flex justify-end gap-3 pt-4 border-t border-zinc-200 dark:border-zinc-800">
             <button
               type="button"
               @click="fecharModal"
-              class="px-4 py-2.5 text-xs sm:text-sm font-semibold text-zinc-400 hover:text-white rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/60 transition-colors"
+              class="px-4 py-2.5 text-xs sm:text-sm font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700/60 transition-colors"
             >
               Cancelar
             </button>
             <button
               type="submit"
               :disabled="isSaving"
-              class="bg-white text-zinc-950 hover:bg-zinc-200 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-lg shadow-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-lg shadow-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {{ isSaving ? 'Salvando...' : (isEditing ? 'Atualizar Insumo' : 'Salvar Insumo') }}
             </button>
