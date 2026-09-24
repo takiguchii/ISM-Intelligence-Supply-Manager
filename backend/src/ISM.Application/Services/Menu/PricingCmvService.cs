@@ -81,15 +81,7 @@ public class PricingCmvService : IPricingCmvService, IPricingAgent
 
                 if (alert != null)
                 {
-                    bool created = await TryPersistAlertAsync(dish, alert, cancellationToken);
-                    if (created)
-                    {
-                        alertsCreated++;
-                    }
-                    else
-                    {
-                        alertsSkippedByDedup++;
-                    }
+                    alertsCreated++;
                 }
             }
         }
