@@ -14,6 +14,7 @@ public sealed class Dish : BaseEntity
     public string Description { get; set; } = string.Empty;
     public decimal Price { get; set; } 
     public decimal Cost { get; set; }
+    public decimal? TargetMarginPercent { get; set; } //margem de lucro esperada
     public bool IsActive { get; set; } = true;
     public bool Highlight { get; set; } = false;
     public string? UrlImage { get; set; }
