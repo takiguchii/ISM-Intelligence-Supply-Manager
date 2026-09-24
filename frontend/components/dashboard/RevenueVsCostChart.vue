@@ -27,25 +27,25 @@ const chartData = computed(() => ({
         {
             label: "Receita",
             data: props.data.map((d) => d.receita),
-            borderColor: "rgb(52, 211, 153)",
-            backgroundColor: "rgba(52, 211, 153, 0.15)",
+            borderColor: "rgb(16, 185, 129)",
+            backgroundColor: "rgba(16, 185, 129, 0.15)",
             fill: true,
             tension: 0.35,
             pointRadius: 3,
-            pointBackgroundColor: "rgb(9, 9, 11)",
-            pointBorderColor: "rgb(52, 211, 153)",
+            pointBackgroundColor: "rgb(255, 255, 255)",
+            pointBorderColor: "rgb(16, 185, 129)",
             pointBorderWidth: 2
         },
         {
             label: "Custo",
             data: props.data.map((d) => d.custo),
-            borderColor: "rgb(251, 191, 36)",
-            backgroundColor: "rgba(251, 191, 36, 0.12)",
+            borderColor: "rgb(245, 158, 11)",
+            backgroundColor: "rgba(245, 158, 11, 0.12)",
             fill: true,
             tension: 0.35,
             pointRadius: 3,
-            pointBackgroundColor: "rgb(9, 9, 11)",
-            pointBorderColor: "rgb(251, 191, 36)",
+            pointBackgroundColor: "rgb(255, 255, 255)",
+            pointBorderColor: "rgb(245, 158, 11)",
             pointBorderWidth: 2
         }
     ]
@@ -58,11 +58,11 @@ const chartOptions = computed(() => ({
     plugins: {
         legend: { display: false },
         tooltip: {
-            backgroundColor: "rgb(24, 24, 27)",
-            borderColor: "rgb(63, 63, 70)",
+            backgroundColor: "rgba(24, 24, 27, 0.9)",
+            borderColor: "rgba(63, 63, 70, 0.5)",
             borderWidth: 1,
-            titleColor: "rgb(228, 228, 231)",
-            bodyColor: "rgb(161, 161, 170)",
+            titleColor: "rgb(255, 255, 255)",
+            bodyColor: "rgb(228, 228, 231)",
             padding: 10,
             cornerRadius: 8,
             callbacks: {
@@ -76,7 +76,7 @@ const chartOptions = computed(() => ({
             ticks: { color: "rgb(113, 113, 122)", font: { size: 10, family: "monospace" } }
         },
         y: {
-            grid: { color: "rgba(63, 63, 70, 0.5)" },
+            grid: { color: "rgba(161, 161, 170, 0.15)" },
             ticks: {
                 color: "rgb(113, 113, 122)",
                 font: { size: 10 },
@@ -94,18 +94,18 @@ const totals = computed(() => {
 </script>
 
 <template>
-    <div class="p-6 rounded-2xl bg-zinc-900/80 border border-zinc-800/80 shadow-lg space-y-4">
+    <div class="p-6 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800/80 shadow-sm dark:shadow-lg space-y-4 transition-colors duration-200">
         <div class="flex items-center justify-between flex-wrap gap-3">
             <div>
-                <h3 class="text-sm font-semibold text-white">Receita vs. Custo</h3>
-                <p class="text-xs text-zinc-500">Últimos 7 dias</p>
+                <h3 class="text-sm font-bold text-zinc-900 dark:text-white">Receita vs. Custo</h3>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400">Últimos 7 dias</p>
             </div>
             <div class="flex items-center gap-4 text-xs">
-                <span class="flex items-center gap-1.5 text-zinc-400">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Receita
+                <span class="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Receita
                 </span>
-                <span class="flex items-center gap-1.5 text-zinc-400">
-                    <span class="w-2 h-2 rounded-full bg-amber-400"></span> Custo
+                <span class="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
+                    <span class="w-2 h-2 rounded-full bg-amber-500"></span> Custo
                 </span>
             </div>
         </div>
@@ -114,9 +114,9 @@ const totals = computed(() => {
             <Line :data="chartData" :options="chartOptions" />
         </div>
 
-        <div class="flex items-center justify-between text-xs text-zinc-500 pt-3 border-t border-zinc-800/80">
-            <span>Receita total: <span class="text-zinc-300 font-medium">{{ currency(totals.receita) }}</span></span>
-            <span>Margem: <span class="text-zinc-300 font-medium">{{ totals.margem.toFixed(1) }}%</span></span>
+        <div class="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 pt-3 border-t border-zinc-200 dark:border-zinc-800/80">
+            <span>Receita total: <span class="text-zinc-900 dark:text-zinc-200 font-bold">{{ currency(totals.receita) }}</span></span>
+            <span>Margem: <span class="text-zinc-900 dark:text-zinc-200 font-bold">{{ totals.margem.toFixed(1) }}%</span></span>
         </div>
     </div>
 </template>
