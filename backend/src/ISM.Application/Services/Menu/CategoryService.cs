@@ -117,7 +117,7 @@ public sealed class CategoryService : ICategoryService
         if (_currentUser.IsSuperAdmin)
         {
             if (requestRestaurantId <= 0)
-                return _currentUser.RestaurantId ?? 1;
+                throw new InvalidOperationException("Super Admin deve informar o RestaurantId.");
             return requestRestaurantId;
         }
 
