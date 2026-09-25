@@ -45,6 +45,11 @@ onMounted(async () => {
     return;
   }
 
+  if (authStore.currentUser?.role === "Waiter") {
+    await router.replace("/garcom");
+    return;
+  }
+
   const elapsedTime = Date.now() - startTime;
   const minDuration = 800;
   const remainingTime = Math.max(0, minDuration - elapsedTime);

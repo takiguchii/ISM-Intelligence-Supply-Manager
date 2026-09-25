@@ -59,9 +59,18 @@ const chefMenuItems: MenuItem[] = [
   { id: "disponibilidade", label: "Disponibilidade", icon: "gear", disabled: true }
 ];
 
-const menuItems = computed(() =>
-  authStore.currentUser?.role === "Chef" ? chefMenuItems : defaultMenuItems
-);
+const waiterMenuItems: MenuItem[] = [
+  { id: "atendimento", label: "Atendimento", icon: "tray", disabled: true },
+  { id: "cardapio", label: "Cardápio", icon: "menu", disabled: true },
+  { id: "pedidos", label: "Pedidos", icon: "tray", disabled: true },
+  { id: "mesas-comandas", label: "Mesas/Comandas", icon: "tray", disabled: true }
+];
+
+const menuItems = computed(() => {
+  if (authStore.currentUser?.role === "Chef") return chefMenuItems;
+  if (authStore.currentUser?.role === "Waiter") return waiterMenuItems;
+  return defaultMenuItems;
+});
 
 const router = useRouter();
 
