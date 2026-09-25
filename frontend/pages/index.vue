@@ -40,6 +40,11 @@ onMounted(async () => {
     return;
   }
 
+  if (authStore.currentUser?.role === "Chef") {
+    await router.replace("/chef");
+    return;
+  }
+
   const elapsedTime = Date.now() - startTime;
   const minDuration = 800;
   const remainingTime = Math.max(0, minDuration - elapsedTime);

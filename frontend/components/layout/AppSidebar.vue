@@ -33,7 +33,15 @@ vueOnMounted(() => {
   }
 });
 
-const menuItems = [
+type MenuItem = {
+  id: string;
+  label: string;
+  icon: string;
+  route?: string;
+  disabled?: boolean;
+};
+
+const defaultMenuItems: MenuItem[] = [
   { id: "dashboard", label: "Dashboard", icon: "dashboard", route: "/" },
   { id: "financeiro", label: "Financeiro", icon: "wallet", route: "/financeiro" },
   { id: "atendimento", label: "Atendimento", icon: "tray", route: "/atendimento" },
@@ -44,14 +52,26 @@ const menuItems = [
   { id: "configuracoes", label: "Configurações", icon: "gear", route: "/configuracoes" }
 ];
 
+const chefMenuItems: MenuItem[] = [
+  { id: "cozinha", label: "Cozinha", icon: "tray", disabled: true },
+  { id: "pedidos", label: "Pedidos", icon: "tray", disabled: true },
+  { id: "cardapio-fichas", label: "Cardápio/Fichas", icon: "menu", disabled: true },
+  { id: "disponibilidade", label: "Disponibilidade", icon: "gear", disabled: true }
+];
+
+const menuItems = computed(() =>
+  authStore.currentUser?.role === "Chef" ? chefMenuItems : defaultMenuItems
+);
+
 const router = useRouter();
 
 const activeItem = computed(() => {
-  const match = menuItems.find((m) => route.path === m.route || route.path.startsWith(m.route + "/"));
-  return match?.id ?? menuItems[0].id;
+  const match = menuItems.value.find((m) => m.route && (route.path === m.route || route.path.startsWith(m.route + "/")));
+  return match?.id ?? menuItems.value[0].id;
 });
 
-const selectItem = (item: typeof menuItems[number]) => {
+const selectItem = (item: MenuItem) => {
+  if (item.disabled || !item.route) return;
   router.push(item.route);
   if (window.innerWidth < 1024) emit("close");
 };
@@ -129,8 +149,10 @@ const userInitials = computed(() => {
           v-for="item in menuItems"
           :key="item.id"
           @click="selectItem(item)"
+          :disabled="item.disabled"
           :class="[
             'w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-left',
+            item.disabled && 'cursor-default opacity-70',
             activeItem === item.id
               ? (
                   themeStore.isDark
