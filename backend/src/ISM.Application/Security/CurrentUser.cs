@@ -19,6 +19,8 @@ public static class IsmRoles
 public static class IsmPolicies
 {
     public const string SuperAdminOnly = "SuperAdminOnly";
+    public const string RestaurantAdminOnly = "RestaurantAdminOnly";
+    public const string UserManagement = "UserManagement";
     public const string RestaurantManagerOrAbove = "RestaurantManagerOrAbove";
     public const string RestaurantAnyUser = "RestaurantAnyUser";
 }

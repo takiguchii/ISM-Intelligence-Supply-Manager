@@ -110,8 +110,16 @@ public static class ServiceCollectionExtensions
                 policy.RequireRole(IsmRoles.Admin)
                       .RequireAssertion(ctx =>
                           string.IsNullOrEmpty(ctx.User.FindFirstValue("restaurantId"))))
+            .AddPolicy(IsmPolicies.RestaurantAdminOnly, policy =>
+                policy.RequireRole(IsmRoles.Admin)
+                      .RequireAssertion(ctx =>
+                          int.TryParse(ctx.User.FindFirstValue("restaurantId"), out var restaurantId) && restaurantId > 0))
+            .AddPolicy(IsmPolicies.UserManagement, policy =>
+                policy.RequireRole(IsmRoles.Admin))
             .AddPolicy(IsmPolicies.RestaurantManagerOrAbove, policy =>
-                policy.RequireRole(IsmRoles.Admin, IsmRoles.Manager))
+                policy.RequireRole(IsmRoles.Admin, IsmRoles.Manager)
+                      .RequireAssertion(ctx =>
+                          int.TryParse(ctx.User.FindFirstValue("restaurantId"), out var restaurantId) && restaurantId > 0))
             .AddPolicy(IsmPolicies.RestaurantAnyUser, policy =>
                 policy.RequireRole(IsmRoles.Admin, IsmRoles.Manager, IsmRoles.Chef, IsmRoles.Waiter));
 

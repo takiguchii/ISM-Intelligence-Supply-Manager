@@ -40,7 +40,7 @@ public sealed class AuthController : ControllerBase
     }
 
     [HttpPost("register")]
-    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
+    [Authorize(Policy = IsmPolicies.RestaurantAdminOnly)]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

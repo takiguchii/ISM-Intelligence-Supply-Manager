@@ -75,16 +75,9 @@ public sealed class AuthService : IAuthService
         // 🔒 PONTO 4: Manager logado NÃO PODE criar Admin nem SuperAdmin
         if (!_currentUser.IsSuperAdmin)
         {
-            if (string.Equals(requestedRole, IsmRoles.Admin, StringComparison.OrdinalIgnoreCase) &&
+            if (!string.Equals(_currentUser.Role, IsmRoles.Admin, StringComparison.OrdinalIgnoreCase) ||
                 !_currentUser.RestaurantId.HasValue)
-            {
-                throw new UnauthorizedAccessException("Você não tem permissão para criar usuários Super Admin.");
-            }
-
-            if (!_currentUser.IsManagerOrAbove)
-            {
-                throw new UnauthorizedAccessException("Apenas gerentes e administradores podem criar usuários.");
-            }
+                throw new UnauthorizedAccessException("Apenas administradores do restaurante podem criar usuários.");
 
             // 🔒 Manager só pode criar usuário PROPRIO RESTAURANTE
             if (_currentUser.RestaurantId.HasValue)
@@ -92,13 +85,6 @@ public sealed class AuthService : IAuthService
                 if (!request.RestaurantId.HasValue || request.RestaurantId.Value != _currentUser.RestaurantId.Value)
                     throw new UnauthorizedAccessException("Você só pode criar usuários no seu próprio restaurante.");
 
-                // Manager NÃO pode criar Admin do sistema (só employees/Manager do mesmo restaurante)
-                if (string.Equals(requestedRole, IsmRoles.Admin, StringComparison.OrdinalIgnoreCase)
-                    && _currentUser.RestaurantId.HasValue)
-                {
-                    // Dentro do restaurante o Admin ainda é permitido, mas NÃO SuperAdmin (restaurantId null)
-                    // então OK, pois request.RestaurantId já está setado pro proprio restaurante
-                }
             }
 
             // Limite de plano (PONTO 5): só se for criar user em restaurante

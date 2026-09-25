@@ -71,8 +71,9 @@ public sealed class UserService : IUserService
 
         if (!_currentUser.IsSuperAdmin)
         {
-            if (!_currentUser.IsManagerOrAbove)
-                throw new UnauthorizedAccessException("Apenas gerentes podem editar usuários.");
+            if (!string.Equals(_currentUser.Role, IsmRoles.Admin, StringComparison.OrdinalIgnoreCase) ||
+                !_currentUser.RestaurantId.HasValue)
+                throw new UnauthorizedAccessException("Apenas administradores do restaurante podem editar usuários.");
 
             // Garantir que esta editando user do SEU restaurante
             if (_currentUser.RestaurantId.HasValue)
@@ -84,17 +85,6 @@ public sealed class UserService : IUserService
                 if (!request.RestaurantId.HasValue || request.RestaurantId.Value != _currentUser.RestaurantId.Value)
                     throw new UnauthorizedAccessException("Você não pode alterar o restaurante de um usuário.");
 
-                // Nao pode promover ninguem a SuperAdmin (RestaurantId null + Admin)
-                if (string.Equals(request.Role, IsmRoles.Admin, StringComparison.OrdinalIgnoreCase) &&
-                    !request.RestaurantId.HasValue)
-                    throw new UnauthorizedAccessException("Você não tem permissão para criar Super Admin.");
-
-                // Nao pode dar ROLE acima da sua (Manager vira Admin global)
-                if (string.Equals(request.Role, IsmRoles.Admin, StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(_currentUser.Role, IsmRoles.Manager, StringComparison.OrdinalIgnoreCase))
-                {
-                    // Manager pode promover a Admin DO MESMO restaurante (com restaurantId setado), só não pode SuperAdmin
-                }
             }
         }
 
@@ -135,8 +125,10 @@ public sealed class UserService : IUserService
         var user = await _userRepository.GetByIdAsync(id, cancellationToken)
             ?? throw new InvalidOperationException($"Usuário com ID {id} não existe.");
 
-        if (!_currentUser.IsSuperAdmin && !_currentUser.IsManagerOrAbove)
-            throw new UnauthorizedAccessException("Apenas gerentes podem ativar/desativar usuários.");
+        if (!_currentUser.IsSuperAdmin &&
+            (!string.Equals(_currentUser.Role, IsmRoles.Admin, StringComparison.OrdinalIgnoreCase) ||
+             !_currentUser.RestaurantId.HasValue))
+            throw new UnauthorizedAccessException("Apenas administradores do restaurante podem ativar/desativar usuários.");
 
         if (!_currentUser.IsSuperAdmin && _currentUser.RestaurantId.HasValue)
         {
@@ -158,8 +150,10 @@ public sealed class UserService : IUserService
         var user = await _userRepository.GetByIdAsync(id, cancellationToken);
         if (user == null) return false;
 
-        if (!_currentUser.IsSuperAdmin && !_currentUser.IsManagerOrAbove)
-            throw new UnauthorizedAccessException("Apenas gerentes podem deletar usuários.");
+        if (!_currentUser.IsSuperAdmin &&
+            (!string.Equals(_currentUser.Role, IsmRoles.Admin, StringComparison.OrdinalIgnoreCase) ||
+             !_currentUser.RestaurantId.HasValue))
+            throw new UnauthorizedAccessException("Apenas administradores do restaurante podem deletar usuários.");
 
         if (!_currentUser.IsSuperAdmin && _currentUser.RestaurantId.HasValue)
         {
