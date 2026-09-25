@@ -33,25 +33,33 @@ public static class WebApplicationExtensions
         {
             var context = services.GetRequiredService<IsmDbContext>();
 
-            if (app.Environment.IsDevelopment())
+            if (!context.Database.IsRelational())
             {
-                var applied = await context.Database.GetAppliedMigrationsAsync();
-                var defined = context.Database.GetMigrations();
-                var orphaned = applied.Except(defined).ToList();
-
-                if (orphaned.Any())
-                {
-                    logger.LogWarning("Banco possui migrations órfãs ({Orphaned}). Mantendo banco atual e apenas aplicando migrations pendentes...", string.Join(", ", orphaned));
-                }
+                await context.Database.EnsureCreatedAsync();
             }
+            else
+            {
+                if (app.Environment.IsDevelopment())
+                {
+                    var applied = await context.Database.GetAppliedMigrationsAsync();
+                    var defined = context.Database.GetMigrations();
+                    var orphaned = applied.Except(defined).ToList();
 
-            await context.Database.MigrateAsync();
+                    if (orphaned.Any())
+                    {
+                        logger.LogWarning("Banco possui migrations órfãs ({Orphaned}). Mantendo banco atual e apenas aplicando migrations pendentes...", string.Join(", ", orphaned));
+                    }
+                }
+
+                await context.Database.MigrateAsync();
+            }
             var seedDemoData = app.Configuration.GetValue<bool>("SEED_DEMO_DATA");
             await DbSeeder.SeedAsync(context, seedDemoData, app.Configuration["SEED_PASSWORD"]);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ocorreu um erro durante a inicialização do banco de dados.");
+            throw;
         }
     }
 }
