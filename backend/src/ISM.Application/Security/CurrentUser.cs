@@ -34,3 +34,10 @@ public interface ICurrentUser
     bool IsSuperAdmin { get; }
     bool IsManagerOrAbove { get; }
 }
+
+public interface IBackgroundTenantContext
+{
+    int? RestaurantId { get; }
+    void SetRestaurant(int restaurantId);
+    void Clear();
+}

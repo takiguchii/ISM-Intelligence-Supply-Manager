@@ -165,6 +165,7 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddScoped<ICurrentUser, CurrentUserApi>();
+        services.AddScoped<IBackgroundTenantContext, BackgroundTenantContext>();
         services.AddScoped<IPlanEnforcer, PlanEnforcer>();
         services.AddInfrastructure(databaseOptions);
         services.AddScoped<ISupplierService, SupplierService>();
