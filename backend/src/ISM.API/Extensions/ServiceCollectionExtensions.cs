@@ -115,9 +115,7 @@ public static class ServiceCollectionExtensions
                       .RequireAssertion(ctx =>
                           int.TryParse(ctx.User.FindFirstValue("restaurantId"), out var restaurantId) && restaurantId > 0))
             .AddPolicy(IsmPolicies.UserManagement, policy =>
-                policy.RequireRole(IsmRoles.Admin)
-                      .RequireAssertion(ctx =>
-                          int.TryParse(ctx.User.FindFirstValue("restaurantId"), out var restaurantId) && restaurantId > 0))
+                policy.RequireRole(IsmRoles.Admin))
             .AddPolicy(IsmPolicies.RestaurantManagerOrAbove, policy =>
                 policy.RequireRole(IsmRoles.Admin, IsmRoles.Manager)
                       .RequireAssertion(ctx =>
