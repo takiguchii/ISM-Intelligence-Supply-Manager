@@ -1,5 +1,12 @@
 <template>
-  <div class="flex h-screen bg-gray-50 dark:bg-zinc-950 font-sans relative overflow-hidden">
+  <main v-if="isOperationalWaiter" class="min-h-[calc(100vh-8rem)] flex items-center justify-center px-6">
+    <section class="max-w-xl w-full rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-400">Atendimento</p>
+      <h1 class="mt-3 text-3xl font-bold text-zinc-900 dark:text-white">Atendimento operacional</h1>
+      <p class="mt-3 text-sm text-zinc-600 dark:text-zinc-400">Em construção</p>
+    </section>
+  </main>
+  <div v-else class="flex h-screen bg-gray-50 dark:bg-zinc-950 font-sans relative overflow-hidden">
     
     <!-- ÁREA PRINCIPAL: MENU E FILTROS -->
     <main class="flex-1 flex flex-col h-full w-full relative">
@@ -252,8 +259,11 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useAuthStore } from '~/stores/auth'
 
 definePageMeta({ layout: 'default' })
+const authStore = useAuthStore()
+const isOperationalWaiter = computed(() => authStore.currentUser?.role === 'Waiter')
 
 // --- ESTADO LOCAL ---
 const comandaMesa = ref('')

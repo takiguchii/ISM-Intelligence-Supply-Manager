@@ -44,6 +44,7 @@ const authStore = useAuthStore()
 const router = useRouter()
 const config = useRuntimeConfig()
 const canManageMenu = computed(() => ["Admin", "Manager"].includes(authStore.currentUser?.role ?? ""))
+const isOperationalUser = computed(() => ["Chef", "Waiter"].includes(authStore.currentUser?.role ?? ""))
 
 const API_BASE =
   config.public?.apiBase ||
@@ -373,10 +374,9 @@ const deleteCategory = async (category: Category) => {
 
     successMessage.value = 'Categoria excluída com sucesso.'
 
-    await Promise.all([
-      fetchCategories(),
-      fetchDishes()
-    ])
+    if (!isOperationalUser.value) {
+      await Promise.all([fetchCategories(), fetchDishes()])
+    }
 
   } catch (error) {
     handleApiError(error)
@@ -915,7 +915,14 @@ onMounted(loadPage)
 </script>
 
 <template>
-  <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
+  <main v-if="isOperationalUser" class="min-h-[calc(100vh-8rem)] flex items-center justify-center px-6">
+    <section class="max-w-xl w-full rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-400">Cardápio operacional</p>
+      <h1 class="mt-3 text-3xl font-bold text-zinc-900 dark:text-white">Cardápio</h1>
+      <p class="mt-3 text-sm text-zinc-600 dark:text-zinc-400">Em construção</p>
+    </section>
+  </main>
+  <div v-else class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
     <AppLoader :visible="isLoading" />
 
     <!-- MAIN -->
