@@ -1,7 +1,6 @@
 services:
   mysql:
     image: mysql:8.4
-    container_name: ism-mysql-1
     hostname: mysql
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
@@ -29,7 +28,6 @@ services:
     build:
       context: .
       dockerfile: docker/backend/Dockerfile
-    container_name: ism-backend-1
     hostname: backend
     environment:
       ASPNETCORE_ENVIRONMENT: Development
@@ -69,7 +67,6 @@ services:
     build:
       context: .
       dockerfile: docker/frontend/Dockerfile
-    container_name: ism-frontend-1
     hostname: frontend
     environment:
       CHOKIDAR_USEPOLLING: "true"
@@ -96,7 +93,6 @@ services:
     build:
       context: .
       dockerfile: docker/backend/Dockerfile
-    container_name: ism-db-migrate-1
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: Server=mysql;Port=3306;Database=${MYSQL_DATABASE};User=${MYSQL_USER};Password=${MYSQL_PASSWORD};
@@ -123,7 +119,6 @@ services:
     build:
       context: .
       dockerfile: docker/backend/Dockerfile
-    container_name: ism-db-reset-1
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: Server=mysql;Port=3306;Database=${MYSQL_DATABASE};User=${MYSQL_USER};Password=${MYSQL_PASSWORD};
