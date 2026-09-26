@@ -37,7 +37,7 @@ public sealed class AuthorizationPolicyTests
     }
 
     [Fact]
-    public async Task BothPlatformSuperAdminAndRestaurantAdmin_ShouldBeAllowedOnUserManagementPolicy()
+    public async Task TenantManagersAndAdmins_ShouldBeAllowedOnUserManagementPolicy()
     {
         var superAdminResult = await AuthorizeAsync(Principal(IsmRoles.Admin), IsmPolicies.UserManagement);
         var restaurantAdminResult = await AuthorizeAsync(Principal(IsmRoles.Admin, 10), IsmPolicies.UserManagement);
@@ -45,7 +45,7 @@ public sealed class AuthorizationPolicyTests
 
         superAdminResult.Succeeded.Should().BeTrue();
         restaurantAdminResult.Succeeded.Should().BeTrue();
-        managerResult.Succeeded.Should().BeFalse();
+        managerResult.Succeeded.Should().BeTrue();
     }
 
     private static async Task<AuthorizationResult> AuthorizeAsync(ClaimsPrincipal principal, string policy)
