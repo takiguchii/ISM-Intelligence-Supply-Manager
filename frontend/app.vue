@@ -37,8 +37,12 @@ watchEffect(() => {
   const isLoginPage = route.path === "/login";
 
   if (isAuthenticated && isLoginPage) {
-    const redirect = (route.query.redirect as string) || "/";
-    router.replace(redirect);
+    const redirect = route.query.redirect as string;
+    router.replace(
+      redirect && redirect.startsWith("/") && canAccessRoute(authStore.currentUser, redirect)
+        ? redirect
+        : homeForUser(authStore.currentUser)
+    );
     return;
   }
 
@@ -49,6 +53,11 @@ watchEffect(() => {
         ? `/login?redirect=${encodeURIComponent(redirect)}`
         : "/login";
     router.replace(target);
+    return;
+  }
+
+  if (isAuthenticated && !isLoginPage && !canAccessRoute(authStore.currentUser, route.path)) {
+    router.replace(homeForUser(authStore.currentUser));
   }
 });
 

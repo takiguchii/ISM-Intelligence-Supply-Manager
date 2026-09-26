@@ -54,6 +54,17 @@ public sealed class FoundationAuthorizationTests : IClassFixture<FoundationWebAp
         (await _client.GetAsync("/api/restaurants")).StatusCode.Should().Be(HttpStatusCode.OK);
         (await _client.GetAsync("/api/stock/products")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
+
+    [Theory]
+    [InlineData(IsmRoles.Waiter)]
+    [InlineData(IsmRoles.Chef)]
+    [InlineData(IsmRoles.Admin)]
+    public async Task RestaurantUser_CanReadMenu(string role)
+    {
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", FoundationWebApplicationFactory.Token(role, 10));
+
+        (await _client.GetAsync("/api/menu/dishes")).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
 }
 
 public sealed class FoundationWebApplicationFactory : WebApplicationFactory<Program>

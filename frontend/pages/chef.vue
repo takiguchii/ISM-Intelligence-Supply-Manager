@@ -1,21 +1,9 @@
-<script setup lang="ts">
-import { useAuthStore } from "~/stores/auth";
-
-const authStore = useAuthStore();
-const router = useRouter();
-
-onMounted(() => {
-  authStore.initFromStorage();
-  if (authStore.currentUser?.role !== "Chef") {
-    router.replace("/");
-  }
-});
-</script>
-
 <template>
   <main class="min-h-[calc(100vh-8rem)] flex items-center justify-center px-6">
-    <p class="text-center text-xl font-semibold text-zinc-700 dark:text-zinc-200">
-      Perfil em contrução...
-    </p>
+    <section class="max-w-xl w-full rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-400">Cozinha</p>
+      <h1 class="mt-3 text-3xl font-bold text-zinc-900 dark:text-white">Área do Chef</h1>
+      <p class="mt-3 text-sm text-zinc-600 dark:text-zinc-400">Em construção</p>
+    </section>
   </main>
 </template>

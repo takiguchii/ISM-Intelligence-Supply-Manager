@@ -43,6 +43,7 @@ interface ApiError {
 const authStore = useAuthStore()
 const router = useRouter()
 const config = useRuntimeConfig()
+const canManageMenu = computed(() => ["Admin", "Manager"].includes(authStore.currentUser?.role ?? ""))
 
 const API_BASE =
   config.public?.apiBase ||
@@ -948,7 +949,7 @@ onMounted(loadPage)
             </div>
           </div>
 
-          <div class="flex flex-col sm:flex-row gap-3">
+          <div v-if="canManageMenu" class="flex flex-col sm:flex-row gap-3">
             <button type="button" @click="openCreateCategoryModal"
               class="px-4 py-2.5 rounded-xl border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white text-sm font-semibold transition">
               + Categoria
@@ -1037,7 +1038,7 @@ onMounted(loadPage)
             </p>
           </div>
 
-          <button type="button" @click="openCreateCategoryModal"
+          <button v-if="canManageMenu" type="button" @click="openCreateCategoryModal"
             class="text-xs font-semibold text-zinc-300 hover:text-white">
             Gerenciar
           </button>
@@ -1064,12 +1065,12 @@ onMounted(loadPage)
               {{ category.name }}
             </button>
 
-            <button type="button" @click="openEditCategoryModal(category)" class="px-2 text-zinc-500 hover:text-white"
+            <button v-if="canManageMenu" type="button" @click="openEditCategoryModal(category)" class="px-2 text-zinc-500 hover:text-white"
               title="Editar categoria">
               ✎
             </button>
 
-            <button type="button" @click="deleteCategory(category)" :disabled="isDeletingCategory === category.id
+            <button v-if="canManageMenu" type="button" @click="deleteCategory(category)" :disabled="isDeletingCategory === category.id
               " class="px-2 pr-3 text-zinc-500 hover:text-red-400 disabled:opacity-50" title="Excluir categoria">
               {{
                 isDeletingCategory === category.id
@@ -1166,7 +1167,7 @@ onMounted(loadPage)
             cadastre um novo prato.
           </p>
 
-          <button type="button" @click="openCreateDishModal"
+          <button v-if="canManageMenu" type="button" @click="openCreateDishModal"
             class="mt-5 px-4 py-2 rounded-xl bg-white text-zinc-950 text-sm font-semibold hover:bg-zinc-200 transition">
             Criar primeiro prato
           </button>
@@ -1259,7 +1260,7 @@ onMounted(loadPage)
               </div>
 
               <!-- ACTIONS -->
-              <div class="flex items-center gap-2 mt-5 pt-4 border-t border-zinc-800">
+              <div v-if="canManageMenu" class="flex items-center gap-2 mt-5 pt-4 border-t border-zinc-800">
                 <button type="button" @click="openEditDishModal(dish)"
                   class="flex-1 px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-xs font-semibold text-zinc-300 hover:text-white transition">
                   Editar
