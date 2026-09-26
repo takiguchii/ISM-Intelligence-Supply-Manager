@@ -46,6 +46,12 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 8080"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
     links:
       - "mysql:mysql"
       - "mysql:db"
@@ -70,7 +76,8 @@ services:
       NUXT_API_BASE: ${NUXT_API_BASE}
       NUXT_TELEMETRY_DISABLED: "1"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     links:
       - "backend:backend"
     ports:
@@ -141,6 +148,7 @@ services:
 
 volumes:
   mysql_data:
+    name: ism_mysql_${ISM_BRANCH_SLUG:-default}
   nuget_packages:
   frontend_node_modules:
   frontend_nuxt:
