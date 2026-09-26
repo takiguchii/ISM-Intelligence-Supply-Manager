@@ -8,7 +8,11 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const isAuthenticated = authStore.isAuthenticated;
 
   if (isAuthenticated && isLoginPage) {
-    return await navigateTo(homeForUser(authStore.currentUser), { replace: true });
+    const redirect = to.query.redirect as string;
+    const target = redirect && redirect.startsWith("/") && canAccessRoute(authStore.currentUser, redirect)
+      ? redirect
+      : homeForUser(authStore.currentUser);
+    return await navigateTo(target, { replace: true });
   }
 
   if (!isAuthenticated && !isLoginPage) {
