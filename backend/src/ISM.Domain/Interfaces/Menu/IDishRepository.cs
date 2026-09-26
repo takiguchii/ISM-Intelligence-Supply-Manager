@@ -10,4 +10,5 @@ public interface IDishRepository
     Task<Dish?> UpdateDishAsync(int id, Dish dish, IReadOnlyCollection<DishIngredient> ingredients, CancellationToken cancellationToken = default);
     Task<bool> DeleteDishAsync(int id, CancellationToken cancellationToken = default);
     Task<IReadOnlyCollection<Dish>> GetDishesByProductIdAsync(int productId, CancellationToken cancellationToken = default); //vai ajudar a recalcular o custo dos pratos
+    Task UpdateDishCostAsync(int dishId, decimal newCost, CancellationToken cancellationToken = default);
 }

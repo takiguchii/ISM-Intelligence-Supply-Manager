@@ -1,8 +1,10 @@
 using ISM.Application.Interfaces;
 using ISM.Application.DTOs;
+using ISM.Application.Interfaces.Menu;
 using ISM.Application.Security;
 using ISM.Domain.Modules.Stock.Entities;
 using ISM.Domain.Interfaces;
+using ISM.Application.Services;
 
 namespace ISM.Application.Services.Stock;
 
@@ -11,15 +13,18 @@ public sealed class ProductService : IProductService
     private readonly IProductRepository _productRepository;
     private readonly ICurrentUser _currentUser;
     private readonly IPlanEnforcer _planEnforcer;
+    private readonly IPricingCmvService _pricingCmvService;
 
     public ProductService(
         IProductRepository productRepository,
         ICurrentUser currentUser,
-        IPlanEnforcer planEnforcer)
+        IPlanEnforcer planEnforcer,
+        IPricingCmvService pricingCmvService)
     {
         _productRepository = productRepository;
         _currentUser = currentUser;
         _planEnforcer = planEnforcer;
+        _pricingCmvService = pricingCmvService;
     }
 
     public async Task<ProductResponse?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
@@ -132,6 +137,10 @@ public sealed class ProductService : IProductService
         };
 
         await _productRepository.UpdateAsync(updated, cancellationToken);
+        if (existing.AverageCost != request.AverageCost)
+        {
+            await _pricingCmvService.RecalculateForProductAsync(id, cancellationToken);
+        }
         return Map(updated);
     }
 

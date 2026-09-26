@@ -116,4 +116,11 @@ public sealed class DishRepository : IDishRepository
 
         return await query;
     }
+
+    public async Task UpdateDishCostAsync(int dishId, decimal newCost, CancellationToken cancellationToken = default)
+    {
+        await _dbContext.Dishes
+            .Where(dish => dish.Id == dishId)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(dish => dish.Cost, newCost), cancellationToken);
+    }
 }

@@ -1,8 +1,11 @@
 using System.Globalization;
+using ISM.Application.Interfaces;
 using ISM.Application.Interfaces.DataImport;
+using ISM.Application.Interfaces.Menu;
 using ISM.Domain.Modules.DataImport;
 using ISM.Domain.Modules.Stock.Entities;
 using ISM.Domain.Interfaces;
+using ISM.Application.Services;
 
 namespace ISM.Application.Services.DataImport;
 
@@ -13,13 +16,20 @@ public sealed class CsvProductImporter : CsvImporterBase
 
     private readonly IProductRepository _productRepo;
     private Dictionary<string, Product>? _existingByName;
+    private readonly IPricingCmvService _pricingCmvService;
+
 
     public CsvProductImporter(
         IProductRepository productRepo,
+        IPricingCmvService pricingCmvService,
         IImportAuditRepository auditRepo,
         IImportFileReaderResolver fileReaders)
         : base(auditRepo, fileReaders)
-        => _productRepo = productRepo;
+    {
+        _productRepo = productRepo;
+        _pricingCmvService = pricingCmvService;
+    }
+
 
     protected override async Task OnBeforeRowsAsync(ImportContext context, CancellationToken ct)
     {
@@ -27,6 +37,7 @@ public sealed class CsvProductImporter : CsvImporterBase
             .Where(p => p.RestaurantId == context.RestaurantId)
             .GroupBy(p => p.Name.Trim(), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+        
     }
 
     protected override async Task<int> ImportRowAsync(
@@ -46,12 +57,19 @@ public sealed class CsvProductImporter : CsvImporterBase
         if (strategy == UpsertStrategy.MergeByNameAndRestaurant &&
             _existingByName!.TryGetValue(key, out var existing))
         {
+            decimal previousCost = existing.AverageCost;
             existing.Unit = norm.Unit;
             existing.CurrentQuantity = norm.Qtd;
             existing.MinimumQuantity = norm.Min > 0 ? norm.Min : existing.MinimumQuantity;
             existing.AverageCost = norm.CustoMedio > 0 ? norm.CustoMedio : existing.AverageCost;
             existing.UpdatedAtUtc = DateTime.UtcNow;
+
+           
             await _productRepo.UpdateAsync(existing, ct);
+            if (existing.AverageCost != previousCost)
+            {
+                await _pricingCmvService.RecalculateForProductAsync(existing.Id, ct);
+            }
             entity = existing;
         }
         else
