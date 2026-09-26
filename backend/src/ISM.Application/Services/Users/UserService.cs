@@ -71,9 +71,8 @@ public sealed class UserService : IUserService
 
         if (!_currentUser.IsSuperAdmin)
         {
-            if (!string.Equals(_currentUser.Role, IsmRoles.Admin, StringComparison.OrdinalIgnoreCase) ||
-                !_currentUser.RestaurantId.HasValue)
-                throw new UnauthorizedAccessException("Apenas administradores do restaurante podem editar usuários.");
+            if (!IsTenantManager())
+                throw new UnauthorizedAccessException("Apenas administradores ou gerentes do restaurante podem editar usuários.");
 
             // Garantir que esta editando user do SEU restaurante
             if (_currentUser.RestaurantId.HasValue)
@@ -107,6 +106,9 @@ public sealed class UserService : IUserService
 
         var normalizedRole = IsmRoles.Normalize(request.Role);
 
+        if (!_currentUser.IsSuperAdmin && (!CanManageRole(user.Role) || !CanManageRole(normalizedRole)))
+            throw new UnauthorizedAccessException("Você não pode editar usuários com este cargo.");
+
         user.Name = request.Name;
         user.Email = request.Email;
         user.Role = normalizedRole;
@@ -125,16 +127,17 @@ public sealed class UserService : IUserService
         var user = await _userRepository.GetByIdAsync(id, cancellationToken)
             ?? throw new InvalidOperationException($"Usuário com ID {id} não existe.");
 
-        if (!_currentUser.IsSuperAdmin &&
-            (!string.Equals(_currentUser.Role, IsmRoles.Admin, StringComparison.OrdinalIgnoreCase) ||
-             !_currentUser.RestaurantId.HasValue))
-            throw new UnauthorizedAccessException("Apenas administradores do restaurante podem ativar/desativar usuários.");
+        if (!_currentUser.IsSuperAdmin && !IsTenantManager())
+            throw new UnauthorizedAccessException("Apenas administradores ou gerentes do restaurante podem ativar/desativar usuários.");
 
         if (!_currentUser.IsSuperAdmin && _currentUser.RestaurantId.HasValue)
         {
             if (user.RestaurantId != _currentUser.RestaurantId.Value)
                 throw new UnauthorizedAccessException("Você só pode ativar/desativar usuários do seu próprio restaurante.");
         }
+
+        if (!_currentUser.IsSuperAdmin && !CanManageRole(user.Role))
+            throw new UnauthorizedAccessException("Você não pode alterar usuários com este cargo.");
 
         user.IsActive = isActive;
         user.UpdatedAtUtc = DateTime.UtcNow;
@@ -150,16 +153,17 @@ public sealed class UserService : IUserService
         var user = await _userRepository.GetByIdAsync(id, cancellationToken);
         if (user == null) return false;
 
-        if (!_currentUser.IsSuperAdmin &&
-            (!string.Equals(_currentUser.Role, IsmRoles.Admin, StringComparison.OrdinalIgnoreCase) ||
-             !_currentUser.RestaurantId.HasValue))
-            throw new UnauthorizedAccessException("Apenas administradores do restaurante podem deletar usuários.");
+        if (!_currentUser.IsSuperAdmin && !IsTenantManager())
+            throw new UnauthorizedAccessException("Apenas administradores ou gerentes do restaurante podem deletar usuários.");
 
         if (!_currentUser.IsSuperAdmin && _currentUser.RestaurantId.HasValue)
         {
             if (user.RestaurantId != _currentUser.RestaurantId.Value)
                 return false;
         }
+
+        if (!_currentUser.IsSuperAdmin && !CanManageRole(user.Role))
+            throw new UnauthorizedAccessException("Você não pode remover usuários com este cargo.");
 
         _userRepository.Delete(user);
         return await _userRepository.SaveChangesAsync(cancellationToken);
@@ -176,4 +180,12 @@ public sealed class UserService : IUserService
         CreatedAtUtc = user.CreatedAtUtc,
         UpdatedAtUtc = user.UpdatedAtUtc
     };
+
+    private bool IsTenantManager() =>
+        _currentUser.Role is IsmRoles.Admin or IsmRoles.Manager && _currentUser.RestaurantId.HasValue;
+
+    private bool CanManageRole(string role) =>
+        _currentUser.Role == IsmRoles.Admin
+            ? role is IsmRoles.Manager or IsmRoles.Chef or IsmRoles.Waiter
+            : role is IsmRoles.Chef or IsmRoles.Waiter;
 }

@@ -12,7 +12,6 @@ public sealed class UserManagementAuthorizationTests
     [Theory]
     [InlineData(IsmRoles.Waiter)]
     [InlineData(IsmRoles.Chef)]
-    [InlineData(IsmRoles.Manager)]
     public async Task UpdateUserAsync_ShouldRejectNonRestaurantAdmin(string role)
     {
         var service = CreateService(role, 10);
@@ -20,6 +19,28 @@ public sealed class UserManagementAuthorizationTests
         var action = () => service.UpdateUserAsync(2, Request(10, IsmRoles.Admin));
 
         await action.Should().ThrowAsync<UnauthorizedAccessException>();
+    }
+
+    [Theory]
+    [InlineData(IsmRoles.Chef, true)]
+    [InlineData(IsmRoles.Waiter, true)]
+    [InlineData(IsmRoles.Manager, false)]
+    [InlineData(IsmRoles.Admin, false)]
+    public async Task UpdateUserAsync_ManagerCanOnlyManageChefAndWaiter(string targetRole, bool allowed)
+    {
+        var userRepository = new InMemoryUserRepository(new User
+        {
+            Id = 2, Name = "Colaborador", Email = "colaborador@ism.test", Role = targetRole,
+            RestaurantId = 10, IsActive = true, CreatedAtUtc = DateTime.UtcNow
+        });
+        var service = new UserService(userRepository, new InMemoryRestaurantRepository(10),
+            new TestCurrentUser(IsmRoles.Manager, 10));
+        var action = () => service.UpdateUserAsync(2, Request(10, IsmRoles.Waiter));
+
+        if (allowed)
+            await action.Should().NotThrowAsync();
+        else
+            await action.Should().ThrowAsync<UnauthorizedAccessException>();
     }
 
     [Fact]

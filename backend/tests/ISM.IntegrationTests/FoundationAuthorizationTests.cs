@@ -31,12 +31,18 @@ public sealed class FoundationAuthorizationTests : IClassFixture<FoundationWebAp
     [Theory]
     [InlineData(IsmRoles.Waiter)]
     [InlineData(IsmRoles.Chef)]
-    [InlineData(IsmRoles.Manager)]
-    public async Task UsersEndpoint_NonAdminRestaurantRole_ReturnsForbidden(string role)
+    public async Task UsersEndpoint_NonManagerRestaurantRole_ReturnsForbidden(string role)
     {
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", FoundationWebApplicationFactory.Token(role, 10));
 
         (await _client.GetAsync("/api/users")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Manager_CanAccessTenantUserManagementEndpoint()
+    {
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", FoundationWebApplicationFactory.Token(IsmRoles.Manager, 10));
+        (await _client.GetAsync("/api/users")).StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
