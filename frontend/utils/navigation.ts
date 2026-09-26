@@ -18,12 +18,12 @@ export const navigationItems: readonly NavigationItem[] = [
   { id: "dashboard", label: "Dashboard", icon: "dashboard", route: "/", roles: ["Admin", "Manager"] },
   { id: "financeiro", label: "Financeiro", icon: "wallet", route: "/financeiro", roles: managementRoles, requiresRestaurant: true },
   { id: "atendimento", label: "Atendimento", icon: "tray", route: "/atendimento", roles: ["Admin", "Manager", "Waiter"], requiresRestaurant: true },
-  { id: "cozinha", label: "Cozinha", icon: "tray", route: "/cozinha", roles: ["Chef"], requiresRestaurant: true },
+  { id: "cozinha", label: "Cozinha", icon: "tray", route: "/cozinha", roles: ["Admin", "Manager", "Chef"], requiresRestaurant: true },
   { id: "cardapio", label: "Cardápio", icon: "menu", route: "/cardapio", roles: restaurantRoles, requiresRestaurant: true },
   { id: "pedidos", label: "Pedidos", icon: "tray", route: "/pedidos", roles: restaurantRoles, requiresRestaurant: true },
   { id: "estoque", label: "Estoque", icon: "boxes", route: "/estoque", roles: managementRoles, requiresRestaurant: true },
   { id: "fornecedores", label: "Fornecedores", icon: "truck", route: "/fornecedores", roles: managementRoles, requiresRestaurant: true },
-  { id: "funcionarios", label: "Funcionários", icon: "users", route: "/funcionarios", roles: ["Admin"] },
+  { id: "funcionarios", label: "Funcionários", icon: "users", route: "/funcionarios", roles: managementRoles, requiresRestaurant: true },
   { id: "integracoes", label: "Integrações", icon: "plug", route: "/integracoes", roles: managementRoles, requiresRestaurant: true },
   { id: "configuracoes", label: "Configurações", icon: "gear", route: "/configuracoes", roles: managementRoles, requiresRestaurant: true }
 ];
