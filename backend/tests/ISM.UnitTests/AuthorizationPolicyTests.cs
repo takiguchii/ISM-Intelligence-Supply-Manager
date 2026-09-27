@@ -36,6 +36,8 @@ public sealed class AuthorizationPolicyTests
         result.Succeeded.Should().BeTrue();
     }
 
+
+
     [Fact]
     public async Task TenantManagersAndAdmins_ShouldBeAllowedOnUserManagementPolicy()
     {

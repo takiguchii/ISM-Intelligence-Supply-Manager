@@ -217,6 +217,7 @@ public class ImportFileReaderResolverTests
         ws.Cell(2, 1).Value = "Arroz";
         var ms = new MemoryStream();
         wb.SaveAs(ms);
+        ms.Position = 0;
 
         var content = await CreateResolver().ReadAsync(ms, "planilha.xlsx",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", CancellationToken.None);

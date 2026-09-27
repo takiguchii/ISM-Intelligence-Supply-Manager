@@ -14,7 +14,7 @@ const isSidebarOpen = ref(false);
       'min-h-screen flex flex-col font-sans transition-colors duration-200',
       themeStore.isDark
         ? 'bg-zinc-950 text-white selection:bg-zinc-800 selection:text-white'
-        : 'bg-zinc-50 text-zinc-900 selection:bg-indigo-100 selection:text-indigo-950'
+        : 'bg-white text-[#2B2B2B] selection:bg-[#D4D4D4] selection:text-[#2B2B2B]'
     ]"
   >
     <template v-if="showContent">

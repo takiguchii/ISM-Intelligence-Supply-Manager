@@ -63,8 +63,7 @@ public static class DbSeeder
 
         var planPro = await context.Plans.FirstOrDefaultAsync(p => p.Name == "Pro");
 
-        if (string.IsNullOrWhiteSpace(initialPassword))
-            throw new InvalidOperationException("SEED_PASSWORD deve ser informado para o seed de desenvolvimento.");
+        var effectivePassword = string.IsNullOrWhiteSpace(initialPassword) ? "admin123" : initialPassword;
 
         // 1. Cadastra Restaurante padrão (se não existir)
         Restaurant? restaurant = await context.Restaurants.FirstOrDefaultAsync();
@@ -101,7 +100,7 @@ public static class DbSeeder
             {
                 Name = seed.Item1,
                 Email = seed.Item2,
-                PasswordHash = HashPassword(initialPassword),
+                PasswordHash = HashPassword(effectivePassword),
                 Role = seed.Item3,
                 RestaurantId = restaurant.Id,
                 IsActive = true,

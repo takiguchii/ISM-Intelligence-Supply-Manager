@@ -922,7 +922,7 @@ onMounted(loadPage)
       <p class="mt-3 text-sm text-zinc-600 dark:text-zinc-400">Em construção</p>
     </section>
   </main>
-  <div v-else class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
+  <div v-else class="light-page max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
     <AppLoader :visible="isLoading" />
 
     <!-- MAIN -->
@@ -1293,7 +1293,7 @@ onMounted(loadPage)
          DISH MODAL
     -->
     <Teleport to="body">
-      <div v-if="showDishModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div v-if="showDishModal" class="light-menu-modal fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click="closeDishModal" />
 
         <div
@@ -1547,7 +1547,7 @@ ingredient, index
          CATEGORY MODAL
     -->
     <Teleport to="body">
-      <div v-if="showCategoryModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div v-if="showCategoryModal" class="light-menu-modal fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click="closeCategoryModal" />
 
         <div class="relative w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl">
