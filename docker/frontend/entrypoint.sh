@@ -12,7 +12,7 @@ fi
 
 if [ ! -d "/workspace/frontend/node_modules" ] || [ ! -f "$LOCK_HASH_FILE" ] || [ "$(cat "$LOCK_HASH_FILE" 2>/dev/null)" != "$CURRENT_HASH" ]; then
   echo "Dependencies missing or changed. Installing frontend dependencies..."
-  npm install --prefer-offline --no-audit
+  npm ci --prefer-offline --no-audit
   mkdir -p /workspace/frontend/node_modules
   echo "$CURRENT_HASH" > "$LOCK_HASH_FILE"
 else

@@ -16,7 +16,6 @@ public static class DbSeeder
 
     public static async Task SeedAsync(
         IsmDbContext context,
-        bool seedDemoData,
         string? initialPassword)
     {
         // 0. Planos SaaS (Free / Pro / Enterprise)
@@ -64,11 +63,7 @@ public static class DbSeeder
 
         var planPro = await context.Plans.FirstOrDefaultAsync(p => p.Name == "Pro");
 
-        if (!seedDemoData)
-            return;
-
-        if (string.IsNullOrWhiteSpace(initialPassword))
-            throw new InvalidOperationException("SEED_PASSWORD deve ser informado quando SEED_DEMO_DATA=true.");
+        var effectivePassword = string.IsNullOrWhiteSpace(initialPassword) ? "admin123" : initialPassword;
 
         // 1. Cadastra Restaurante padrão (se não existir)
         Restaurant? restaurant = await context.Restaurants.FirstOrDefaultAsync();
@@ -88,57 +83,31 @@ public static class DbSeeder
             await context.SaveChangesAsync();
         }
 
-        // 2. Usuários padrão por cargo (Admin, Manager, Chef, Waiter)
-        if (!await context.Users.AnyAsync())
+        // 2. Usuários padrão por cargo (Admin, Manager, Chef, Waiter), idempotente por e-mail.
+        var defaultUsers = new[]
         {
-            var defaultPassword = HashPassword(initialPassword);
-            var users = new List<User>
+            ("Super Administrador ISM", "admin@ism.com.br", "Admin"),
+            ("Mariana Gerente", "gerente@ism.com.br", "Manager"),
+            ("Chef Carlos Silva", "chef@ism.com.br", "Chef"),
+            ("Lucas Garçom", "garcom@ism.com.br", "Waiter")
+        };
+        var knownEmails = await context.Users
+            .Where(user => defaultUsers.Select(seed => seed.Item2).Contains(user.Email))
+            .Select(user => user.Email)
+            .ToListAsync();
+        var missingUsers = defaultUsers.Where(seed => !knownEmails.Contains(seed.Item2, StringComparer.OrdinalIgnoreCase))
+            .Select(seed => new User
             {
-                new()
-                {
-                    Name = "Super Administrador ISM",
-                    Email = "admin@ism.com.br",
-                    PasswordHash = defaultPassword,
-                    Role = "Admin",
-                    RestaurantId = restaurant.Id,
-                    IsActive = true,
-                    CreatedAtUtc = DateTime.UtcNow
-                },
-                new()
-                {
-                    Name = "Mariana Gerente",
-                    Email = "gerente@ism.com.br",
-                    PasswordHash = defaultPassword,
-                    Role = "Manager",
-                    RestaurantId = restaurant.Id,
-                    IsActive = true,
-                    CreatedAtUtc = DateTime.UtcNow
-                },
-                new()
-                {
-                    Name = "Chef Carlos Silva",
-                    Email = "chef@ism.com.br",
-                    PasswordHash = defaultPassword,
-                    Role = "Chef",
-                    RestaurantId = restaurant.Id,
-                    IsActive = true,
-                    CreatedAtUtc = DateTime.UtcNow
-                },
-                new()
-                {
-                    Name = "Lucas Garçom",
-                    Email = "garcom@ism.com.br",
-                    PasswordHash = defaultPassword,
-                    Role = "Waiter",
-                    RestaurantId = restaurant.Id,
-                    IsActive = true,
-                    CreatedAtUtc = DateTime.UtcNow
-                }
-            };
-
-            await context.Users.AddRangeAsync(users);
-            await context.SaveChangesAsync();
-        }
+                Name = seed.Item1,
+                Email = seed.Item2,
+                PasswordHash = HashPassword(effectivePassword),
+                Role = seed.Item3,
+                RestaurantId = restaurant.Id,
+                IsActive = true,
+                CreatedAtUtc = DateTime.UtcNow
+            });
+        await context.Users.AddRangeAsync(missingUsers);
+        await context.SaveChangesAsync();
 
         // 3. Fornecedores diversificados
         if (!await context.Suppliers.AnyAsync())

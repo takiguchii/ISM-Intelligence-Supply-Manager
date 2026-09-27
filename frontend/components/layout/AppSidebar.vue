@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, watchEffect, computed, onMounted as vueOnMounted, onBeforeUnmount as vueOnBeforeUnmount } from "vue";
+import { ref, computed, onMounted as vueOnMounted, onBeforeUnmount as vueOnBeforeUnmount } from "vue";
 import { useAuthStore } from "~/stores/auth";
 import { useThemeStore } from "~/stores/theme";
+import { navigationForUser, type NavigationItem } from "~/utils/navigation";
 
 const props = defineProps<{
   isOpen: boolean;
@@ -33,25 +34,17 @@ vueOnMounted(() => {
   }
 });
 
-const menuItems = [
-  { id: "dashboard", label: "Dashboard", icon: "dashboard", route: "/" },
-  { id: "financeiro", label: "Financeiro", icon: "wallet", route: "/financeiro" },
-  { id: "atendimento", label: "Atendimento", icon: "tray", route: "/atendimento" },
-  { id: "cardapio", label: "Cardápio", icon: "menu", route: "/cardapio" },
-  { id: "estoque", label: "Estoque", icon: "boxes", route: "/estoque" },
-  { id: "fornecedores", label: "Fornecedores", icon: "truck", route: "/fornecedores" },
-  { id: "integracoes", label: "Integrações", icon: "plug", route: "/integracoes" },
-  { id: "configuracoes", label: "Configurações", icon: "gear", route: "/configuracoes" }
-];
+const menuItems = computed(() => navigationForUser(authStore.currentUser));
 
 const router = useRouter();
 
 const activeItem = computed(() => {
-  const match = menuItems.find((m) => route.path === m.route || route.path.startsWith(m.route + "/"));
-  return match?.id ?? menuItems[0].id;
+  const match = menuItems.value.find((m) => route.path === m.route || route.path.startsWith(m.route + "/"));
+  return match?.id ?? menuItems.value[0].id;
 });
 
-const selectItem = (item: typeof menuItems[number]) => {
+const selectItem = (item: MenuItem) => {
+  if (!item.route) return;
   router.push(item.route);
   if (window.innerWidth < 1024) emit("close");
 };
@@ -184,6 +177,10 @@ const userInitials = computed(() => {
           <!-- Atendimento Icon (Bandeja/Comanda) -->
           <svg v-else-if="item.icon === 'tray'" class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z"></path>
+          </svg>
+
+          <svg v-else-if="item.icon === 'users'" class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-4-4h-1m-4 6H2v-2a4 4 0 014-4h3a4 4 0 014 4v2zm-5-9a4 4 0 100-8 4 4 0 000 8z" />
           </svg>
 
           <span>{{ item.label }}</span>

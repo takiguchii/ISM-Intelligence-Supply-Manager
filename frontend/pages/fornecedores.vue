@@ -228,7 +228,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
+  <div class="light-page max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
     <AppLoader :visible="isLoading" />
 
     <!-- Notifications Alert -->

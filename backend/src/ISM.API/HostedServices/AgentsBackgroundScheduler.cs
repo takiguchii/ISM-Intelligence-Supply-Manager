@@ -1,6 +1,8 @@
 using ISM.Application.Interfaces.Menu;
 using ISM.Application.Interfaces.Stock;
 using ISM.Application.Interfaces.Suppliers;
+using ISM.Application.Security;
+using ISM.Domain.Interfaces;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -67,61 +69,31 @@ public sealed class AgentsBackgroundScheduler : BackgroundService
 
     private async Task RunTickAsync(CancellationToken ct)
     {
-        using var scope = _scopeFactory.CreateScope();
-        var stockAgent = scope.ServiceProvider.GetRequiredService<IStockAgent>();
-        var supplierAgent = scope.ServiceProvider.GetRequiredService<ISupplierAgent>();
-        var pricingAgent = scope.ServiceProvider.GetRequiredService<IPricingAgent>();
+        using var discoveryScope = _scopeFactory.CreateScope();
+        var restaurants = await discoveryScope.ServiceProvider
+            .GetRequiredService<IRestaurantRepository>()
+            .GetAllRestaurantsAsync(ct);
 
-        try
+        foreach (var restaurant in restaurants)
         {
-            _logger.LogInformation("Iniciando tick StockAgent");
-            var stockSummary = await stockAgent.RunAsync(null, ct);
-            _logger.LogInformation(
-                "StockAgent finalizado: Restaurantes={Restaurantes} Produtos={Produtos} Alertas={Alertas} SkipDedup={SkipDedup} Duração={DuracaoMs}ms",
-                stockSummary.RestaurantsProcessed,
-                stockSummary.EntitiesEvaluated,
-                stockSummary.AlertsCreated,
-                stockSummary.AlertsSkippedByDedup,
-                stockSummary.Duration.TotalMilliseconds);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Erro ao executar tick StockAgent");
-        }
+            using var scope = _scopeFactory.CreateScope();
+            var tenantContext = scope.ServiceProvider.GetRequiredService<IBackgroundTenantContext>();
+            tenantContext.SetRestaurant(restaurant.Id);
 
-        try
-        {
-            _logger.LogInformation("Iniciando tick SupplierAgent");
-            var supplierSummary = await supplierAgent.RunAsync(null, ct);
-            _logger.LogInformation(
-                "SupplierAgent finalizado: Restaurantes={Restaurantes} Entidades={Entidades} Alertas={Alertas} SkipDedup={SkipDedup} Duração={DuracaoMs}ms",
-                supplierSummary.RestaurantsProcessed,
-                supplierSummary.EntitiesEvaluated,
-                supplierSummary.AlertsCreated,
-                supplierSummary.AlertsSkippedByDedup,
-                supplierSummary.Duration.TotalMilliseconds);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Erro ao executar tick SupplierAgent");
-        }
-
-        try
-        {
-            _logger.LogInformation("Iniciando tick PricingAgent");
-            var pricingSummary = await pricingAgent.RunAsync(null, ct);
-            _logger.LogInformation(
-                "PricingAgent finalizado: Restaurantes={Restaurantes} Entidades={Entidades} Alertas={Alertas} SkipDedup={SkipDedup} Duração={DuracaoMs}ms",
-                pricingSummary.RestaurantsProcessed,
-                pricingSummary.EntitiesEvaluated,
-                pricingSummary.AlertsCreated,
-                pricingSummary.AlertsSkippedByDedup,
-                pricingSummary.Duration.TotalMilliseconds);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Erro ao executar tick PricingAgent");
+            try
+            {
+                await scope.ServiceProvider.GetRequiredService<IStockAgent>().RunAsync(restaurant.Id, ct);
+                await scope.ServiceProvider.GetRequiredService<ISupplierAgent>().RunAsync(restaurant.Id, ct);
+                await scope.ServiceProvider.GetRequiredService<IPricingAgent>().RunAsync(restaurant.Id, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao executar agentes para restaurante {RestaurantId}", restaurant.Id);
+            }
+            finally
+            {
+                tenantContext.Clear();
+            }
         }
     }
 }
-

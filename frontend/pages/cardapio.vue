@@ -43,6 +43,8 @@ interface ApiError {
 const authStore = useAuthStore()
 const router = useRouter()
 const config = useRuntimeConfig()
+const canManageMenu = computed(() => ["Admin", "Manager"].includes(authStore.currentUser?.role ?? ""))
+const isOperationalUser = computed(() => ["Chef", "Waiter"].includes(authStore.currentUser?.role ?? ""))
 
 const API_BASE =
   config.public?.apiBase ||
@@ -372,10 +374,9 @@ const deleteCategory = async (category: Category) => {
 
     successMessage.value = 'Categoria excluída com sucesso.'
 
-    await Promise.all([
-      fetchCategories(),
-      fetchDishes()
-    ])
+    if (!isOperationalUser.value) {
+      await Promise.all([fetchCategories(), fetchDishes()])
+    }
 
   } catch (error) {
     handleApiError(error)
@@ -914,7 +915,14 @@ onMounted(loadPage)
 </script>
 
 <template>
-  <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
+  <main v-if="isOperationalUser" class="min-h-[calc(100vh-8rem)] flex items-center justify-center px-6">
+    <section class="max-w-xl w-full rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-400">Cardápio operacional</p>
+      <h1 class="mt-3 text-3xl font-bold text-zinc-900 dark:text-white">Cardápio</h1>
+      <p class="mt-3 text-sm text-zinc-600 dark:text-zinc-400">Em construção</p>
+    </section>
+  </main>
+  <div v-else class="light-page max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
     <AppLoader :visible="isLoading" />
 
     <!-- MAIN -->
@@ -948,7 +956,7 @@ onMounted(loadPage)
             </div>
           </div>
 
-          <div class="flex flex-col sm:flex-row gap-3">
+          <div v-if="canManageMenu" class="flex flex-col sm:flex-row gap-3">
             <button type="button" @click="openCreateCategoryModal"
               class="px-4 py-2.5 rounded-xl border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white text-sm font-semibold transition">
               + Categoria
@@ -1037,7 +1045,7 @@ onMounted(loadPage)
             </p>
           </div>
 
-          <button type="button" @click="openCreateCategoryModal"
+          <button v-if="canManageMenu" type="button" @click="openCreateCategoryModal"
             class="text-xs font-semibold text-zinc-300 hover:text-white">
             Gerenciar
           </button>
@@ -1064,12 +1072,12 @@ onMounted(loadPage)
               {{ category.name }}
             </button>
 
-            <button type="button" @click="openEditCategoryModal(category)" class="px-2 text-zinc-500 hover:text-white"
+            <button v-if="canManageMenu" type="button" @click="openEditCategoryModal(category)" class="px-2 text-zinc-500 hover:text-white"
               title="Editar categoria">
               ✎
             </button>
 
-            <button type="button" @click="deleteCategory(category)" :disabled="isDeletingCategory === category.id
+            <button v-if="canManageMenu" type="button" @click="deleteCategory(category)" :disabled="isDeletingCategory === category.id
               " class="px-2 pr-3 text-zinc-500 hover:text-red-400 disabled:opacity-50" title="Excluir categoria">
               {{
                 isDeletingCategory === category.id
@@ -1166,7 +1174,7 @@ onMounted(loadPage)
             cadastre um novo prato.
           </p>
 
-          <button type="button" @click="openCreateDishModal"
+          <button v-if="canManageMenu" type="button" @click="openCreateDishModal"
             class="mt-5 px-4 py-2 rounded-xl bg-white text-zinc-950 text-sm font-semibold hover:bg-zinc-200 transition">
             Criar primeiro prato
           </button>
@@ -1259,7 +1267,7 @@ onMounted(loadPage)
               </div>
 
               <!-- ACTIONS -->
-              <div class="flex items-center gap-2 mt-5 pt-4 border-t border-zinc-800">
+              <div v-if="canManageMenu" class="flex items-center gap-2 mt-5 pt-4 border-t border-zinc-800">
                 <button type="button" @click="openEditDishModal(dish)"
                   class="flex-1 px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-xs font-semibold text-zinc-300 hover:text-white transition">
                   Editar
@@ -1285,7 +1293,7 @@ onMounted(loadPage)
          DISH MODAL
     -->
     <Teleport to="body">
-      <div v-if="showDishModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div v-if="showDishModal" class="light-menu-modal fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click="closeDishModal" />
 
         <div
@@ -1539,7 +1547,7 @@ ingredient, index
          CATEGORY MODAL
     -->
     <Teleport to="body">
-      <div v-if="showCategoryModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div v-if="showCategoryModal" class="light-menu-modal fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click="closeCategoryModal" />
 
         <div class="relative w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl">

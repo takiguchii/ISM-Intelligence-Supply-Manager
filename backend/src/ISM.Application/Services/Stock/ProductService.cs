@@ -64,7 +64,8 @@ public sealed class ProductService : IProductService
         int? filterRestaurantId = null;
         if (!_currentUser.IsSuperAdmin)
         {
-            filterRestaurantId = _currentUser.RestaurantId ?? 1;
+            filterRestaurantId = _currentUser.RestaurantId
+                ?? throw new UnauthorizedAccessException("Usuário não vinculado a restaurante.");
         }
 
         var (items, totalCount) = await _productRepository.GetPagedAsync(

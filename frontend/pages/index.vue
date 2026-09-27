@@ -9,6 +9,7 @@ import TopDishesChart from "~/components/dashboard/TopDishesChart.vue";
 import WeekdayOrdersChart from "~/components/dashboard/WeekdayOrdersChart.vue";
 import PriceAdjustmentsList from "~/components/dashboard/PriceAdjustmentsList.vue";
 import { useAuthStore } from "~/stores/auth";
+import { homeForUser } from "~/utils/navigation";
 import { useDashboardMetrics } from "~/composables/useDashboardMetrics";
 
 const authStore = useAuthStore();
@@ -37,6 +38,12 @@ onMounted(async () => {
   authStore.initFromStorage();
   if (!authStore.isAuthenticated) {
     router.push("/login");
+    return;
+  }
+
+  const home = homeForUser(authStore.currentUser);
+  if (home !== "/") {
+    await router.replace(home);
     return;
   }
 

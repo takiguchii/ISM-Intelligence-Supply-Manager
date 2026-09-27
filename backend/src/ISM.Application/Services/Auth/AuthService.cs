@@ -63,28 +63,17 @@ public sealed class AuthService : IAuthService
         if (await _userRepository.EmailExistsAsync(request.Email, cancellationToken))
             throw new InvalidOperationException("E-mail já cadastrado.");
 
-        if (request.RestaurantId.HasValue)
-        {
-            var restaurantExists = await _restaurantRepository.GetRestaurantByIdAsync(request.RestaurantId.Value, cancellationToken);
-            if (restaurantExists == null)
-                throw new InvalidOperationException($"Restaurante com ID {request.RestaurantId.Value} não existe.");
-        }
+        if (!IsmRoles.IsValid(request.Role))
+            throw new InvalidOperationException($"Role inválido '{request.Role}'.");
 
         var requestedRole = IsmRoles.Normalize(request.Role);
 
         // 🔒 PONTO 4: Manager logado NÃO PODE criar Admin nem SuperAdmin
         if (!_currentUser.IsSuperAdmin)
         {
-            if (string.Equals(requestedRole, IsmRoles.Admin, StringComparison.OrdinalIgnoreCase) &&
+            if (!IsTenantManager() ||
                 !_currentUser.RestaurantId.HasValue)
-            {
-                throw new UnauthorizedAccessException("Você não tem permissão para criar usuários Super Admin.");
-            }
-
-            if (!_currentUser.IsManagerOrAbove)
-            {
-                throw new UnauthorizedAccessException("Apenas gerentes e administradores podem criar usuários.");
-            }
+                throw new UnauthorizedAccessException("Apenas administradores ou gerentes do restaurante podem criar usuários.");
 
             // 🔒 Manager só pode criar usuário PROPRIO RESTAURANTE
             if (_currentUser.RestaurantId.HasValue)
@@ -92,18 +81,21 @@ public sealed class AuthService : IAuthService
                 if (!request.RestaurantId.HasValue || request.RestaurantId.Value != _currentUser.RestaurantId.Value)
                     throw new UnauthorizedAccessException("Você só pode criar usuários no seu próprio restaurante.");
 
-                // Manager NÃO pode criar Admin do sistema (só employees/Manager do mesmo restaurante)
-                if (string.Equals(requestedRole, IsmRoles.Admin, StringComparison.OrdinalIgnoreCase)
-                    && _currentUser.RestaurantId.HasValue)
-                {
-                    // Dentro do restaurante o Admin ainda é permitido, mas NÃO SuperAdmin (restaurantId null)
-                    // então OK, pois request.RestaurantId já está setado pro proprio restaurante
-                }
             }
 
             // Limite de plano (PONTO 5): só se for criar user em restaurante
             if (request.RestaurantId.HasValue)
                 await _planEnforcer.AssertCanAddUserAsync(request.RestaurantId.Value, cancellationToken);
+
+            if (!CanManageRole(requestedRole))
+                throw new UnauthorizedAccessException("Você não pode criar usuários com este cargo.");
+        }
+
+        if (request.RestaurantId.HasValue)
+        {
+            var restaurantExists = await _restaurantRepository.GetRestaurantByIdAsync(request.RestaurantId.Value, cancellationToken);
+            if (restaurantExists == null)
+                throw new InvalidOperationException($"Restaurante com ID {request.RestaurantId.Value} não existe.");
         }
 
         var now = DateTime.UtcNow;
@@ -189,6 +181,14 @@ public sealed class AuthService : IAuthService
             User = MapToUserDto(user)
         };
     }
+
+    private bool IsTenantManager() =>
+        _currentUser.Role is IsmRoles.Admin or IsmRoles.Manager && _currentUser.RestaurantId.HasValue;
+
+    private bool CanManageRole(string role) =>
+        _currentUser.Role == IsmRoles.Admin
+            ? role is IsmRoles.Manager or IsmRoles.Chef or IsmRoles.Waiter
+            : role is IsmRoles.Chef or IsmRoles.Waiter;
 
     private string GenerateJwtToken(User user, DateTime expires)
     {
