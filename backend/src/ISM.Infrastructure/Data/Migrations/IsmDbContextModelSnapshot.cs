@@ -98,6 +98,15 @@ namespace ISM.Infrastructure.Data.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("varchar(120)");
 
+                    b.Property<string>("PhotoImportApiEndpoint")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("PhotoImportApiKey")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("PhotoImportModel")
+                        .HasColumnType("longtext");
+
                     b.Property<int?>("PlanId")
                         .HasColumnType("int");
 
@@ -169,6 +178,77 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.ToTable("suppliers", (string)null);
                 });
 
+            modelBuilder.Entity("ISM.Domain.Entities.TmpAuthorization", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("AutoRotateAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("LastUsedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
+
+                    b.Property<int>("RestaurantId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("RevokedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("RevokedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("RevokedByUserId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("RestaurantId", "ExpiresAtUtc");
+
+                    b.HasIndex("RestaurantId", "TokenHash")
+                        .IsUnique();
+
+                    b.ToTable("tmp_authorizations", (string)null);
+                });
+
             modelBuilder.Entity("ISM.Domain.Entities.User", b =>
                 {
                     b.Property<int>("Id")
@@ -217,76 +297,6 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.HasIndex("RestaurantId");
 
                     b.ToTable("users", (string)null);
-                });
-
-            modelBuilder.Entity("ISM.Domain.Entities.TmpAuthorization", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime?>("AutoRotateAtUtc")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<int?>("CreatedByUserId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)");
-
-                    b.Property<DateTime>("ExpiresAtUtc")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime?>("LastUsedAtUtc")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("varchar(120)");
-
-                    b.Property<int>("RestaurantId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("RevokedAtUtc")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<int?>("RevokedByUserId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Scope")
-                        .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("varchar(80)");
-
-                    b.Property<string>("TokenHash")
-                        .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("varchar(512)");
-
-                    b.Property<DateTime?>("UpdatedAtUtc")
-                        .HasColumnType("datetime(6)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RestaurantId", "ExpiresAtUtc")
-                        .HasDatabaseName("IX_tmp_authorizations_RestaurantId_ExpiresAtUtc");
-
-                    b.HasIndex("RestaurantId", "TokenHash")
-                        .IsUnique()
-                        .HasDatabaseName("IX_tmp_authorizations_RestaurantId_TokenHash");
-
-                    b.HasIndex("TokenHash")
-                        .IsUnique()
-                        .HasDatabaseName("IX_tmp_authorizations_TokenHash");
-
-                    b.ToTable("tmp_authorizations", (string)null);
                 });
 
             modelBuilder.Entity("ISM.Domain.Modules.DataImport.ImportAudit", b =>
@@ -470,6 +480,9 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.Property<int>("RestaurantId")
                         .HasColumnType("int");
 
+                    b.Property<decimal?>("TargetMarginPercent")
+                        .HasColumnType("decimal(65,30)");
+
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("datetime(6)");
 
@@ -527,13 +540,25 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<DateTime?>("LastConsumptionRecalculatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<decimal>("MaximumQuantity")
+                        .HasColumnType("decimal(10,3)");
+
                     b.Property<decimal>("MinimumQuantity")
+                        .HasColumnType("decimal(10,3)");
+
+                    b.Property<decimal>("MovingAverageConsumption")
                         .HasColumnType("decimal(10,3)");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(120)
                         .HasColumnType("varchar(120)");
+
+                    b.Property<decimal>("ReorderPoint")
+                        .HasColumnType("decimal(10,3)");
 
                     b.Property<int>("RestaurantId")
                         .HasColumnType("int");
@@ -554,6 +579,184 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.ToTable("products", (string)null);
                 });
 
+            modelBuilder.Entity("ISM.Domain.Modules.Stock.Entities.StockMovement", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("MovementType")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("QuantityDelta")
+                        .HasColumnType("decimal(10,3)");
+
+                    b.Property<int>("RestaurantId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("TriggeredByImportId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<int?>("TriggeredByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("UnitCostSnapshot")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("RestaurantId", "CreatedAtUtc");
+
+                    b.HasIndex("RestaurantId", "ProductId", "CreatedAtUtc");
+
+                    b.ToTable("stock_movements", (string)null);
+                });
+
+            modelBuilder.Entity("ISM.Domain.Modules.Suppliers.Entities.SupplierProductPriceHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("NFeAccessKeyOrImportId")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<string>("ProductRawName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<DateTime>("PurchasedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<decimal>("QuantityPurchased")
+                        .HasColumnType("decimal(10,3)");
+
+                    b.Property<int>("RestaurantId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SupplierId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SupplierRawName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SupplierId");
+
+                    b.HasIndex("RestaurantId", "PurchasedAtUtc");
+
+                    b.HasIndex("RestaurantId", "ProductRawName", "PurchasedAtUtc");
+
+                    b.ToTable("supplier_product_price_history", (string)null);
+                });
+
+            modelBuilder.Entity("ISM.Domain.Modules.System.Entities.SystemAlert", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AlertType")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("DismissedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("DismissedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("GeneratedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsDismissed")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("varchar(400)");
+
+                    b.Property<string>("PayloadSerializedJson")
+                        .HasMaxLength(4000)
+                        .HasColumnType("varchar(4000)");
+
+                    b.Property<DateTime?>("ReadAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("ReferenceEntityId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReferenceEntityType")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<int>("RestaurantId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Severity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DismissedByUserId");
+
+                    b.HasIndex("RestaurantId", "GeneratedAtUtc");
+
+                    b.HasIndex("RestaurantId", "AlertType", "GeneratedAtUtc", "IsDismissed");
+
+                    b.ToTable("system_alerts", (string)null);
+                });
+
             modelBuilder.Entity("ISM.Domain.Entities.Restaurant", b =>
                 {
                     b.HasOne("ISM.Domain.Entities.Plan", "Plan")
@@ -571,16 +774,6 @@ namespace ISM.Infrastructure.Data.Migrations
                         .HasForeignKey("RestaurantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Restaurant");
-                });
-
-            modelBuilder.Entity("ISM.Domain.Entities.User", b =>
-                {
-                    b.HasOne("ISM.Domain.Entities.Restaurant", "Restaurant")
-                        .WithMany("Users")
-                        .HasForeignKey("RestaurantId")
-                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Restaurant");
                 });
@@ -608,6 +801,16 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.Navigation("Restaurant");
 
                     b.Navigation("RevokedByUser");
+                });
+
+            modelBuilder.Entity("ISM.Domain.Entities.User", b =>
+                {
+                    b.HasOne("ISM.Domain.Entities.Restaurant", "Restaurant")
+                        .WithMany("Users")
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Restaurant");
                 });
 
             modelBuilder.Entity("ISM.Domain.Modules.DataImport.ImportAudit", b =>
@@ -688,6 +891,61 @@ namespace ISM.Infrastructure.Data.Migrations
                         .HasForeignKey("RestaurantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Restaurant");
+                });
+
+            modelBuilder.Entity("ISM.Domain.Modules.Stock.Entities.StockMovement", b =>
+                {
+                    b.HasOne("ISM.Domain.Modules.Stock.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ISM.Domain.Entities.Restaurant", "Restaurant")
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("Restaurant");
+                });
+
+            modelBuilder.Entity("ISM.Domain.Modules.Suppliers.Entities.SupplierProductPriceHistory", b =>
+                {
+                    b.HasOne("ISM.Domain.Entities.Restaurant", "Restaurant")
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ISM.Domain.Entities.Supplier", "Supplier")
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Restaurant");
+
+                    b.Navigation("Supplier");
+                });
+
+            modelBuilder.Entity("ISM.Domain.Modules.System.Entities.SystemAlert", b =>
+                {
+                    b.HasOne("ISM.Domain.Entities.User", "DismissedByUser")
+                        .WithMany()
+                        .HasForeignKey("DismissedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ISM.Domain.Entities.Restaurant", "Restaurant")
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DismissedByUser");
 
                     b.Navigation("Restaurant");
                 });

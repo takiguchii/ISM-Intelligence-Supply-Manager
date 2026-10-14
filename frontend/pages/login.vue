@@ -39,7 +39,9 @@ const MOUSE_REPEL_STRENGTH = 1.2;
 
 const redirectPath = computed(() => {
   const redirect = route.query.redirect as string;
-  return redirect && redirect.startsWith("/") ? redirect : "/";
+  return redirect && redirect.startsWith("/") && canAccessRoute(authStore.currentUser, redirect)
+    ? redirect
+    : homeForUser(authStore.currentUser);
 });
 
 const randomRange = (min: number, max: number) => Math.random() * (max - min) + min;

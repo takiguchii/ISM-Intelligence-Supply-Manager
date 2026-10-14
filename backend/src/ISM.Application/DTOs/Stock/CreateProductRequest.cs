@@ -16,4 +16,10 @@ public sealed record CreateProductRequest(
     [property: Range(0, double.MaxValue)]
     decimal MinimumQuantity,
     [property: Range(0, double.MaxValue)]
-    decimal AverageCost);
+    decimal MaximumQuantity,
+    [property: Range(0, double.MaxValue)]
+    decimal ReorderPoint,
+    [property: Range(0, double.MaxValue)]
+    decimal AverageCost,
+    [property: Range(0, double.MaxValue)]
+    decimal MovingAverageConsumption);

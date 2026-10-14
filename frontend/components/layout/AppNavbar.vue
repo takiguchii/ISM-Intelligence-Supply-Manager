@@ -2,6 +2,8 @@
 import { ref, onMounted, onUnmounted } from "vue";
 import { useAuthStore } from "~/stores/auth";
 import ThemeToggle from "~/components/base/ThemeToggle.vue";
+import NotificationDrawer from "~/components/layout/NotificationDrawer.vue";
+import { useThemeStore } from "~/stores/theme";
 
 const emit = defineEmits<{
   (e: "toggleSidebar"): void;
@@ -9,7 +11,11 @@ const emit = defineEmits<{
 
 const runtimeConfig = useRuntimeConfig();
 const authStore = useAuthStore();
+const themeStore = useThemeStore();
 const router = useRouter();
+
+const isNotificationOpen = ref(false);
+const drawerRef = ref<InstanceType<typeof NotificationDrawer> | null>(null);
 
 const isLogoutExpanded = ref(false);
 let collapseTimeout: any = null;
@@ -60,12 +66,12 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <header class="h-16 border-b border-zinc-800/80 bg-zinc-900/60 backdrop-blur-xl sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between">
+  <header :class="['h-16 border-b backdrop-blur-xl sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between', themeStore.isDark ? 'border-zinc-800/80 bg-zinc-900/60' : 'border-[#D4D4D4] bg-white/95 text-[#2B2B2B]']">
     <div class="flex items-center gap-4">
       <button
         @click="emit('toggleSidebar')"
         type="button"
-        class="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-zinc-800/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-zinc-600"
+        :class="['p-2 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2', themeStore.isDark ? 'text-zinc-300 hover:text-white hover:bg-zinc-800/80 focus:ring-zinc-600' : 'text-[#2B2B2B] hover:bg-[#D4D4D4] focus:ring-[#B3B3B3]']"
         title="Abrir Menu Lateral"
         aria-label="Abrir Menu Lateral"
       >
@@ -75,21 +81,39 @@ onUnmounted(() => {
       </button>
 
       <NuxtLink to="/" class="flex items-center gap-3">
-        <span class="font-bold text-lg text-white tracking-tight">ISM</span>
-        <span class="hidden sm:inline-block text-xs uppercase tracking-widest text-zinc-400 font-mono border-l border-zinc-700/60 pl-3">
+        <span :class="['font-bold text-lg tracking-tight', themeStore.isDark ? 'text-white' : 'text-[#2B2B2B]']">ISM</span>
+        <span :class="['hidden sm:inline-block text-xs uppercase tracking-widest font-mono border-l pl-3', themeStore.isDark ? 'text-zinc-400 border-zinc-700/60' : 'text-[#2B2B2B] border-[#D4D4D4]']">
           {{ runtimeConfig.public.appName }}
         </span>
       </NuxtLink>
     </div>
 
     <div class="flex items-center gap-3">
+      <!-- Botão Central de Notificações -->
+      <button
+        v-if="authStore.isAuthenticated"
+        @click="isNotificationOpen = true"
+        type="button"
+        :class="['relative p-2.5 rounded-xl transition-all duration-200', themeStore.isDark ? 'text-zinc-300 hover:text-white hover:bg-zinc-800/80' : 'text-[#2B2B2B] hover:bg-[#D4D4D4]']"
+        title="Notificações dos Agentes"
+        aria-label="Notificações dos Agentes"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+        </svg>
+        <span
+          v-if="drawerRef?.unreadCount"
+          class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-indigo-500 animate-pulse"
+        ></span>
+      </button>
+
       <ThemeToggle />
       <div v-if="authStore.isAuthenticated" class="flex items-center gap-3">
-        <span class="hidden md:inline-block text-xs text-zinc-400 font-medium">
+        <span :class="['hidden md:inline-block text-xs font-medium', themeStore.isDark ? 'text-zinc-400' : 'text-[#2B2B2B]']">
           {{ authStore.currentUser?.name }} ({{ authStore.currentUser?.role }})
         </span>
         <button
-          :class="['Btn', isLogoutExpanded ? 'is-expanded' : '']"
+          :class="['Btn', isLogoutExpanded ? 'is-expanded' : '', !themeStore.isDark ? 'light-button' : '']"
           @click="handleLogoutClick"
           type="button"
           title="Sair"
@@ -106,16 +130,24 @@ onUnmounted(() => {
       <NuxtLink
         v-else
         to="/login"
-        class="px-4 py-2 text-xs font-semibold rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white border border-zinc-700/60 transition-all duration-200 flex items-center gap-2"
+        :class="['px-4 py-2 text-xs font-semibold rounded-xl border transition-all duration-200 flex items-center gap-2', themeStore.isDark ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white border-zinc-700/60' : 'bg-[#D4D4D4] hover:bg-[#B3B3B3] text-[#2B2B2B] border-[#B3B3B3]']"
       >
-        <svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg :class="['w-4 h-4', themeStore.isDark ? 'text-zinc-400' : 'text-[#2B2B2B]']" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
         </svg>
         <span>Login</span>
       </NuxtLink>
     </div>
+
+    <!-- Central de Notificações Drawer -->
+    <NotificationDrawer
+      ref="drawerRef"
+      :is-open="isNotificationOpen"
+      @close="isNotificationOpen = false"
+    />
   </header>
 </template>
+
 
 <style scoped>
 .Btn {
@@ -192,5 +224,10 @@ onUnmounted(() => {
 /* button click effect */
 .Btn:active {
   transform: translate(2px, 2px);
+}
+
+.Btn.light-button {
+  background-color: #2b2b2b;
+  box-shadow: 2px 2px 10px rgba(43, 43, 43, 0.2);
 }
 </style>

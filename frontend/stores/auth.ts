@@ -7,13 +7,15 @@ interface AuthState {
   token: string | null;
   user: User | null;
   loading: boolean;
+  hydrated: boolean;
 }
 
 export const useAuthStore = defineStore("auth", {
   state: (): AuthState => ({
     token: null,
     user: null,
-    loading: false
+    loading: false,
+    hydrated: false
   }),
 
   getters: {
@@ -25,7 +27,9 @@ export const useAuthStore = defineStore("auth", {
 
   actions: {
     initFromStorage() {
-      if (process.client) {
+      if (!process.client || this.hydrated) return;
+      this.hydrated = true;
+      {
         const token = localStorage.getItem("auth_token");
         const userStr = localStorage.getItem("auth_user");
         if (token) {

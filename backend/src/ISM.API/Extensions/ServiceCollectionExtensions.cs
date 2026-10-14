@@ -1,9 +1,14 @@
 using System.Text;
 using System.Security.Claims;
+using ISM.API.HostedServices;
 using ISM.API.Security;
 using ISM.Application.Interfaces;
 using ISM.Application.Interfaces.DataImport;
+using ISM.Application.Interfaces.Menu;
 using ISM.Application.Interfaces.Restaurant;
+using ISM.Application.Interfaces.Stock;
+using ISM.Application.Interfaces.Suppliers;
+using ISM.Application.Interfaces.System;
 using ISM.Application.Options;
 using ISM.Application.Security;
 using ISM.Application.Services;
@@ -12,6 +17,7 @@ using ISM.Application.Services.Menu;
 using ISM.Application.Services.Restaurant;
 using ISM.Application.Services.Stock;
 using ISM.Application.Services.Suppliers;
+using ISM.Application.Services.System;
 using ISM.Application.Services.Users;
 using ISM.Application.Services.Tenants;
 using ISM.Application.Services.DataImport;
@@ -21,6 +27,7 @@ using ISM.Infrastructure.DependencyInjection;
 using ISM.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -103,10 +110,23 @@ public static class ServiceCollectionExtensions
                 policy.RequireRole(IsmRoles.Admin)
                       .RequireAssertion(ctx =>
                           string.IsNullOrEmpty(ctx.User.FindFirstValue("restaurantId"))))
+            .AddPolicy(IsmPolicies.RestaurantAdminOnly, policy =>
+                policy.RequireRole(IsmRoles.Admin)
+                      .RequireAssertion(ctx =>
+                          int.TryParse(ctx.User.FindFirstValue("restaurantId"), out var restaurantId) && restaurantId > 0))
+            .AddPolicy(IsmPolicies.UserManagement, policy =>
+                policy.RequireRole(IsmRoles.Admin, IsmRoles.Manager)
+                      .RequireAssertion(ctx =>
+                          (ctx.User.IsInRole(IsmRoles.Admin) && string.IsNullOrEmpty(ctx.User.FindFirstValue("restaurantId"))) ||
+                          (int.TryParse(ctx.User.FindFirstValue("restaurantId"), out var restaurantId) && restaurantId > 0)))
             .AddPolicy(IsmPolicies.RestaurantManagerOrAbove, policy =>
-                policy.RequireRole(IsmRoles.Admin, IsmRoles.Manager))
+                policy.RequireRole(IsmRoles.Admin, IsmRoles.Manager)
+                      .RequireAssertion(ctx =>
+                          int.TryParse(ctx.User.FindFirstValue("restaurantId"), out var restaurantId) && restaurantId > 0))
             .AddPolicy(IsmPolicies.RestaurantAnyUser, policy =>
-                policy.RequireRole(IsmRoles.Admin, IsmRoles.Manager, IsmRoles.Chef, IsmRoles.Waiter));
+                policy.RequireRole(IsmRoles.Admin, IsmRoles.Manager, IsmRoles.Chef, IsmRoles.Waiter)
+                      .RequireAssertion(ctx =>
+                          int.TryParse(ctx.User.FindFirstValue("restaurantId"), out var restaurantId) && restaurantId > 0));
 
         var rawCorsOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
             ?? configuration["Cors:AllowedOrigins"]?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
@@ -146,12 +166,14 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddScoped<ICurrentUser, CurrentUserApi>();
+        services.AddScoped<IBackgroundTenantContext, BackgroundTenantContext>();
         services.AddScoped<IPlanEnforcer, PlanEnforcer>();
         services.AddInfrastructure(databaseOptions);
         services.AddScoped<ISupplierService, SupplierService>();
         services.AddScoped<IProductService, ProductService>();
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IDishService, DishService>();
+        services.AddScoped<IPricingCmvService, PricingCmvService>();
         services.AddScoped<IRestaurantService, RestaurantService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IDevAuthService, DevAuthService>();
@@ -182,6 +204,16 @@ public static class ServiceCollectionExtensions
         services.Configure<PhotoImportOptions>(configuration.GetSection(PhotoImportOptions.SectionName));
         services.AddHttpClient<IPhotoImportExtractor, LlmVisionPhotoExtractor>();
         services.AddScoped<IPhotoImportService, PhotoImportService>();
+        
+        // Criação do valor padrão de margem ideal para o preço de um produto
+        services.Configure<PricingOptions>(configuration.GetSection(PricingOptions.SectionName));
+
+        // Agentes autônomos (Estoque + Fornecedores + Precificação/CMV)
+        services.AddScoped<IStockAgent, StockAgent>();
+        services.AddScoped<ISupplierAgent, SupplierAgent>();
+        services.AddScoped<IPricingAgent, PricingCmvService>();
+        services.AddScoped<ISystemAlertService, SystemAlertService>();
+        services.AddHostedService<AgentsBackgroundScheduler>();
 
         return services;
     }

@@ -2,6 +2,7 @@ using ISM.Application.Interfaces;
 using ISM.Application.DTOs;
 using ISM.Application.Security;
 using ISM.Domain.Modules.Stock.Entities;
+using ISM.Domain.Modules.Stock.Enums;
 using ISM.Domain.Interfaces;
 
 namespace ISM.Application.Services.Stock;
@@ -11,15 +12,18 @@ public sealed class ProductService : IProductService
     private readonly IProductRepository _productRepository;
     private readonly ICurrentUser _currentUser;
     private readonly IPlanEnforcer _planEnforcer;
+    private readonly IStockMovementRepository _stockMovementRepository;
 
     public ProductService(
         IProductRepository productRepository,
         ICurrentUser currentUser,
-        IPlanEnforcer planEnforcer)
+        IPlanEnforcer planEnforcer,
+        IStockMovementRepository stockMovementRepository)
     {
         _productRepository = productRepository;
         _currentUser = currentUser;
         _planEnforcer = planEnforcer;
+        _stockMovementRepository = stockMovementRepository;
     }
 
     public async Task<ProductResponse?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
@@ -60,7 +64,8 @@ public sealed class ProductService : IProductService
         int? filterRestaurantId = null;
         if (!_currentUser.IsSuperAdmin)
         {
-            filterRestaurantId = _currentUser.RestaurantId ?? 1;
+            filterRestaurantId = _currentUser.RestaurantId
+                ?? throw new UnauthorizedAccessException("Usuário não vinculado a restaurante.");
         }
 
         var (items, totalCount) = await _productRepository.GetPagedAsync(
@@ -95,7 +100,10 @@ public sealed class ProductService : IProductService
             Unit = request.Unit.Trim(),
             CurrentQuantity = request.CurrentQuantity,
             MinimumQuantity = request.MinimumQuantity,
+            MaximumQuantity = request.MaximumQuantity,
+            ReorderPoint = request.ReorderPoint,
             AverageCost = request.AverageCost,
+            MovingAverageConsumption = request.MovingAverageConsumption,
             IsActive = true,
             CreatedAtUtc = DateTime.UtcNow
         };
@@ -117,6 +125,8 @@ public sealed class ProductService : IProductService
                 throw new UnauthorizedAccessException("Apenas gerentes podem editar produtos.");
         }
 
+        var oldQuantity = existing.CurrentQuantity;
+
         var updated = new Product
         {
             Id = id,
@@ -125,13 +135,41 @@ public sealed class ProductService : IProductService
             Unit = request.Unit.Trim(),
             CurrentQuantity = request.CurrentQuantity,
             MinimumQuantity = request.MinimumQuantity,
+            MaximumQuantity = request.MaximumQuantity,
+            ReorderPoint = request.ReorderPoint,
             AverageCost = request.AverageCost,
+            MovingAverageConsumption = request.MovingAverageConsumption,
+            LastConsumptionRecalculatedAtUtc = existing.LastConsumptionRecalculatedAtUtc,
             IsActive = existing.IsActive,
             CreatedAtUtc = existing.CreatedAtUtc,
             UpdatedAtUtc = DateTime.UtcNow
         };
 
         await _productRepository.UpdateAsync(updated, cancellationToken);
+
+        try
+        {
+            var delta = request.CurrentQuantity - oldQuantity;
+            if (delta != 0m)
+            {
+                var movement = new StockMovement
+                {
+                    RestaurantId = existing.RestaurantId,
+                    ProductId = id,
+                    MovementType = delta > 0m ? StockMovementType.ManualIncrease : StockMovementType.ManualDecrease,
+                    QuantityDelta = delta,
+                    UnitCostSnapshot = existing.AverageCost > 0m ? existing.AverageCost : null,
+                    TriggeredByImportId = null,
+                    TriggeredByUserId = _currentUser.UserId,
+                    CreatedAtUtc = DateTime.UtcNow
+                };
+                await _stockMovementRepository.AddAsync(movement, cancellationToken);
+            }
+        }
+        catch
+        {
+        }
+
         return Map(updated);
     }
 
@@ -177,7 +215,11 @@ public sealed class ProductService : IProductService
             product.Unit,
             product.CurrentQuantity,
             product.MinimumQuantity,
+            product.MaximumQuantity,
+            product.ReorderPoint,
             product.AverageCost,
+            product.MovingAverageConsumption,
+            product.LastConsumptionRecalculatedAtUtc,
             product.IsActive,
             product.CreatedAtUtc,
             product.UpdatedAtUtc);

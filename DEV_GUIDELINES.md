@@ -12,6 +12,9 @@ Sempre consulte os guias detalhados antes de grandes alterações:
 - [🔄 Sincronização Git](./docs/development/git-sync.md)
 - [🏗️ Arquitetura Backend](./docs/architecture/backend.md)
 - [🛠️ Tooling Backend](./docs/development/backend-tooling.md)
+- [📖 Endpoints & API](./docs/api/README.md)
+- [📊 Mapeamento de Dados & Agentes](./docs/mapeamento-recepcao-dados-agentes.md)
+
 
 ## 🏗 Arquitetura e Estrutura
 

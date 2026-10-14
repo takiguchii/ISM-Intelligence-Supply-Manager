@@ -7,7 +7,11 @@ public sealed record ProductResponse(
     string Unit,
     decimal CurrentQuantity,
     decimal MinimumQuantity,
+    decimal MaximumQuantity,
+    decimal ReorderPoint,
     decimal AverageCost,
+    decimal MovingAverageConsumption,
+    DateTime? LastConsumptionRecalculatedAtUtc,
     bool IsActive,
     DateTime CreatedAtUtc,
     DateTime? UpdatedAtUtc);

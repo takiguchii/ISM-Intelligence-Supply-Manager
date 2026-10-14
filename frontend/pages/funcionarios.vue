@@ -2,11 +2,7 @@
 import { computed, onMounted, ref, watch } from "vue";
 import AppLoader from "~/components/base/AppLoader.vue";
 import { useAuthStore } from "~/stores/auth";
-import {
-  employeeService,
-  EMPLOYEE_ROLES,
-  type EmployeeResponse
-} from "~/services/modules/employees/employeeService";
+import { employeeService, type EmployeeResponse } from "~/services/modules/employees/employeeService";
 
 
 const PAGE_SIZE = 10;
@@ -61,6 +57,15 @@ const canManage = computed(() => {
   const role = authStore.currentUser?.role ?? "";
   return role === "Admin" || role === "Manager";
 });
+
+const manageableRoles = computed(() =>
+  authStore.currentUser?.role === "Admin"
+    ? ["Manager", "Chef", "Waiter"]
+    : ["Chef", "Waiter"]
+);
+
+const canManageEmployee = (employee: EmployeeResponse) =>
+  manageableRoles.value.includes(employee.role);
 
 /* -------------------------------------------------------------- */
 /* Busca e paginação (client-side: a rota GET /api/users devolve   */
@@ -235,7 +240,7 @@ const validateForm = (): string | null => {
   if (email.length > 255) return "O e-mail deve ter no máximo 255 caracteres.";
   if (!isEditing && form.value.password.length < 6)
     return "A senha deve ter pelo menos 6 caracteres.";
-  if (!(EMPLOYEE_ROLES as readonly string[]).includes(form.value.role))
+  if (!manageableRoles.value.includes(form.value.role))
     return "Selecione um cargo válido.";
 
   return null;
@@ -343,7 +348,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
+  <div class="light-page max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
     <AppLoader :visible="isPageLoading" />
 
     <!-- Feedback -->
@@ -488,7 +493,7 @@ onMounted(async () => {
                   </td>
                   <td class="px-4 py-3 text-zinc-500">{{ formatDate(employee.createdAtUtc) }}</td>
                   <td v-if="canManage" class="px-4 py-3">
-                    <div class="flex items-center justify-end gap-3">
+                    <div v-if="canManageEmployee(employee)" class="flex items-center justify-end gap-3">
                       <button
                         type="button"
                         @click="openEditModal(employee)"
@@ -607,7 +612,7 @@ onMounted(async () => {
                 v-model="form.role"
                 class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white focus:outline-none focus:border-zinc-600 transition"
               >
-                <option v-for="role in EMPLOYEE_ROLES" :key="role" :value="role">
+                <option v-for="role in manageableRoles" :key="role" :value="role">
                   {{ ROLE_LABELS[role] }}
                 </option>
               </select>

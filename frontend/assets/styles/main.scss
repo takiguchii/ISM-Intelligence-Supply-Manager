@@ -34,11 +34,64 @@ html.dark body {
 }
 
 html.light body {
-  background:
-    radial-gradient(circle at top left, rgba(99, 102, 241, 0.08), transparent 24rem),
-    radial-gradient(circle at bottom right, rgba(129, 140, 248, 0.08), transparent 22rem),
-    linear-gradient(135deg, #fafafa 0%, #ffffff 48%, #f4f4f5 100%);
-  color: #18181b;
+  background: #ffffff;
+  color: #2b2b2b;
+}
+
+// Salt & pepper: telas administrativas que ainda nasceram com superfícies dark.
+// Mantemos o escopo em .light-page para o tema escuro e páginas especiais intactos.
+html.light {
+  .light-page,
+  .light-menu-modal {
+    color: #2b2b2b;
+
+    [class*="bg-gradient-to-r"],
+    [class*="bg-zinc-950"],
+    [class*="bg-zinc-900"],
+    [class*="bg-[#"] {
+      background-color: #ffffff !important;
+      background-image: none !important;
+    }
+
+    [class*="bg-zinc-800"] {
+      background-color: #d4d4d4 !important;
+    }
+
+    [class*="border-zinc"] {
+      border-color: #d4d4d4 !important;
+    }
+
+    [class*="text-white"],
+    [class*="text-zinc-100"],
+    [class*="text-zinc-200"],
+    [class*="text-zinc-300"],
+    [class*="text-zinc-400"],
+    [class*="text-zinc-500"],
+    [class*="text-zinc-600"] {
+      color: #2b2b2b !important;
+    }
+
+    [class*="placeholder-zinc"]::placeholder {
+      color: #b3b3b3 !important;
+    }
+
+    input,
+    select,
+    textarea {
+      background-color: #ffffff !important;
+      border-color: #b3b3b3 !important;
+      color: #2b2b2b !important;
+    }
+
+    thead,
+    [class*="divide-zinc"] > :not([hidden]) ~ :not([hidden]) {
+      border-color: #d4d4d4 !important;
+    }
+
+    [class*="hover:bg-zinc"]:hover {
+      background-color: #d4d4d4 !important;
+    }
+  }
 }
 
 .hero-grid {

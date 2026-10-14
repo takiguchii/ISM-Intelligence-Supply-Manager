@@ -47,7 +47,7 @@ const formatCurrency = (value: number) => {
 </script>
 
 <template>
-  <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-8">
+  <div class="light-page max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-8">
     <AppLoader :visible="isLoading" />
 
     <main class="flex-1">

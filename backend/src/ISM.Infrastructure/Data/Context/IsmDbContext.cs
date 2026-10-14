@@ -3,6 +3,8 @@ using System.Reflection;
 using ISM.Application.Security;
 using ISM.Domain.Entities;
 using ISM.Domain.Modules.Stock.Entities;
+using ISM.Domain.Modules.Suppliers.Entities;
+using ISM.Domain.Modules.System.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using ISM.Domain.Modules.DataImport;
@@ -22,6 +24,9 @@ public sealed class IsmDbContext : DbContext
 
     public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<Product> Products => Set<Product>();
+    public DbSet<StockMovement> StockMovements => Set<StockMovement>();
+    public DbSet<SupplierProductPriceHistory> SupplierProductPriceHistories => Set<SupplierProductPriceHistory>();
+    public DbSet<SystemAlert> SystemAlerts => Set<SystemAlert>();
     public DbSet<Restaurant> Restaurants => Set<Restaurant>();
     public DbSet<Plan> Plans => Set<Plan>();
     public DbSet<Category> Categories => Set<Category>();
@@ -90,7 +95,11 @@ public sealed class IsmDbContext : DbContext
             builder.Property(p => p.Unit).HasMaxLength(10).IsRequired();
             builder.Property(p => p.CurrentQuantity).HasColumnType("decimal(10,3)").IsRequired();
             builder.Property(p => p.MinimumQuantity).HasColumnType("decimal(10,3)").IsRequired();
+            builder.Property(p => p.MaximumQuantity).HasColumnType("decimal(10,3)").IsRequired();
+            builder.Property(p => p.ReorderPoint).HasColumnType("decimal(10,3)").IsRequired();
             builder.Property(p => p.AverageCost).HasColumnType("decimal(10,2)").IsRequired();
+            builder.Property(p => p.MovingAverageConsumption).HasColumnType("decimal(10,3)").IsRequired();
+            builder.Property(p => p.LastConsumptionRecalculatedAtUtc).HasColumnType("datetime(6)");
             builder.Property(p => p.IsActive).IsRequired();
             builder.Property(p => p.CreatedAtUtc).HasColumnType("datetime(6)").IsRequired();
             builder.Property(p => p.UpdatedAtUtc).HasColumnType("datetime(6)");
@@ -100,6 +109,98 @@ public sealed class IsmDbContext : DbContext
                 .WithMany(r => r.Products)
                 .HasForeignKey(p => p.RestaurantId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.ApplyTenantQueryFilter(this);
+        });
+
+        modelBuilder.Entity<StockMovement>(builder =>
+        {
+            builder.ToTable("stock_movements");
+            builder.HasKey(sm => sm.Id);
+            builder.Property(sm => sm.RestaurantId).IsRequired();
+            builder.Property(sm => sm.ProductId).IsRequired();
+            builder.Property(sm => sm.MovementType).IsRequired()
+                .HasConversion<int>();
+            builder.Property(sm => sm.QuantityDelta).HasColumnType("decimal(10,3)").IsRequired();
+            builder.Property(sm => sm.UnitCostSnapshot).HasColumnType("decimal(10,2)");
+            builder.Property(sm => sm.CreatedAtUtc).HasColumnType("datetime(6)").IsRequired();
+            builder.Property(sm => sm.UpdatedAtUtc).HasColumnType("datetime(6)");
+            builder.HasIndex(sm => new { sm.RestaurantId, sm.ProductId, sm.CreatedAtUtc });
+            builder.HasIndex(sm => new { sm.RestaurantId, sm.CreatedAtUtc });
+
+            builder.HasOne(sm => sm.Product)
+                .WithMany()
+                .HasForeignKey(sm => sm.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasOne(sm => sm.Restaurant)
+                .WithMany()
+                .HasForeignKey(sm => sm.RestaurantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.ApplyTenantQueryFilter(this);
+        });
+
+        modelBuilder.Entity<SupplierProductPriceHistory>(builder =>
+        {
+            builder.ToTable("supplier_product_price_history");
+            builder.HasKey(h => h.Id);
+            builder.Property(h => h.RestaurantId).IsRequired();
+            builder.Property(h => h.SupplierRawName).HasMaxLength(200).IsRequired();
+            builder.Property(h => h.ProductRawName).HasMaxLength(200).IsRequired();
+            builder.Property(h => h.Unit).HasMaxLength(10).IsRequired();
+            builder.Property(h => h.UnitPrice).HasColumnType("decimal(10,2)").IsRequired();
+            builder.Property(h => h.QuantityPurchased).HasColumnType("decimal(10,3)").IsRequired();
+            builder.Property(h => h.NFeAccessKeyOrImportId).HasMaxLength(200);
+            builder.Property(h => h.PurchasedAtUtc).HasColumnType("datetime(6)").IsRequired();
+            builder.Property(h => h.CreatedAtUtc).HasColumnType("datetime(6)").IsRequired();
+            builder.Property(h => h.UpdatedAtUtc).HasColumnType("datetime(6)");
+            builder.HasIndex(h => new { h.RestaurantId, h.PurchasedAtUtc });
+            builder.HasIndex(h => new { h.RestaurantId, h.ProductRawName, h.PurchasedAtUtc });
+
+            builder.HasOne(h => h.Supplier)
+                .WithMany()
+                .HasForeignKey(h => h.SupplierId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            builder.HasOne(h => h.Restaurant)
+                .WithMany()
+                .HasForeignKey(h => h.RestaurantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.ApplyTenantQueryFilter(this);
+        });
+
+        modelBuilder.Entity<SystemAlert>(builder =>
+        {
+            builder.ToTable("system_alerts");
+            builder.HasKey(a => a.Id);
+            builder.Property(a => a.RestaurantId).IsRequired();
+            builder.Property(a => a.AlertType).IsRequired().HasConversion<int>();
+            builder.Property(a => a.Severity).IsRequired().HasConversion<int>();
+            builder.Property(a => a.Title).HasMaxLength(150).IsRequired();
+            builder.Property(a => a.Message).HasMaxLength(400).IsRequired();
+            builder.Property(a => a.ReferenceEntityType).HasMaxLength(50);
+            builder.Property(a => a.PayloadSerializedJson).HasMaxLength(4000);
+            builder.Property(a => a.IsRead).IsRequired();
+            builder.Property(a => a.IsDismissed).IsRequired();
+            builder.Property(a => a.GeneratedAtUtc).HasColumnType("datetime(6)").IsRequired();
+            builder.Property(a => a.ReadAtUtc).HasColumnType("datetime(6)");
+            builder.Property(a => a.DismissedAtUtc).HasColumnType("datetime(6)");
+            builder.Property(a => a.CreatedAtUtc).HasColumnType("datetime(6)").IsRequired();
+            builder.Property(a => a.UpdatedAtUtc).HasColumnType("datetime(6)");
+            builder.HasIndex(a => new { a.RestaurantId, a.AlertType, a.GeneratedAtUtc, a.IsDismissed });
+            builder.HasIndex(a => new { a.RestaurantId, a.GeneratedAtUtc });
+
+            builder.HasOne(a => a.Restaurant)
+                .WithMany()
+                .HasForeignKey(a => a.RestaurantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasOne(a => a.DismissedByUser)
+                .WithMany()
+                .HasForeignKey(a => a.DismissedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             builder.ApplyTenantQueryFilter(this);
         });

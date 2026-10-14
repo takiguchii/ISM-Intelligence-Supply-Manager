@@ -1,5 +1,6 @@
 using ISM.Application.DTOs;
 using ISM.Application.Interfaces;
+using ISM.Application.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,7 +8,7 @@ namespace ISM.API.Controllers;
 
 [ApiController]
 [Route("api/users")]
-[Authorize]
+[Authorize(Policy = IsmPolicies.UserManagement)]
 public sealed class UsersController : ControllerBase
 {
     private readonly IUserService _userService;

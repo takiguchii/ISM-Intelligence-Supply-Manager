@@ -23,9 +23,27 @@ O projeto está configurado para rodar completamente via Docker, garantindo que 
    docker compose up --build
    ```
 
-3. **Acessar as Aplicações:**
+3. **Configurar Git Hooks (Recomendado para prevenir erros de migration/conflito):**
+   ```bash
+   chmod +x scripts/*.sh .githooks/*
+   git config core.hooksPath .githooks/
+   ```
+
+4. **Acessar as Aplicações:**
    - **Frontend:** [http://localhost:3000](http://localhost:3000)
    - **Backend (Documentação Swagger):** [http://localhost:8080/swagger](http://localhost:8080/swagger)
+
+## Operações Úteis com Docker
+
+### Executar Migrations
+```bash
+docker compose --profile tools run --rm db-migrate
+```
+
+### Recriar Banco de Dados Local (Reset)
+```bash
+docker compose --profile tools run --rm db-reset
+```
 
 ## Guia para Frontend (Sem dor de cabeça)
 
@@ -38,7 +56,7 @@ Se você é do Frontend e só precisa que o backend funcione para você trabalha
 ## Configurações Técnicas
 
 ### Backend (appsettings.json)
-O arquivo `backend/src/ISM.API/appsettings.json` já vem configurado para o ambiente de container (apontando para o host `db`). 
+O arquivo `backend/src/ISM.API/appsettings.json` já vem configurado para o ambiente de container (apontando para o host `db` / `mysql`). 
 
 Se você optar por rodar o backend localmente (via Visual Studio ou `dotnet run`) fora do Docker, você precisará:
 - Ter um MySQL rodando localmente.
@@ -48,3 +66,4 @@ Se você optar por rodar o backend localmente (via Visual Studio ou `dotnet run`
 **Problemas Comuns:**
 - **Porta em uso:** Se o MySQL não subir, verifique se você já tem um MySQL/MariaDB rodando na porta `3306`.
 - **Banco Vazio:** Na primeira execução, o sistema aplica as "Migrations" automaticamente. Aguarde o backend estabilizar.
+

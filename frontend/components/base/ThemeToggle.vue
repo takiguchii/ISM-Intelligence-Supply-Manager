@@ -56,7 +56,7 @@ const toggleTheme = () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #73C0FC;
+  background-color: #d4d4d4;
   transition: .4s;
   border-radius: 30px;
 }
@@ -70,7 +70,7 @@ const toggleTheme = () => {
   left: 2px;
   bottom: 2px;
   z-index: 2;
-  background-color: #e8e8e8;
+  background-color: #ffffff;
   transition: .4s;
 }
 
@@ -84,7 +84,7 @@ const toggleTheme = () => {
 }
 
 .moon svg {
-  fill: #73C0FC;
+  fill: #2b2b2b;
   position: absolute;
   top: 5px;
   left: 5px;
@@ -126,11 +126,11 @@ const toggleTheme = () => {
 }
 
 .input:checked + .slider {
-  background-color: #183153;
+  background-color: #2b2b2b;
 }
 
 .input:focus + .slider {
-  box-shadow: 0 0 1px #183153;
+  box-shadow: 0 0 1px #2b2b2b;
 }
 
 .input:checked + .slider:before {

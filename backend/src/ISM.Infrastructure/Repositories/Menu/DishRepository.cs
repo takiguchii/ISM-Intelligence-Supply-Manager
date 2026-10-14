@@ -2,6 +2,7 @@ using ISM.Domain.Modules.Menu.Entities;
 using ISM.Domain.Interfaces;
 using ISM.Infrastructure.Data.Context;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ValueGeneration.Internal;
 
 namespace ISM.Infrastructure.Repositories.Menu;
 
@@ -25,6 +26,7 @@ public sealed class DishRepository : IDishRepository
         var query = _dbContext.Dishes
             .AsNoTracking()
             .Include(dish => dish.Ingredients)
+            .ThenInclude(i => i.Product)
             .AsQueryable(); 
 
         if (restaurantId != null)
@@ -101,5 +103,18 @@ public sealed class DishRepository : IDishRepository
         _dbContext.Dishes.Remove(entity);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return true;
+    }
+
+    public async Task<IReadOnlyCollection<Dish>> GetDishesByProductIdAsync(int productId,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _dbContext.Dishes
+            .AsNoTracking()
+            .Include(dish => dish.Ingredients)
+            .ThenInclude(ingredient => ingredient.Product)
+            .Where(dish => dish.Ingredients.Any(ingredient => ingredient.ProductId == productId))
+            .ToListAsync(cancellationToken);
+
+        return await query;
     }
 }

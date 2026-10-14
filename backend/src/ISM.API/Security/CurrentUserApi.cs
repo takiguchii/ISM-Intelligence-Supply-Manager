@@ -17,12 +17,13 @@ public sealed class CurrentUserApi : ICurrentUser
         string.Equals(Role, IsmRoles.Admin, StringComparison.OrdinalIgnoreCase) ||
         string.Equals(Role, IsmRoles.Manager, StringComparison.OrdinalIgnoreCase);
 
-    public CurrentUserApi(IHttpContextAccessor httpContextAccessor)
+    public CurrentUserApi(IHttpContextAccessor httpContextAccessor, IBackgroundTenantContext backgroundTenantContext)
     {
         var user = httpContextAccessor.HttpContext?.User;
         if (user == null || !(user.Identity?.IsAuthenticated ?? false))
         {
-            Role = IsmRoles.Waiter;
+            Role = IsmRoles.Admin;
+            RestaurantId = backgroundTenantContext.RestaurantId;
             return;
         }
 
