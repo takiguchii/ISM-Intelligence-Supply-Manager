@@ -6,6 +6,7 @@ const showContent = computed(() => isLoginPage.value || authReady.value);
 
 const themeStore = useThemeStore();
 const isSidebarOpen = ref(false);
+const isSidebarCollapsed = ref(false);
 </script>
 
 <template>
@@ -23,12 +24,24 @@ const isSidebarOpen = ref(false);
       </template>
 
       <template v-else>
-        <AppNavbar @toggleSidebar="isSidebarOpen = !isSidebarOpen" />
-        <AppSidebar :isOpen="isSidebarOpen" @close="isSidebarOpen = false" />
-        <div class="flex-1">
-          <slot />
+        <AppSidebar
+          :isOpen="isSidebarOpen"
+          :isCollapsed="isSidebarCollapsed"
+          @update:isCollapsed="isSidebarCollapsed = $event"
+          @close="isSidebarOpen = false"
+        />
+        <div
+          :class="[
+            'flex-1 flex flex-col min-w-0 will-change-[padding] transition-[padding] duration-[400ms] ease-[cubic-bezier(0.16,1,0.3,1)]',
+            isSidebarCollapsed ? 'lg:pl-[72px]' : 'lg:pl-[256px]'
+          ]"
+        >
+          <AppNavbar @toggleSidebar="isSidebarOpen = !isSidebarOpen" />
+          <main class="flex-1">
+            <slot />
+          </main>
+          <AppFooter />
         </div>
-        <AppFooter />
       </template>
     </template>
 

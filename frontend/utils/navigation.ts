@@ -2,12 +2,20 @@ import type { User } from "~/types/auth";
 
 export type AppRole = "Admin" | "Manager" | "Chef" | "Waiter";
 
+export type NavigationCategory =
+  | "VISÃO GERAL"
+  | "FINANCEIRO"
+  | "MOVIMENTAÇÕES"
+  | "CADASTROS"
+  | "SISTEMA";
+
 export type NavigationItem = {
   id: string;
   label: string;
   icon: string;
   route: string;
   roles: readonly AppRole[];
+  category?: NavigationCategory;
   requiresRestaurant?: boolean;
 };
 
@@ -15,17 +23,17 @@ const restaurantRoles = ["Admin", "Manager", "Chef", "Waiter"] as const;
 const managementRoles = ["Admin", "Manager"] as const;
 
 export const navigationItems: readonly NavigationItem[] = [
-  { id: "dashboard", label: "Dashboard", icon: "dashboard", route: "/", roles: ["Admin", "Manager"] },
-  { id: "financeiro", label: "Financeiro", icon: "wallet", route: "/financeiro", roles: managementRoles, requiresRestaurant: true },
-  { id: "atendimento", label: "Atendimento", icon: "tray", route: "/atendimento", roles: ["Admin", "Manager", "Waiter"], requiresRestaurant: true },
-  { id: "cozinha", label: "Cozinha", icon: "tray", route: "/cozinha", roles: ["Admin", "Manager", "Chef"], requiresRestaurant: true },
-  { id: "cardapio", label: "Cardápio", icon: "menu", route: "/cardapio", roles: restaurantRoles, requiresRestaurant: true },
-  { id: "pedidos", label: "Pedidos", icon: "tray", route: "/pedidos", roles: restaurantRoles, requiresRestaurant: true },
-  { id: "estoque", label: "Estoque", icon: "boxes", route: "/estoque", roles: managementRoles, requiresRestaurant: true },
-  { id: "fornecedores", label: "Fornecedores", icon: "truck", route: "/fornecedores", roles: managementRoles, requiresRestaurant: true },
-  { id: "funcionarios", label: "Funcionários", icon: "users", route: "/funcionarios", roles: managementRoles, requiresRestaurant: true },
-  { id: "integracoes", label: "Integrações", icon: "plug", route: "/integracoes", roles: managementRoles, requiresRestaurant: true },
-  { id: "configuracoes", label: "Configurações", icon: "gear", route: "/configuracoes", roles: managementRoles, requiresRestaurant: true }
+  { id: "dashboard", label: "Dashboard", icon: "dashboard", route: "/", roles: ["Admin", "Manager"], category: "VISÃO GERAL" },
+  { id: "financeiro", label: "Financeiro", icon: "wallet", route: "/financeiro", roles: managementRoles, category: "FINANCEIRO", requiresRestaurant: true },
+  { id: "atendimento", label: "Atendimento", icon: "tray", route: "/atendimento", roles: ["Admin", "Manager", "Waiter"], category: "MOVIMENTAÇÕES", requiresRestaurant: true },
+  { id: "cozinha", label: "Cozinha", icon: "chef-hat", route: "/cozinha", roles: ["Admin", "Manager", "Chef"], category: "MOVIMENTAÇÕES", requiresRestaurant: true },
+  { id: "pedidos", label: "Pedidos", icon: "clipboard-list", route: "/pedidos", roles: restaurantRoles, category: "MOVIMENTAÇÕES", requiresRestaurant: true },
+  { id: "cardapio", label: "Cardápio", icon: "menu", route: "/cardapio", roles: restaurantRoles, category: "CADASTROS", requiresRestaurant: true },
+  { id: "estoque", label: "Estoque", icon: "boxes", route: "/estoque", roles: managementRoles, category: "CADASTROS", requiresRestaurant: true },
+  { id: "fornecedores", label: "Fornecedores", icon: "truck", route: "/fornecedores", roles: managementRoles, category: "CADASTROS", requiresRestaurant: true },
+  { id: "funcionarios", label: "Funcionários", icon: "users", route: "/funcionarios", roles: managementRoles, category: "CADASTROS", requiresRestaurant: true },
+  { id: "integracoes", label: "Integrações", icon: "plug", route: "/integracoes", roles: managementRoles, category: "SISTEMA", requiresRestaurant: true },
+  { id: "configuracoes", label: "Configurações", icon: "gear", route: "/configuracoes", roles: managementRoles, category: "SISTEMA", requiresRestaurant: true }
 ];
 
 const roleHome: Record<AppRole, string> = {
@@ -64,7 +72,8 @@ export function navigationForUser(user: User | null): NavigationItem[] {
     label: user.role === "Chef" || user.role === "Waiter" ? "Início" : "Dashboard",
     icon: "dashboard",
     route: home,
-    roles: [user.role as AppRole]
+    roles: [user.role as AppRole],
+    category: "VISÃO GERAL"
   };
 
   return [homeItem, ...navigationItems.filter((item) =>
