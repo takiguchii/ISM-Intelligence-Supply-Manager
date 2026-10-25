@@ -3,21 +3,21 @@ using System.ComponentModel.DataAnnotations;
 namespace ISM.Application.DTOs;
 
 public sealed record UpdateProductRequest(
-    [property: Required]
-    [property: MaxLength(120)]
+    [Required]
+    [MaxLength(120)]
     string Name,
-    [property: Required]
-    [property: MaxLength(10)]
+    [Required]
+    [MaxLength(10)]
     string Unit,
-    [property: Range(0, double.MaxValue)]
+    [Range(0, double.MaxValue)]
     decimal CurrentQuantity,
-    [property: Range(0, double.MaxValue)]
+    [Range(0, double.MaxValue)]
     decimal MinimumQuantity,
-    [property: Range(0, double.MaxValue)]
+    [Range(0, double.MaxValue)]
     decimal MaximumQuantity,
-    [property: Range(0, double.MaxValue)]
+    [Range(0, double.MaxValue)]
     decimal ReorderPoint,
-    [property: Range(0, double.MaxValue)]
+    [Range(0, double.MaxValue)]
     decimal AverageCost,
-    [property: Range(0, double.MaxValue)]
+    [Range(0, double.MaxValue)]
     decimal MovingAverageConsumption);

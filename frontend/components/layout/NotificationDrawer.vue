@@ -16,83 +16,40 @@ const router = useRouter();
 const alerts = ref<SystemAlertResponse[]>([]);
 const loading = ref(false);
 
-const mockAlerts: SystemAlertResponse[] = [
-  {
-    id: 991,
-    restaurantId: 1,
-    alertType: "StockRuptureRisk48h",
-    severity: "Critical",
-    title: "Risco de Ruptura de Estoque",
-    message: "Insumo Carne Moída bovina atingirá nível zero nas próximas 48h.",
-    isRead: false,
-    isDismissed: false,
-    generatedAtUtc: new Date().toISOString(),
-    createdAtUtc: new Date().toISOString(),
-    referenceEntityType: "Product",
-    referenceEntityId: 12
-  },
-  {
-    id: 992,
-    restaurantId: 1,
-    alertType: "SupplierPriceSpike",
-    severity: "Warning",
-    title: "Alerta de Fornecedor - Alta de Preço",
-    message: "O preço do Queijo Mozarela subiu 18% no último lançamento em relação ao histórico.",
-    isRead: false,
-    isDismissed: false,
-    generatedAtUtc: new Date(Date.now() - 3600000).toISOString(),
-    createdAtUtc: new Date(Date.now() - 3600000).toISOString(),
-    referenceEntityType: "Supplier",
-    referenceEntityId: 5
-  },
-  {
-    id: 993,
-    restaurantId: 1,
-    alertType: "DishCmvDefasagem",
-    severity: "Warning",
-    title: "Alerta de Margem & CMV",
-    message: "O prato Filé Mignon teve o CMV elevado para 42%. Sugestão de novo preço: R$ 98.50 para reestabelecer a margem de 65%.",
-    isRead: true,
-    isDismissed: false,
-    generatedAtUtc: new Date(Date.now() - 7200000).toISOString(),
-    createdAtUtc: new Date(Date.now() - 7200000).toISOString(),
-    referenceEntityType: "Dish",
-    referenceEntityId: 3
-  }
-];
+const errorMessage = ref("");
 
 const unreadCount = computed(() => alerts.value.filter(a => !a.isRead).length);
 
 const fetchAlerts = async () => {
   loading.value = true;
+  errorMessage.value = "";
   try {
-    const res = await getSystemAlerts({ pageSize: 20 });
-    if (res && res.items && res.items.length > 0) {
-      alerts.value = res.items;
-    } else {
-      alerts.value = mockAlerts;
-    }
-  } catch {
-    alerts.value = mockAlerts;
+    const result = await getSystemAlerts({ pageSize: 20 });
+    alerts.value = result.items;
+  } catch (error) {
+    console.error("Erro ao carregar alertas:", error);
+    errorMessage.value = "Não foi possível carregar os alertas. Tente novamente.";
   } finally {
     loading.value = false;
   }
 };
 
-const handleMarkRead = async (alertItem: SystemAlertResponse) => {
-  if (alertItem.isRead) return;
-  alertItem.isRead = true;
+const handleMarkRead = async (alertItem: SystemAlertResponse): Promise<boolean> => {
+  if (alertItem.isRead) return true;
+  errorMessage.value = "";
   try {
-    if (alertItem.id < 900) {
-      await markAlertAsRead(alertItem.id);
-    }
-  } catch {
-    // Local fallback state updated
+    const updated = await markAlertAsRead(alertItem.id);
+    Object.assign(alertItem, updated);
+    return true;
+  } catch (error) {
+    console.error("Erro ao marcar alerta como lido:", error);
+    errorMessage.value = "Não foi possível marcar o alerta como lido. Tente novamente.";
+    return false;
   }
 };
 
-const handleAction = (alertItem: SystemAlertResponse) => {
-  handleMarkRead(alertItem);
+const handleAction = async (alertItem: SystemAlertResponse) => {
+  if (!(await handleMarkRead(alertItem))) return;
   emit("close");
   if (alertItem.referenceEntityType === "Product" || alertItem.alertType.includes("Stock")) {
     router.push("/estoque");
@@ -103,13 +60,6 @@ const handleAction = (alertItem: SystemAlertResponse) => {
   } else {
     router.push("/");
   }
-};
-
-const mapSeverity = (sev: string): "info" | "warning" | "critical" => {
-  const lower = sev.toLowerCase();
-  if (lower === "critical") return "critical";
-  if (lower === "warning") return "warning";
-  return "info";
 };
 
 onMounted(() => {
@@ -167,8 +117,13 @@ defineExpose({
           Carregando alertas dos agentes...
         </div>
 
+        <div v-if="errorMessage" role="alert" class="p-4 text-sm text-red-400">
+          {{ errorMessage }}
+          <button type="button" class="ml-2 underline" @click="fetchAlerts">Tentar novamente</button>
+        </div>
+
         <div
-          v-else-if="alerts.length === 0"
+          v-if="!loading && !errorMessage && alerts.length === 0"
           class="p-8 text-center text-sm text-zinc-400"
         >
           Nenhum alerta pendente no momento.

@@ -1,12 +1,5 @@
 <template>
-  <main v-if="isOperationalWaiter" class="min-h-[calc(100vh-8rem)] flex items-center justify-center px-6">
-    <section class="max-w-xl w-full rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-400">Atendimento</p>
-      <h1 class="mt-3 text-3xl font-bold text-zinc-900 dark:text-white">Atendimento operacional</h1>
-      <p class="mt-3 text-sm text-zinc-600 dark:text-zinc-400">Em construção</p>
-    </section>
-  </main>
-  <div v-else class="flex h-screen bg-gray-50 dark:bg-zinc-950 font-sans relative overflow-hidden">
+  <div class="flex h-screen bg-gray-50 dark:bg-zinc-950 font-sans relative overflow-hidden">
     
     <!-- ÁREA PRINCIPAL: MENU E FILTROS -->
     <main class="flex-1 flex flex-col h-full w-full relative">
@@ -21,6 +14,7 @@
           <input 
             id="mesa"
             v-model="comandaMesa"
+            :disabled="isSubmitting"
             type="text" 
             placeholder="Ex: 12 ou João" 
             class="flex-1 sm:w-48 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-900 dark:text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
@@ -61,7 +55,9 @@
       </div>
 
       <div class="flex-1 overflow-y-auto p-4 lg:p-6 pb-24 lg:pb-6">
-        <div v-if="pratosFiltrados.length === 0" class="flex flex-col items-center justify-center h-40 text-gray-400">
+        <p v-if="cardapioLoading" class="text-sm text-gray-500">Carregando cardápio...</p>
+        <p v-else-if="cardapioError" role="alert" class="text-sm text-red-500">{{ cardapioError }}</p>
+        <div v-else-if="pratosFiltrados.length === 0" class="flex flex-col items-center justify-center h-40 text-gray-400">
           <p class="font-medium text-lg">Nenhum prato encontrado.</p>
         </div>
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
@@ -181,7 +177,7 @@
           </div>
 
           <div class="mt-3">
-            <input v-model="item.observacao" type="text" placeholder="Observações (ex: sem cebola)" class="w-full text-sm border border-gray-300 dark:border-zinc-700 rounded-md px-3 py-2 bg-gray-50 dark:bg-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-colors" />
+            <input v-model="item.observacao" :disabled="isSubmitting" type="text" placeholder="Observações (ex: sem cebola)" class="w-full text-sm border border-gray-300 dark:border-zinc-700 rounded-md px-3 py-2 bg-gray-50 dark:bg-zinc-900 dark:text-white focus:bg-white dark:focus:bg-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-colors" />
           </div>
         </div>
       </div>
@@ -192,44 +188,26 @@
           <span class="font-semibold text-gray-500 dark:text-zinc-400 uppercase tracking-wider text-sm">Valor Total</span>
           <span class="font-black text-2xl lg:text-3xl text-gray-900 dark:text-white">{{ formatarMoeda(totalPedido) }}</span>
         </div>
-        <button 
+        <button
           @click="confirmarPedido"
-          :disabled="carrinho.length === 0 || !comandaMesa"
-          :class="[
-            'w-full py-4 rounded-xl font-bold text-lg transition-all flex justify-center items-center',
-            (carrinho.length === 0 || !comandaMesa) ? 'bg-gray-200 dark:bg-zinc-800 text-gray-400 dark:text-zinc-600 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white shadow-lg active:scale-95'
-          ]"
+          :disabled="isSubmitting || carrinho.length === 0 || !comandaMesa.trim()"
+          class="w-full py-4 rounded-xl font-bold text-lg flex justify-center items-center bg-green-600 text-white disabled:bg-gray-200 dark:disabled:bg-zinc-800 disabled:text-gray-400 disabled:cursor-not-allowed"
         >
-          Confirmar Pedido
+          {{ isSubmitting ? 'Enviando pedido...' : 'Confirmar Pedido' }}
         </button>
+        <p v-if="orderError" role="alert" class="text-sm text-red-500 text-center mt-3">{{ orderError }}</p>
         <p v-if="!comandaMesa && carrinho.length > 0" class="text-sm font-medium text-red-500 dark:text-red-400 text-center mt-3 animate-pulse">
           * Informe a Mesa/Comanda no topo.
         </p>
       </div>
     </aside>
 
-    <!-- MODAL DE SUCESSO -->
-    <div v-if="showSuccessModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 transition-opacity">
-      <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-sm p-8 transform transition-all text-center border border-gray-100 dark:border-zinc-800">
-        <div class="w-20 h-20 bg-green-100 dark:bg-green-900/30 text-green-500 rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-        <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Pedido Confirmado!</h3>
-        <p class="text-gray-600 dark:text-zinc-400 mb-6">O pedido foi enviado para a cozinha com sucesso.</p>
-
-        <div class="bg-gray-50 dark:bg-zinc-800/80 rounded-xl p-4 mb-8 text-left border border-gray-100 dark:border-zinc-700">
-           <p class="text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Destino / Mesa</p>
-           <p class="font-black text-lg text-gray-900 dark:text-white">{{ pedidoConfirmadoInfo.mesa }}</p>
-           <div class="h-px bg-gray-200 dark:bg-zinc-700 my-3"></div>
-           <p class="text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Total do Pedido</p>
-           <p class="font-black text-2xl text-green-600 dark:text-green-400">{{ formatarMoeda(pedidoConfirmadoInfo.total) }}</p>
-        </div>
-
-        <button @click="showSuccessModal = false" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl transition-all shadow-md active:scale-95">
-          Novo Atendimento
-        </button>
+    <div v-if="confirmedOrder" role="dialog" aria-modal="true" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+      <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center">
+        <h3 class="text-xl font-bold text-gray-900 dark:text-white">Pedido enviado</h3>
+        <p class="mt-3 text-sm text-gray-600 dark:text-zinc-400">Comanda {{ confirmedOrder.tableReference }} · Pedido #{{ confirmedOrder.id }}</p>
+        <p class="mt-2 text-lg font-bold text-green-600">{{ formatarMoeda(confirmedOrder.items.reduce((total, item) => total + item.unitPrice * item.quantity, 0)) }}</p>
+        <button @click="confirmedOrder = null" class="mt-5 w-full bg-blue-600 text-white rounded-xl py-3 font-semibold">Novo atendimento</button>
       </div>
     </div>
 
@@ -259,12 +237,13 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { menuService } from '~/services/modules/menu/menuService'
+import { orderService } from '~/services/modules/orders/orderService'
 import { useAuthStore } from '~/stores/auth'
 
 definePageMeta({ layout: 'default' })
 const authStore = useAuthStore()
-const isOperationalWaiter = computed(() => authStore.currentUser?.role === 'Waiter')
 
 // --- ESTADO LOCAL ---
 const comandaMesa = ref('')
@@ -272,23 +251,42 @@ const categoriaAtiva = ref('Todos')
 const termoBusca = ref('')
 const carrinho = ref([])
 const isCartOpenMobile = ref(false)
+const isSubmitting = ref(false)
+const orderError = ref('')
+const confirmedOrder = ref(null)
+const requestId = ref(null)
+watch([comandaMesa, carrinho], () => { if (!isSubmitting.value) requestId.value = null }, { deep: true, flush: 'sync' })
 
 // Estados dos Modais
-const showSuccessModal = ref(false)
 const showClearModal = ref(false)
-const pedidoConfirmadoInfo = ref({ mesa: '', total: 0 })
 
-const categorias = ['Todos', 'Entradas', 'Pratos Principais', 'Bebidas', 'Sobremesas']
+const pratosBase = ref([])
+const cardapioLoading = ref(true)
+const cardapioError = ref('')
+const categorias = computed(() => ['Todos', ...new Set(pratosBase.value.map(prato => prato.categoria))])
 
-const pratosBase = ref([
-  { id: 1, nome: 'Bruschetta Italiana', categoria: 'Entradas', descricao: 'Pão italiano, tomates rústicos, manjericão e azeite trufado.', precoVenda: 32.00 },
-  { id: 2, nome: 'Dadinhos de Tapioca', categoria: 'Entradas', descricao: 'Acompanha geleia de pimenta defumada.', precoVenda: 28.50 },
-  { id: 3, nome: 'Filé Mignon ao Poivre', categoria: 'Pratos Principais', descricao: 'Medalhão alto com crosta de pimenta, acompanhado de risoto de parmesão.', precoVenda: 89.00 },
-  { id: 4, nome: 'Salmão Grelhado', categoria: 'Pratos Principais', descricao: 'Posta de salmão com legumes salteados na manteiga de ervas.', precoVenda: 78.00 },
-  { id: 5, nome: 'Suco Natural de Laranja', categoria: 'Bebidas', descricao: 'Copo 400ml, espremido na hora.', precoVenda: 12.00 },
-  { id: 6, nome: 'Cerveja Artesanal IPA', categoria: 'Bebidas', descricao: 'Garrafa 500ml.', precoVenda: 24.00 },
-  { id: 7, nome: 'Petit Gâteau', categoria: 'Sobremesas', descricao: 'Bolo quente de chocolate belga com sorvete de baunilha.', precoVenda: 34.00 },
-])
+onMounted(async () => {
+  try {
+    const restaurantId = authStore.currentUser?.restaurantId ?? undefined
+    const [dishes, categories] = await Promise.all([
+      menuService.getDishes(restaurantId),
+      menuService.getCategories(restaurantId)
+    ])
+    const categoryNames = new Map(categories.filter(category => category.isActive !== false).map(category => [category.id, category.name]))
+    pratosBase.value = dishes.filter(dish => dish.isActive && categoryNames.has(dish.categoryId)).map(dish => ({
+      id: dish.id,
+      nome: dish.name,
+      categoria: categoryNames.get(dish.categoryId),
+      descricao: dish.description || '',
+      precoVenda: dish.price
+    }))
+  } catch (error) {
+    console.error('Erro ao carregar cardápio:', error)
+    cardapioError.value = 'Não foi possível carregar o cardápio. Tente novamente mais tarde.'
+  } finally {
+    cardapioLoading.value = false
+  }
+})
 
 // --- COMPUTADOS ---
 const pratosFiltrados = computed(() => {
@@ -319,6 +317,7 @@ const formatarMoeda = (valor) => {
 }
 
 const adicionarAoCarrinho = (prato) => {
+  if (isSubmitting.value) return
   carrinho.value.push({
     ...prato,
     quantidade: 1,
@@ -327,6 +326,7 @@ const adicionarAoCarrinho = (prato) => {
 }
 
 const alterarQuantidade = (index, delta) => {
+  if (isSubmitting.value) return
   const item = carrinho.value[index]
   const novaQuantidade = item.quantidade + delta
   if (novaQuantidade > 0) {
@@ -337,6 +337,7 @@ const alterarQuantidade = (index, delta) => {
 }
 
 const removerItem = (index) => {
+  if (isSubmitting.value) return
   carrinho.value.splice(index, 1)
   if (carrinho.value.length === 0) {
     isCartOpenMobile.value = false
@@ -344,30 +345,42 @@ const removerItem = (index) => {
 }
 
 const abrirModalLimpar = () => {
+  if (isSubmitting.value) return
   showClearModal.value = true
 }
 
 const confirmarLimparPedido = () => {
+  if (isSubmitting.value) return
   carrinho.value = []
   isCartOpenMobile.value = false
   showClearModal.value = false
 }
 
-const confirmarPedido = () => {
-  if (carrinho.value.length === 0 || !comandaMesa.value) return
 
-  pedidoConfirmadoInfo.value = {
-    mesa: comandaMesa.value,
-    total: totalPedido.value
+const confirmarPedido = async () => {
+  if (isSubmitting.value || carrinho.value.length === 0 || !comandaMesa.value.trim()) return
+  requestId.value ||= crypto.randomUUID()
+  isSubmitting.value = true
+  orderError.value = ''
+  try {
+    const order = await orderService.create({
+      requestId: requestId.value,
+      tableReference: comandaMesa.value.trim(),
+      items: carrinho.value.map(item => ({ dishId: item.id, quantity: item.quantidade, observation: item.observacao }))
+    })
+    confirmedOrder.value = order
+    isCartOpenMobile.value = false
+    carrinho.value = []
+    comandaMesa.value = ''
+    categoriaAtiva.value = 'Todos'
+    termoBusca.value = ''
+    requestId.value = null
+  } catch (error) {
+    console.error('Erro ao enviar pedido:', error)
+    orderError.value = error?.data?.detail || error?.data?.message || 'Não foi possível enviar o pedido. Tente novamente.'
+  } finally {
+    isSubmitting.value = false
   }
-
-  showSuccessModal.value = true
-  isCartOpenMobile.value = false
-
-  carrinho.value = []
-  comandaMesa.value = ''
-  categoriaAtiva.value = 'Todos'
-  termoBusca.value = ''
 }
 </script>
 

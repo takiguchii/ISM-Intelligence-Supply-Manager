@@ -1,7 +1,9 @@
 using System.Security.Cryptography;
 using System.Text;
 using ISM.Domain.Entities;
+using ISM.Domain.Modules.Finance;
 using ISM.Domain.Modules.Menu.Entities;
+using ISM.Domain.Modules.Orders;
 using ISM.Domain.Modules.Stock.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -509,6 +511,141 @@ public static class DbSeeder
                 await context.DishIngredients.AddRangeAsync(ingredients);
                 await context.SaveChangesAsync();
             }
+        }
+
+        // 7. Pedidos e Vendas históricas realistas (Restaurante em Marília/SP)
+        if (!await context.Orders.AnyAsync(o => o.RestaurantId == restaurant.Id))
+        {
+            var dishes = await context.Dishes.Where(d => d.RestaurantId == restaurant.Id).ToListAsync();
+            if (dishes.Count > 0)
+            {
+                var orders = new List<Order>();
+                var now = DateTime.UtcNow;
+
+                // Histórico de 14 dias para alimentar gráficos diários, margem e indicadores
+                var random = new Random(42);
+                var tables = new[] { "Mesa 01", "Mesa 02", "Mesa 03", "Mesa 04", "Mesa 05", "Balcão 01", "Delivery 01" };
+
+                for (var daysAgo = 13; daysAgo >= 0; daysAgo--)
+                {
+                    var orderDate = now.AddDays(-daysAgo).Date.AddHours(12 + random.Next(0, 9)); // Horário de almoço/jantar
+                    var ordersToday = random.Next(3, 7);
+
+                    for (var i = 0; i < ordersToday; i++)
+                    {
+                        var orderCreatedAt = orderDate.AddMinutes(random.Next(10, 180));
+                        var isPaid = daysAgo > 0 || i < ordersToday - 1; // Deixar algum em preparo hoje
+                        var status = isPaid ? OrderStatus.Paid : (i % 2 == 0 ? OrderStatus.Preparing : OrderStatus.Ready);
+
+                        var order = new Order
+                        {
+                            RestaurantId = restaurant.Id,
+                            RequestId = Guid.NewGuid(),
+                            TableReference = tables[random.Next(tables.Length)],
+                            Status = status,
+                            CreatedAtUtc = orderCreatedAt,
+                            PaidAtUtc = isPaid ? orderCreatedAt.AddMinutes(35) : null,
+                            Version = 1,
+                            Items = new List<OrderItem>()
+                        };
+
+                        var itemsCount = random.Next(1, 4);
+                        for (var itemIdx = 0; itemIdx < itemsCount; itemIdx++)
+                        {
+                            var selectedDish = dishes[random.Next(dishes.Count)];
+                            var qty = random.Next(1, 3);
+                            order.Items.Add(new OrderItem
+                            {
+                                RestaurantId = restaurant.Id,
+                                DishId = selectedDish.Id,
+                                DishName = selectedDish.Name,
+                                Quantity = qty,
+                                UnitPrice = selectedDish.Price,
+                                UnitCost = selectedDish.Cost,
+                                Observation = "Sem observações adicionais.",
+                                CreatedAtUtc = orderCreatedAt
+                            });
+                        }
+
+                        orders.Add(order);
+                    }
+                }
+
+                await context.Orders.AddRangeAsync(orders);
+                await context.SaveChangesAsync();
+            }
+        }
+
+        // 8. Financeiro: Contas a Pagar e Receber realistas
+        if (!await context.FinanceEntries.AnyAsync(f => f.RestaurantId == restaurant.Id))
+        {
+            var now = DateTime.UtcNow;
+            var financeEntries = new List<FinanceEntry>
+            {
+                new()
+                {
+                    RestaurantId = restaurant.Id,
+                    Description = "Aluguel Comercial - Imóvel Centro Marília",
+                    Type = FinanceEntryType.Expense,
+                    Amount = 3500.00m,
+                    DueDate = now.AddDays(5),
+                    SettledAtUtc = null,
+                    CreatedAtUtc = now
+                },
+                new()
+                {
+                    RestaurantId = restaurant.Id,
+                    Description = "Fornecedor Frigorífico Boi Nobre (Cortes Nobres)",
+                    Type = FinanceEntryType.Expense,
+                    Amount = 1840.50m,
+                    DueDate = now.AddDays(-2),
+                    SettledAtUtc = now.AddDays(-2),
+                    CreatedAtUtc = now.AddDays(-10)
+                },
+                new()
+                {
+                    RestaurantId = restaurant.Id,
+                    Description = "Energia Elétrica CPFL Paulista",
+                    Type = FinanceEntryType.Expense,
+                    Amount = 1120.80m,
+                    DueDate = now.AddDays(10),
+                    SettledAtUtc = null,
+                    CreatedAtUtc = now
+                },
+                new()
+                {
+                    RestaurantId = restaurant.Id,
+                    Description = "Fornecedor Hortifruti da Serra (Colheita Semanal)",
+                    Type = FinanceEntryType.Expense,
+                    Amount = 740.00m,
+                    DueDate = now.AddDays(-5),
+                    SettledAtUtc = now.AddDays(-5),
+                    CreatedAtUtc = now.AddDays(-12)
+                },
+                new()
+                {
+                    RestaurantId = restaurant.Id,
+                    Description = "Evento Corporativo Fechado - Sinal Reserva",
+                    Type = FinanceEntryType.Income,
+                    Amount = 2500.00m,
+                    DueDate = now.AddDays(-1),
+                    SettledAtUtc = now.AddDays(-1),
+                    CreatedAtUtc = now.AddDays(-5)
+                },
+                new()
+                {
+                    RestaurantId = restaurant.Id,
+                    Description = "Venda de Voucher Presente / Consignado",
+                    Type = FinanceEntryType.Income,
+                    Amount = 450.00m,
+                    DueDate = now.AddDays(3),
+                    SettledAtUtc = null,
+                    CreatedAtUtc = now
+                }
+            };
+
+            await context.FinanceEntries.AddRangeAsync(financeEntries);
+            await context.SaveChangesAsync();
         }
     }
 

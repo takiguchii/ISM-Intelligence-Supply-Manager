@@ -9,18 +9,21 @@ const props = defineProps<{
     data: { name: string; pedidos: number }[];
 }>();
 
-const chartData = computed(() => ({
-    labels: props.data.map((d) => d.name),
-    datasets: [
-        {
-            label: "Pedidos",
-            data: props.data.map((d) => d.pedidos),
-            backgroundColor: "rgb(16, 185, 129)",
-            borderRadius: 6,
-            barThickness: 18
-        }
-    ]
-}));
+const chartData = computed(() => {
+    const hasData = props.data && props.data.length > 0;
+    return {
+        labels: hasData ? props.data.map((d) => d.name) : ["Nenhum prato"],
+        datasets: [
+            {
+                label: "Pedidos",
+                data: hasData ? props.data.map((d) => d.pedidos) : [0],
+                backgroundColor: "rgb(16, 185, 129)",
+                borderRadius: 6,
+                barThickness: 18
+            }
+        ]
+    };
+});
 
 const chartOptions = {
     indexAxis: "y" as const,

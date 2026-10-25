@@ -25,6 +25,7 @@ const isRestaurantUser = computed(() => !!authStore.currentUser?.restaurantId);
 
 const targetRestaurantId = ref<number | null>(null);
 const restaurants = ref<Array<{ id: number; name: string }>>([]);
+const restaurantsError = ref<string | null>(null);
 
 const activeSectionId = ref<ConfigSectionId>("ai");
 type ConfigSectionId = "ai" | "general" | "appearance" | "notifications" | "security" | "billing";
@@ -117,14 +118,12 @@ async function loadAiConfig() {
     aiConfig.value = isSuperAdmin.value
       ? await aiConfigService.getByRestaurantId(rid)
       : await aiConfigService.getMyRestaurant();
-    const model = normalizeGeminiModelName(aiConfig.value.model);
-    const endpointOk =
-      !!aiConfig.value.apiEndpoint &&
-      aiConfig.value.apiEndpoint.toLowerCase().includes("generativelanguage.googleapis.com");
-    aiEndpoint.value = endpointOk && aiConfig.value.apiEndpoint
-      ? aiConfig.value.apiEndpoint
-      : GEMINI_DEFAULT_ENDPOINT;
-    aiModelPreset.value = "gemini-3.5-flash-lite";
+    const savedModel = normalizeGeminiModelName(aiConfig.value.model);
+    if (savedModel && MODEL_PRESETS.some((p) => p.value === savedModel)) {
+      aiModelPreset.value = savedModel as (typeof MODEL_PRESETS)[number]["value"];
+    } else {
+      aiModelPreset.value = "gemini-3.5-flash-lite";
+    }
     applyAiPreset();
   } catch (err: any) {
     aiConfigError.value = err?.data?.message ?? err?.message ?? "Não foi possível carregar a configuração.";
@@ -569,16 +568,15 @@ onMounted(async () => {
     if (sections.some((s) => s.id === id)) activeSectionId.value = id;
   }
   if (isSuperAdmin.value) {
-    targetRestaurantId.value = 1;
     const { apiClientWithAuth } = await import("~/services/api/client");
     try {
       const list = (await apiClientWithAuth<Array<{ id: number; name: string }>>(`/api/restaurants`, {
         method: "GET"
       })) as Array<{ id: number; name: string }>;
       restaurants.value = list;
-      if (!targetRestaurantId.value && list.length > 0) targetRestaurantId.value = list[0].id;
-    } catch {
-      restaurants.value = [{ id: 1, name: "Gourmet ISM Restaurant" }];
+    } catch (error) {
+      console.error("Erro ao carregar restaurantes:", error);
+      restaurantsError.value = "Não foi possível carregar os restaurantes. Recarregue a página para tentar novamente.";
     }
   } else {
     targetRestaurantId.value = authStore.currentUser?.restaurantId ?? null;
@@ -600,6 +598,7 @@ onMounted(async () => {
     ]"
   >
 
+    <p v-if="restaurantsError" role="alert" class="p-4 text-sm text-red-600 dark:text-red-400">{{ restaurantsError }}</p>
     <div class="flex flex-1 min-h-0 min-w-0">
       <!-- Sidebar de seções interna (navegação vertical estilo SaaS) -->
       <aside
@@ -669,6 +668,7 @@ onMounted(async () => {
                     : 'bg-white border-zinc-300 text-zinc-900 shadow-sm'
                 ]"
               >
+                <option :value="null">Selecione um restaurante</option>
                 <option v-for="r in restaurants" :key="r.id" :value="r.id">{{ r.id }} · {{ r.name }}</option>
               </select>
             </div>
@@ -895,6 +895,7 @@ onMounted(async () => {
                 v-model="targetRestaurantId"
                 class="w-full rounded-xl px-3.5 py-2.5 text-sm dark:bg-zinc-900/80 bg-white border border-amber-400/30 dark:text-amber-50 text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
               >
+                <option :value="null">Selecione um restaurante</option>
                 <option v-for="r in restaurants" :key="r.id" :value="r.id">{{ r.id }} · {{ r.name }}</option>
               </select>
             </label>

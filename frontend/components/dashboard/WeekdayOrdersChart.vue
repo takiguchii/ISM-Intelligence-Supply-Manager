@@ -13,20 +13,26 @@ const props = defineProps<{
 
 const effectiveThreshold = computed(() => props.threshold ?? 120);
 
-const chartData = computed(() => ({
-    labels: props.data.map((d) => d.day),
-    datasets: [
-        {
-            label: "Pedidos",
-            data: props.data.map((d) => d.pedidos),
-            backgroundColor: props.data.map((d) =>
-                d.pedidos >= effectiveThreshold.value ? "rgb(245, 158, 11)" : "rgba(16, 185, 129, 0.65)"
-            ),
-            borderRadius: 6,
-            barThickness: 28
-        }
-    ]
-}));
+const chartData = computed(() => {
+    const defaultDays = ["seg.", "ter.", "qua.", "qui.", "sex.", "sáb.", "dom."];
+    const hasData = props.data && props.data.length > 0;
+    const labels = hasData ? props.data.map((d) => d.day) : defaultDays;
+    const values = hasData ? props.data.map((d) => d.pedidos) : defaultDays.map(() => 0);
+    return {
+        labels,
+        datasets: [
+            {
+                label: "Pedidos",
+                data: values,
+                backgroundColor: values.map((p) =>
+                    p >= effectiveThreshold.value ? "rgb(245, 158, 11)" : "rgba(16, 185, 129, 0.65)"
+                ),
+                borderRadius: 6,
+                barThickness: 28
+            }
+        ]
+    };
+});
 
 const chartOptions = {
     responsive: true,

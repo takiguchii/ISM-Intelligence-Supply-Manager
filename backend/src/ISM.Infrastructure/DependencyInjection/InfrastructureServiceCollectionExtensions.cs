@@ -2,6 +2,8 @@ using ISM.Infrastructure.Data.Context;
 using ISM.Infrastructure.Data.Options;
 using ISM.Domain.Interfaces;
 using ISM.Infrastructure.Repositories.Menu;
+using ISM.Infrastructure.Repositories.Orders;
+using ISM.Infrastructure.Repositories.Finance;
 using ISM.Infrastructure.Repositories.Stock;
 using ISM.Infrastructure.Repositories.Suppliers;
 using ISM.Infrastructure.Repositories.Tenants;
@@ -48,6 +50,8 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<ISystemAlertRepository, SystemAlertRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IDishRepository, DishRepository>();
+        services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<IFinanceEntryRepository, FinanceEntryRepository>();
         services.AddScoped<IRestaurantRepository, RestaurantRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IImportAuditRepository, ImportAuditRepository>();

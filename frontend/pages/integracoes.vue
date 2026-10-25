@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from "vue";
 import type { ImportAuditDto, ImportPreviewDto, ImportResultDto } from "~/services/modules/import/importService";
 import { importService } from "~/services/modules/import/importService";
+import { apiClientWithAuth } from "~/services/api/client";
 import { useAuthStore } from "~/stores/auth";
 import ImportConfirmationStep from "~/components/import/ImportConfirmationStep.vue";
 import ImportHistoryStep from "~/components/import/ImportHistoryStep.vue";
@@ -26,7 +27,16 @@ const historyRefreshToken = ref(0);
 
 // Super Admin restaurante alvo
 const isSuperAdmin = computed(() => authStore.currentUser?.role === "Admin" && !authStore.currentUser?.restaurantId);
-const targetRestaurantId = ref<number | null>(isSuperAdmin.value ? 1 : authStore.currentUser?.restaurantId ?? null);
+const targetRestaurantId = ref<number | null>(authStore.currentUser?.restaurantId ?? null);
+const restaurants = ref<Array<{ id: number; name: string }>>([]);
+const restaurantsError = ref("");
+
+watch(targetRestaurantId, () => {
+  currentPreview.value = null;
+  currentFile.value = null;
+  lastResults.value = null;
+  activeTab.value = "skills";
+});
 
 // ===== Upload de Arquivo / Dropzone State =====
 const fileInput = ref<HTMLInputElement | null>(null);
@@ -101,179 +111,25 @@ function onConfirmed(results: ImportResultDto[]) {
 }
 
 // ===== Integrations / Plug & Play Skills =====
-export interface IntegrationSkill {
+interface IntegrationSkill {
   id: string;
   name: string;
   description: string;
-  category: "delivery" | "payments" | "suppliers" | "files" | "menu";
   icon: string;
-  status: "ativo" | "disponivel";
-  badgeText: string;
-  config: {
-    apiKey?: string;
-    clientId?: string;
-    webhookUrl?: string;
-    autoSync: boolean;
-    syncInterval: string;
-    lastSync?: string;
-  };
 }
 
-const skills = ref<IntegrationSkill[]>([
-  {
-    id: "ifood",
-    name: "iFood",
-    description: "Pedidos e cardápio em tempo real.",
-    category: "delivery",
-    icon: "ifood",
-    status: "ativo",
-    badgeText: "Ativo",
-    config: {
-      autoSync: true,
-      syncInterval: "Tempo real (SWS WebSocket)",
-      lastSync: "Há 3 minutos"
-    }
-  },
-  {
-    id: "99food",
-    name: "99 Food",
-    description: "Sincronização de vendas e entregas.",
-    category: "delivery",
-    icon: "99food",
-    status: "disponivel",
-    badgeText: "Disponível",
-    config: {
-      autoSync: false,
-      syncInterval: "A cada 5 minutos"
-    }
-  },
-  {
-    id: "planilhas",
-    name: "Planilhas",
-    description: "Importação manual via .xlsx/.csv.",
-    category: "files",
-    icon: "sheet",
-    status: "ativo",
-    badgeText: "Ativo",
-    config: {
-      autoSync: true,
-      syncInterval: "Manual / Upload universal",
-      lastSync: "Auditado via Hash SHA256"
-    }
-  },
-  {
-    id: "cardapio_digital",
-    name: "Cardápio Digital",
-    description: "Atualização de itens e preços.",
-    category: "menu",
-    icon: "menu",
-    status: "disponivel",
-    badgeText: "Disponível",
-    config: {
-      autoSync: false,
-      syncInterval: "Em tempo real"
-    }
-  },
-  {
-    id: "stone",
-    name: "Stone",
-    description: "Recebíveis e taxas por bandeira.",
-    category: "payments",
-    icon: "stone",
-    status: "ativo",
-    badgeText: "Ativo",
-    config: {
-      autoSync: true,
-      syncInterval: "Fechamento diário (00:00)",
-      lastSync: "Hoje às 06:00"
-    }
-  },
-  {
-    id: "fornecedores",
-    name: "Fornecedores",
-    description: "Catálogo e disparo de pedidos.",
-    category: "suppliers",
-    icon: "supplier",
-    status: "disponivel",
-    badgeText: "Disponível",
-    config: {
-      autoSync: false,
-      syncInterval: "Sob demanda"
-    }
-  }
-]);
+const skills: IntegrationSkill[] = [
+  { id: "ifood", name: "iFood", description: "Integração de pedidos e cardápio.", icon: "ifood" },
+  { id: "99food", name: "99 Food", description: "Integração de vendas e entregas.", icon: "99food" },
+  { id: "planilhas", name: "Planilhas", description: "Importação manual de arquivos.", icon: "sheet" },
+  { id: "cardapio_digital", name: "Cardápio Digital", description: "Integração de itens e preços.", icon: "menu" },
+  { id: "stone", name: "Stone", description: "Integração de recebíveis e taxas.", icon: "stone" },
+  { id: "fornecedores", name: "Fornecedores", description: "Integração de catálogos e pedidos.", icon: "supplier" }
+];
 
-// Skill Modal State
-const selectedSkill = ref<IntegrationSkill | null>(null);
-const isSkillModalOpen = ref(false);
-const isSavingSkill = ref(false);
-const isTestingSkill = ref(false);
-
-const toastMessage = ref<string | null>(null);
-function showToast(msg: string) {
-  toastMessage.value = msg;
-  setTimeout(() => (toastMessage.value = null), 4000);
-}
-
-function openSkillModal(skill: IntegrationSkill) {
-  if (skill.id === "planilhas") {
-    // Para planilhas, ir para a carga diária
-    activeTab.value = "skills";
-    const dropzone = document.getElementById("dropzone-card");
-    if (dropzone) {
-      dropzone.scrollIntoView({ behavior: "smooth" });
-    }
-    return;
-  }
-  selectedSkill.value = JSON.parse(JSON.stringify(skill));
-  isSkillModalOpen.value = true;
-}
-
-function closeSkillModal() {
-  isSkillModalOpen.value = false;
-  selectedSkill.value = null;
-}
-
-function toggleSkillStatus() {
-  if (!selectedSkill.value) return;
-  if (selectedSkill.value.status === "ativo") {
-    selectedSkill.value.status = "disponivel";
-    selectedSkill.value.badgeText = "Disponível";
-    selectedSkill.value.config.autoSync = false;
-  } else {
-    selectedSkill.value.status = "ativo";
-    selectedSkill.value.badgeText = "Ativo";
-    selectedSkill.value.config.autoSync = true;
-  }
-}
-
-async function testConnection() {
-  if (!selectedSkill.value) return;
-  isTestingSkill.value = true;
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-  isTestingSkill.value = false;
-  showToast(`Conexão com ${selectedSkill.value.name} testada com sucesso! Latência: 42ms.`);
-}
-
-async function saveSkillConfig() {
-  if (!selectedSkill.value) return;
-  isSavingSkill.value = true;
-  await new Promise((resolve) => setTimeout(resolve, 600));
-  
-  // Atualizar na lista local
-  const idx = skills.value.findIndex((s) => s.id === selectedSkill.value?.id);
-  if (idx !== -1 && selectedSkill.value) {
-    skills.value[idx] = JSON.parse(JSON.stringify(selectedSkill.value));
-  }
-  
-  isSavingSkill.value = false;
-  const isNowActive = selectedSkill.value.status === "ativo";
-  closeSkillModal();
-  showToast(
-    isNowActive
-      ? `Skill ${selectedSkill.value?.name} conectada e configurada com sucesso!`
-      : `Skill ${selectedSkill.value?.name} desconectada.`
-  );
+function openImport() {
+  activeTab.value = "skills";
+  document.getElementById("dropzone-card")?.scrollIntoView({ behavior: "smooth" });
 }
 
 const handleLogout = () => {
@@ -287,32 +143,22 @@ onMounted(async () => {
     router.push("/login");
     return;
   }
-  targetRestaurantId.value = isSuperAdmin.value ? 1 : authStore.currentUser?.restaurantId ?? null;
+  if (isSuperAdmin.value) {
+    targetRestaurantId.value = null;
+    try {
+      restaurants.value = await apiClientWithAuth<Array<{ id: number; name: string }>>("/api/restaurants");
+    } catch (error) {
+      console.error("Erro ao carregar restaurantes:", error);
+      restaurantsError.value = "Não foi possível carregar os restaurantes. Recarregue a página para tentar novamente.";
+    }
+  } else {
+    targetRestaurantId.value = authStore.currentUser?.restaurantId ?? null;
+  }
 });
 </script>
 
 <template>
   <div class="light-page max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-8">
-
-    <!-- Toast Notification -->
-    <Teleport to="body">
-      <Transition
-        enter-active-class="transition duration-300 ease-out transform"
-        enter-from-class="translate-y-4 opacity-0 scale-95"
-        enter-to-class="translate-y-0 opacity-100 scale-100"
-        leave-active-class="transition duration-200 ease-in transform"
-        leave-from-class="translate-y-0 opacity-100 scale-100"
-        leave-to-class="translate-y-4 opacity-0 scale-95"
-      >
-        <div
-          v-if="toastMessage"
-          class="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-zinc-900 border border-emerald-500/40 text-emerald-300 text-xs font-semibold shadow-2xl flex items-center gap-3 backdrop-blur-xl"
-        >
-          <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-          <span>{{ toastMessage }}</span>
-        </div>
-      </Transition>
-    </Teleport>
 
     <!-- Top Title & Tag Section -->
       <div class="space-y-2">
@@ -339,10 +185,13 @@ onMounted(async () => {
         <label class="flex items-center gap-2">
           <span class="text-xs text-zinc-400 font-mono">Restaurante:</span>
           <select v-model.number="targetRestaurantId" class="bg-zinc-950 border border-zinc-700/80 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40">
-            <option :value="1">1 - Gourmet ISM Restaurant</option>
+            <option :value="null">Selecione um restaurante</option>
+            <option v-for="restaurant in restaurants" :key="restaurant.id" :value="restaurant.id">{{ restaurant.id }} · {{ restaurant.name }}</option>
           </select>
         </label>
       </div>
+
+      <p v-if="restaurantsError" role="alert" class="text-sm text-red-400">{{ restaurantsError }}</p>
 
       <!-- Navigation Tabs (Permite alternar entre Conexões, Confirmação e Histórico) -->
       <div v-if="currentPreview || lastResults || activeTab !== 'skills'" class="flex items-center gap-2 border-b border-zinc-800 pb-2">
@@ -510,17 +359,8 @@ onMounted(async () => {
                   </svg>
                 </div>
 
-                <!-- Status Badge -->
-                <div
-                  :class="[
-                    'px-2.5 py-1 rounded-full text-[11px] font-medium flex items-center gap-1.5 border',
-                    skill.status === 'ativo'
-                      ? 'bg-emerald-950/60 border-emerald-500/30 text-emerald-400'
-                      : 'bg-zinc-800/80 border-zinc-700/60 text-zinc-400'
-                  ]"
-                >
-                  <span v-if="skill.status === 'ativo'" class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  <span>{{ skill.badgeText }}</span>
+                <div class="px-2.5 py-1 rounded-full text-[11px] font-medium border border-zinc-700/60 text-zinc-400">
+                  {{ skill.id === 'planilhas' ? 'Importação manual' : 'Indisponível' }}
                 </div>
               </div>
 
@@ -529,25 +369,11 @@ onMounted(async () => {
               <p class="text-xs text-zinc-400 mt-1 line-clamp-2 leading-relaxed">{{ skill.description }}</p>
             </div>
 
-            <!-- Card Bottom Action Button (Exatamente como o protótipo) -->
             <div class="mt-6">
-              <!-- Botão Se Ativo: Gerenciar (Botão Escuro) -->
-              <button
-                v-if="skill.status === 'ativo'"
-                @click="openSkillModal(skill)"
-                class="w-full py-2.5 rounded-xl border border-zinc-800 bg-[#18181b] hover:bg-zinc-800 hover:border-zinc-700 text-xs font-semibold text-zinc-200 hover:text-white transition-all flex items-center justify-center gap-2 shadow-sm"
-              >
-                <span>Gerenciar</span>
+              <button v-if="skill.id === 'planilhas'" type="button" @click="openImport" class="w-full py-2.5 rounded-xl border border-zinc-800 bg-[#18181b] hover:bg-zinc-800 text-xs font-semibold text-zinc-200">
+                Importar arquivo
               </button>
-
-              <!-- Botão Se Disponível: Conectar (Botão Branco) -->
-              <button
-                v-else
-                @click="openSkillModal(skill)"
-                class="w-full py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
-              >
-                <span>Conectar</span>
-              </button>
+              <p v-else class="text-xs text-zinc-500">Esta integração ainda não está disponível.</p>
             </div>
           </div>
 
@@ -586,123 +412,7 @@ onMounted(async () => {
         <ImportHistoryStep :restaurant-id="targetRestaurantId" :refresh-token="historyRefreshToken" />
       </section>
 
-    <!-- MODAL SLIDE-OVER DE GERENCIAMENTO DA SKILL (PLUG & PLAY) -->
-    <Teleport to="body">
-      <div
-        v-if="isSkillModalOpen && selectedSkill"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
-        @click.self="closeSkillModal"
-      >
-        <div class="w-full max-w-lg bg-[#121214] rounded-3xl border border-zinc-800 shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
-          
-          <!-- Modal Header -->
-          <div class="p-6 border-b border-zinc-800/80 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-white">
-                <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                </svg>
-              </div>
-              <div>
-                <h3 class="font-bold text-white text-lg tracking-tight">{{ selectedSkill.name }}</h3>
-                <p class="text-xs text-zinc-400">Configuração de Plug & Play Skill</p>
-              </div>
-            </div>
-            <button @click="closeSkillModal" class="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
-          </div>
 
-          <!-- Modal Body -->
-          <div class="p-6 space-y-6 overflow-y-auto max-h-[70vh]">
-            
-            <!-- Status Plug & Play Switch -->
-            <div class="p-4 rounded-2xl bg-zinc-950/80 border border-zinc-800 flex items-center justify-between">
-              <div>
-                <div class="text-xs font-semibold text-white">Status da Conexão</div>
-                <div class="text-[11px] text-zinc-400">Ative ou pause o fluxo de dados em tempo real.</div>
-              </div>
-              <button
-                @click="toggleSkillStatus"
-                :class="[
-                  'px-3 py-1.5 rounded-full text-xs font-bold transition-all border flex items-center gap-1.5',
-                  selectedSkill.status === 'ativo'
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                    : 'bg-zinc-800 border-zinc-700 text-zinc-400'
-                ]"
-              >
-                <span :class="['w-2 h-2 rounded-full', selectedSkill.status === 'ativo' ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500']"></span>
-                <span>{{ selectedSkill.status === 'ativo' ? 'Conectado' : 'Desconectado' }}</span>
-              </button>
-            </div>
-
-            <!-- Campos de Configuração -->
-            <div class="space-y-4 text-xs">
-              <label class="flex flex-col gap-1.5">
-                <span class="text-zinc-400 font-medium">Chave de API / Access Token</span>
-                <input
-                  v-model="selectedSkill.config.apiKey"
-                  type="password"
-                  placeholder="Insira a chave fornecida pelo sistema..."
-                  class="bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-                />
-              </label>
-
-              <label class="flex flex-col gap-1.5">
-                <span class="text-zinc-400 font-medium">Frequência de Sincronização</span>
-                <select
-                  v-model="selectedSkill.config.syncInterval"
-                  class="bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-                >
-                  <option value="Tempo real (SWS WebSocket)">Tempo real (WebSocket)</option>
-                  <option value="A cada 5 minutos">A cada 5 minutos</option>
-                  <option value="A cada 1 hora">A cada 1 hora</option>
-                  <option value="Diário">Fechamento diário</option>
-                </select>
-              </label>
-
-              <div class="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800/80 space-y-1">
-                <div class="text-[11px] text-zinc-400 font-medium">Informações do Cérebro ISM:</div>
-                <p class="text-[11px] text-zinc-500">
-                  Os dados recebidos via {{ selectedSkill.name }} alimentam automaticamente a curva ABC, o custo de mercadoria vendida (CMV) e os alertas de estoque.
-                </p>
-              </div>
-            </div>
-
-          </div>
-
-          <!-- Modal Footer -->
-          <div class="p-6 border-t border-zinc-800/80 bg-zinc-950/60 flex items-center justify-between gap-3">
-            <button
-              @click="testConnection"
-              :disabled="isTestingSkill"
-              class="px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs font-semibold text-zinc-300 hover:text-white transition-all disabled:opacity-40 flex items-center gap-2"
-            >
-              <span v-if="isTestingSkill" class="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-              <span>Testar Conexão</span>
-            </button>
-
-            <div class="flex items-center gap-2">
-              <button
-                @click="closeSkillModal"
-                class="px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-xs font-semibold border border-zinc-800 transition-all"
-              >
-                Cancelar
-              </button>
-              <button
-                @click="saveSkillConfig"
-                :disabled="isSavingSkill"
-                class="px-5 py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-bold transition-all shadow-md flex items-center gap-2"
-              >
-                <span v-if="isSavingSkill" class="w-3 h-3 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin"></span>
-                <span>Salvar & Ativar</span>
-              </button>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </Teleport>
   </div>
 </template>
 
