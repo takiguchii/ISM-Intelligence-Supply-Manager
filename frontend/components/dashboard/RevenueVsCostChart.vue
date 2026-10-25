@@ -54,6 +54,10 @@ const chartData = computed(() => ({
 const chartOptions = computed(() => ({
     responsive: true,
     maintainAspectRatio: false,
+    animation: {
+        duration: typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 1200,
+        easing: "easeOutQuart" as const
+    },
     interaction: { mode: "index" as const, intersect: false },
     plugins: {
         legend: { display: false },
@@ -76,6 +80,7 @@ const chartOptions = computed(() => ({
             ticks: { color: "rgb(113, 113, 122)", font: { size: 10, family: "monospace" } }
         },
         y: {
+            beginAtZero: true,
             grid: { color: "rgba(161, 161, 170, 0.15)" },
             ticks: {
                 color: "rgb(113, 113, 122)",
@@ -110,9 +115,9 @@ const totals = computed(() => {
             </div>
         </div>
 
-        <div class="h-64">
+        <ChartOnVisible>
             <Line :data="chartData" :options="chartOptions" />
-        </div>
+        </ChartOnVisible>
 
         <div class="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 pt-3 border-t border-zinc-200 dark:border-zinc-800/80">
             <span>Receita total: <span class="text-zinc-900 dark:text-zinc-200 font-bold">{{ currency(totals.receita) }}</span></span>

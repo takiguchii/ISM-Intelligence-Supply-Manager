@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import AppLoader from "~/components/base/AppLoader.vue";
 import { useAuthStore } from "~/stores/auth";
 import {
   supplierService,
@@ -14,7 +13,6 @@ const authStore = useAuthStore();
 const router = useRouter();
 
 // State UI
-const isLoading = ref(true);
 const isSidebarOpen = ref(false);
 const listSearch = ref("");
 const selectedCategory = ref<string>("ALL");
@@ -212,7 +210,6 @@ const deleteSupplier = async () => {
 };
 
 onMounted(async () => {
-  const start = Date.now();
   authStore.initFromStorage();
 
   if (!authStore.isAuthenticated) {
@@ -221,15 +218,11 @@ onMounted(async () => {
   }
 
   await loadSuppliers();
-  setTimeout(() => {
-    isLoading.value = false;
-  }, Math.max(0, 800 - (Date.now() - start)));
 });
 </script>
 
 <template>
   <div class="light-page max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
-    <AppLoader :visible="isLoading" />
 
     <!-- Notifications Alert -->
     <div v-if="successMessage" class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs sm:text-sm flex items-center justify-between">

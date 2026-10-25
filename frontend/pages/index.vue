@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
-import AppLoader from "~/components/base/AppLoader.vue";
+import { onMounted } from "vue";
 import PageHeader from "~/components/dashboard/PageHeader.vue";
 import KpiCard from "~/components/dashboard/KpiCard.vue";
 import AiInsightCard from "~/components/dashboard/AiInsightCard.vue";
@@ -15,7 +14,6 @@ import { useDashboardMetrics } from "~/composables/useDashboardMetrics";
 const authStore = useAuthStore();
 const router = useRouter();
 
-const isLoading = ref(true);
 
 const { refresh: refreshStatus } = await useSystemStatus();
 
@@ -32,8 +30,6 @@ const handleRefreshAll = () => {
 };
 
 onMounted(async () => {
-  const startTime = Date.now();
-
   // Verifica autenticação no cliente
   authStore.initFromStorage();
   if (!authStore.isAuthenticated) {
@@ -47,20 +43,12 @@ onMounted(async () => {
     return;
   }
 
-  const elapsedTime = Date.now() - startTime;
-  const minDuration = 800;
-  const remainingTime = Math.max(0, minDuration - elapsedTime);
 
-  setTimeout(() => {
-    isLoading.value = false;
-  }, remainingTime);
 });
 </script>
 
 <template>
   <div class="space-y-8 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
-    <!-- Overlay de Animação de Carregamento -->
-    <AppLoader :visible="isLoading" />
 
     <!-- Main Content Area -->
     <main class="flex-1 space-y-8">

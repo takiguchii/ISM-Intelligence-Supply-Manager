@@ -3,7 +3,6 @@ import { ref, computed, onMounted } from "vue";
 import type { ImportAuditDto, ImportPreviewDto, ImportResultDto } from "~/services/modules/import/importService";
 import { importService } from "~/services/modules/import/importService";
 import { useAuthStore } from "~/stores/auth";
-import AppLoader from "~/components/base/AppLoader.vue";
 import ImportConfirmationStep from "~/components/import/ImportConfirmationStep.vue";
 import ImportHistoryStep from "~/components/import/ImportHistoryStep.vue";
 
@@ -12,7 +11,6 @@ const runtimeConfig = useRuntimeConfig();
 const authStore = useAuthStore();
 const router = useRouter();
 
-const isLoading = ref(true);
 const isSidebarOpen = ref(false);
 const toggleSidebar = () => (isSidebarOpen.value = !isSidebarOpen.value);
 
@@ -284,22 +282,17 @@ const handleLogout = () => {
 };
 
 onMounted(async () => {
-  const start = Date.now();
   authStore.initFromStorage();
   if (!authStore.isAuthenticated) {
     router.push("/login");
     return;
   }
   targetRestaurantId.value = isSuperAdmin.value ? 1 : authStore.currentUser?.restaurantId ?? null;
-  const min = 400;
-  const wait = Math.max(0, min - (Date.now() - start));
-  setTimeout(() => (isLoading.value = false), wait);
 });
 </script>
 
 <template>
   <div class="light-page max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-8">
-    <AppLoader :visible="isLoading" />
 
     <!-- Toast Notification -->
     <Teleport to="body">

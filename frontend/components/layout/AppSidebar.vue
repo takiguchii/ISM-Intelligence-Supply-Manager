@@ -1,25 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed } from "vue";
 import { useAuthStore } from "~/stores/auth";
 import { useThemeStore } from "~/stores/theme";
 import { navigationForUser, type NavigationItem } from "~/utils/navigation";
 
-const props = withDefaults(
-  defineProps<{
-    isOpen?: boolean;
-    isCollapsed?: boolean;
-  }>(),
-  {
-    isOpen: false,
-    isCollapsed: false,
-  }
-);
-
-const emit = defineEmits<{
-  (e: "close"): void;
-  (e: "update:isCollapsed", value: boolean): void;
-  (e: "toggleCollapse"): void;
-}>();
+withDefaults(defineProps<{ isOpen?: boolean }>(), { isOpen: false });
+const emit = defineEmits<{ (e: "close"): void }>();
 
 const authStore = useAuthStore();
 const themeStore = useThemeStore();
@@ -27,21 +13,6 @@ const route = useRoute();
 const router = useRouter();
 
 const searchQuery = ref("");
-const internalCollapsed = ref(props.isCollapsed);
-
-watch(
-  () => props.isCollapsed,
-  (val) => {
-    internalCollapsed.value = val;
-  }
-);
-
-const toggleCollapse = () => {
-  internalCollapsed.value = !internalCollapsed.value;
-  emit("update:isCollapsed", internalCollapsed.value);
-  emit("toggleCollapse");
-};
-
 // Obter itens de menu para o usuário autenticado
 const rawMenuItems = computed(() => navigationForUser(authStore.currentUser));
 
@@ -92,6 +63,8 @@ const selectItem = (item: NavigationItem) => {
   }
 };
 
+const avatarFailed = ref(false);
+
 const userInitials = computed(() => {
   const name = authStore.currentUser?.name || "";
   const parts = name.trim().split(/\s+/);
@@ -110,36 +83,11 @@ const userRoleFormatted = computed(() => {
   return role;
 });
 
-const isMobileScreen = ref(false);
-
-const updateScreen = () => {
-  if (typeof window !== "undefined") {
-    isMobileScreen.value = window.innerWidth < 1024;
-  }
-};
-
-onMounted(() => {
-  updateScreen();
-  window.addEventListener("resize", updateScreen);
-});
-
-onBeforeUnmount(() => {
-  if (typeof window !== "undefined") {
-    window.removeEventListener("resize", updateScreen);
-  }
-});
+const sidebarCollapsed = false;
 </script>
 
 <template>
   <div>
-    <!-- Backdrop overlay para mobile com animação fluida -->
-    <div
-      v-if="isOpen && isMobileScreen"
-      @click="emit('close')"
-      class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden sidebar-fade-enter"
-    ></div>
-
-    <!-- Sidebar Container com física de animação ultra fluida (120fps) -->
     <aside
       :class="[
         'fixed top-0 left-0 bottom-0 z-50 flex flex-col select-none border-r ism-sidebar-transition',
@@ -147,41 +95,17 @@ onBeforeUnmount(() => {
           ? 'bg-[#0f1115] border-zinc-800/80 text-zinc-300'
           : 'bg-[#fafafa] border-zinc-200 text-zinc-700 shadow-xl shadow-zinc-200/50',
         // Largura retraída vs expandida
-        internalCollapsed ? 'w-[72px]' : 'w-[256px]',
+        sidebarCollapsed ? 'w-[min(256px,65vw)] lg:w-[72px]' : 'w-[min(256px,65vw)] lg:w-[256px]',
         // Visibilidade em mobile
-        isMobileScreen ? (isOpen ? 'translate-x-0' : '-translate-x-full') : 'translate-x-0'
+        isOpen ? 'translate-x-0' : '-translate-x-full'
       ]"
     >
-      <!-- Botão circular de retração/expansão -->
-      <button
-        @click="toggleCollapse"
-        type="button"
-        :aria-label="internalCollapsed ? 'Expandir menu lateral' : 'Retrair menu lateral'"
-        :class="[
-          'absolute -right-3 top-6 z-20 hidden lg:flex items-center justify-center w-6 h-6 rounded-full border shadow-md transition-all duration-300 hover:scale-110 active:scale-95',
-          themeStore.isDark
-            ? 'bg-zinc-800 text-zinc-200 border-zinc-700 hover:bg-zinc-700'
-            : 'bg-white text-zinc-800 border-zinc-300 hover:bg-zinc-100'
-        ]"
-      >
-        <svg
-          class="w-3.5 h-3.5 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
-          :class="internalCollapsed ? 'rotate-180' : 'rotate-0'"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.5"
-          viewBox="0 0 24 24"
-        >
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-        </svg>
-      </button>
-
       <!-- Topo: Perfil do Usuário com Foto / Avatar, Nome, Cargo e Status Online -->
       <div
         :class="[
           'pt-5 pb-3 transition-colors duration-300 border-b',
           themeStore.isDark ? 'border-zinc-800/50' : 'border-zinc-200',
-          internalCollapsed ? 'px-2 flex flex-col items-center' : 'px-4'
+          sidebarCollapsed ? 'px-2 flex flex-col items-center' : 'px-4'
         ]"
       >
         <div class="flex items-center gap-3">
@@ -199,9 +123,10 @@ onBeforeUnmount(() => {
                 src="/logos/ism-sidebar-logo.png"
                 alt="Avatar"
                 class="w-full h-full object-cover"
-                @error="($event.target as HTMLElement).style.display = 'none'"
+                v-if="!avatarFailed"
+                @error="avatarFailed = true"
               />
-              <span class="avatar-fallback">{{ userInitials }}</span>
+              <span v-else>{{ userInitials }}</span>
             </div>
             <!-- Ponto Verde Indicador Online -->
             <span
@@ -215,7 +140,7 @@ onBeforeUnmount(() => {
 
           <!-- Informações do Usuário (Ocultadas se colapsado) -->
           <div
-            v-if="!internalCollapsed"
+            v-if="!sidebarCollapsed"
             class="min-w-0 flex-1 overflow-hidden transition-all duration-300"
           >
             <h3
@@ -245,7 +170,7 @@ onBeforeUnmount(() => {
 
         <!-- Barra de Busca Inteligente de Views -->
         <div
-          v-if="!internalCollapsed"
+          v-if="!sidebarCollapsed"
           class="mt-3.5 relative transition-all duration-300"
         >
           <div class="relative flex items-center">
@@ -289,8 +214,8 @@ onBeforeUnmount(() => {
 
       <!-- Área de Navegação com Scroll Suave -->
       <div
-        class="flex-1 overflow-y-auto overflow-x-hidden py-3 scrollbar-none space-y-4"
-        :class="internalCollapsed ? 'px-2' : 'px-3'"
+        class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-3 scrollbar-none space-y-4"
+        :class="sidebarCollapsed ? 'px-2' : 'px-3'"
       >
         <!-- Iteração por grupos de categoria -->
         <div
@@ -300,7 +225,7 @@ onBeforeUnmount(() => {
         >
           <!-- Título da Categoria (Exibido apenas quando expandido) -->
           <div
-            v-if="!internalCollapsed"
+            v-if="!sidebarCollapsed"
             :class="[
               'px-2 pt-2 pb-1 text-[10px] font-bold tracking-wider uppercase select-none transition-colors duration-200',
               themeStore.isDark ? 'text-zinc-500' : 'text-zinc-400'
@@ -322,11 +247,11 @@ onBeforeUnmount(() => {
             v-for="item in group.items"
             :key="item.id"
             @click="selectItem(item)"
-            :title="internalCollapsed ? item.label : undefined"
+            :title="sidebarCollapsed ? item.label : undefined"
             type="button"
             :class="[
               'group relative w-full flex items-center rounded-xl text-xs font-medium transition-all duration-200',
-              internalCollapsed
+              sidebarCollapsed
                 ? 'justify-center p-2.5 my-1'
                 : 'gap-3 px-3 py-2.5',
               isItemActive(item)
@@ -419,7 +344,7 @@ onBeforeUnmount(() => {
 
             <!-- Rótulo do Item (exibido apenas se expandido) -->
             <span
-              v-if="!internalCollapsed"
+              v-if="!sidebarCollapsed"
               class="truncate text-left flex-1"
             >
               {{ item.label }}
@@ -429,7 +354,7 @@ onBeforeUnmount(() => {
 
         <!-- Feedback de busca vazia -->
         <div
-          v-if="!internalCollapsed && groupedMenuItems.length === 0"
+          v-if="!sidebarCollapsed && groupedMenuItems.length === 0"
           :class="[
             'px-4 py-8 text-center text-xs',
             themeStore.isDark ? 'text-zinc-500' : 'text-zinc-400'
@@ -443,27 +368,17 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* Transição com aceleração de hardware 120fps e timing premium */
+/* Transição sincronizada com o layout principal. */
 .ism-sidebar-transition {
   will-change: width, transform;
-  transform: translateZ(0);
   backface-visibility: hidden;
   transition-property: width, transform, background-color, border-color, box-shadow;
   transition-duration: 400ms;
   transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.sidebar-fade-enter {
-  animation: sidebarBackdropFade 350ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-@keyframes sidebarBackdropFade {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+@media (prefers-reduced-motion: reduce) {
+  .ism-sidebar-transition { transition: none; }
 }
 
 /* Ocultar barra de rolagem mantendo funcionalidade */

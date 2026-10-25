@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import AppLoader from '~/components/base/AppLoader.vue'
 import { useAuthStore } from '~/stores/auth'
 import { menuService } from '~/services/modules/menu/menuService'
 
@@ -50,7 +49,6 @@ const API_BASE =
   config.public?.apiBase ||
   'http://localhost:8080'
 
-const isLoading = ref(true)
 const isSidebarOpen = ref(false)
 
 const categories = ref<Category[]>([])
@@ -875,7 +873,6 @@ const clearFilters = async () => {
 */
 
 const loadPage = async () => {
-  const start = Date.now()
 
   errorMessage.value = ''
   successMessage.value = ''
@@ -895,19 +892,6 @@ const loadPage = async () => {
 
   } catch (error) {
     handleApiError(error)
-  } finally {
-    const elapsed =
-      Date.now() - start
-
-    setTimeout(
-      () => {
-        isLoading.value = false
-      },
-      Math.max(
-        0,
-        700 - elapsed
-      )
-    )
   }
 }
 
@@ -923,7 +907,6 @@ onMounted(loadPage)
     </section>
   </main>
   <div v-else class="light-page max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
-    <AppLoader :visible="isLoading" />
 
     <!-- MAIN -->
     <main class="flex-1">

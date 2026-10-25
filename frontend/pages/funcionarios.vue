@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import AppLoader from "~/components/base/AppLoader.vue";
 import { useAuthStore } from "~/stores/auth";
 import { employeeService, type EmployeeResponse } from "~/services/modules/employees/employeeService";
 
@@ -17,7 +16,6 @@ const ROLE_LABELS: Record<string, string> = {
 const authStore = useAuthStore();
 const router = useRouter();
 
-const isPageLoading = ref(true);
 const isSidebarOpen = ref(false);
 
 const employees = ref<EmployeeResponse[]>([]);
@@ -343,13 +341,11 @@ onMounted(async () => {
   }
 
   await loadEmployees();
-  isPageLoading.value = false;
 });
 </script>
 
 <template>
   <div class="light-page max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
-    <AppLoader :visible="isPageLoading" />
 
     <!-- Feedback -->
     <div

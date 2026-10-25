@@ -10,12 +10,7 @@ import {
   type TestRestaurantAiPhotoConfigRequestDto,
   type UpdateRestaurantAiPhotoConfigDto
 } from "~/services/modules/import/importService";
-import AppNavbar from "~/components/layout/AppNavbar.vue";
-import AppSidebar from "~/components/layout/AppSidebar.vue";
-import AppLoader from "~/components/base/AppLoader.vue";
 import { useThemeStore } from "~/stores/theme";
-
-definePageMeta({ layout: false });
 
 const route = useRoute();
 const router = useRouter();
@@ -24,36 +19,7 @@ const themeStore = useThemeStore();
 
 const isLoading = ref(true);
 
-const DESKTOP_BREAKPOINT = 1024;
-const sidebarOpen = ref(
-  typeof window !== "undefined" ? window.innerWidth >= DESKTOP_BREAKPOINT : true
-);
-function toggleSidebar(value?: boolean) {
-  sidebarOpen.value = typeof value === "boolean" ? value : !sidebarOpen.value;
-}
-
-const handleResizeSidebar = () => {
-  if (typeof window === "undefined") return;
-  const isDesktop = window.innerWidth >= DESKTOP_BREAKPOINT;
-  if (isDesktop) {
-    if (!sidebarOpen.value) sidebarOpen.value = true;
-  } else {
-    if (sidebarOpen.value) sidebarOpen.value = false;
-  }
-};
-
-onMounted(() => {
-  if (typeof window !== "undefined") {
-    sidebarOpen.value = window.innerWidth >= DESKTOP_BREAKPOINT;
-    window.addEventListener("resize", handleResizeSidebar);
-  }
-});
-
-onBeforeUnmount(() => {
-  if (typeof window !== "undefined") {
-    window.removeEventListener("resize", handleResizeSidebar);
-  }
-});
+const toggleSidebar = inject<() => void>("toggleSidebar", () => {});
 const isSuperAdmin = computed(() => authStore.currentUser?.role === "Admin" && !authStore.currentUser?.restaurantId);
 const isRestaurantUser = computed(() => !!authStore.currentUser?.restaurantId);
 
@@ -593,7 +559,6 @@ watch(
 );
 
 onMounted(async () => {
-  const start = Date.now();
   authStore.initFromStorage();
   if (!authStore.isAuthenticated) {
     router.push("/login");
@@ -621,9 +586,7 @@ onMounted(async () => {
   await loadAiConfig();
   await loadGeneralProfile();
   await loadTmpTokens();
-  const min = 900;
-  const wait = Math.max(0, min - (Date.now() - start));
-  setTimeout(() => (isLoading.value = false), wait);
+  isLoading.value = false;
 });
 </script>
 
@@ -636,18 +599,8 @@ onMounted(async () => {
         : 'bg-zinc-50 text-zinc-900 selection:bg-indigo-100 selection:text-indigo-900'
     ]"
   >
-    <AppLoader :visible="isLoading" />
 
-    <AppNavbar @toggleSidebar="toggleSidebar()" />
-
-    <AppSidebar :is-open="sidebarOpen" @close="toggleSidebar(false)" />
-
-    <div
-      :class="[
-        'flex flex-1 min-h-0 transition-[padding] duration-300 ease-in-out',
-        sidebarOpen ? 'lg:pl-64' : 'lg:pl-0'
-      ]"
-    >
+    <div class="flex flex-1 min-h-0 min-w-0">
       <!-- Sidebar de seções interna (navegação vertical estilo SaaS) -->
       <aside
         :class="[

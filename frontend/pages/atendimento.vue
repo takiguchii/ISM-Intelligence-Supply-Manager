@@ -67,7 +67,8 @@
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
           <div 
             v-for="prato in pratosFiltrados" 
-            :key="prato.id" 
+            :key="prato.id"
+            data-card-reveal
             class="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-800 overflow-hidden flex flex-col active:scale-[0.98] transition-transform lg:hover:shadow-lg lg:active:scale-100"
           >
             <div class="p-4 lg:p-5 flex-1">

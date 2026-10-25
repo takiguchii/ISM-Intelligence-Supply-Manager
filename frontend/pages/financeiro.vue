@@ -1,16 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 
-import AppLoader from "~/components/base/AppLoader.vue";
 import { useAuthStore } from "~/stores/auth";
 
 const authStore = useAuthStore();
 const router = useRouter();
 
-const isLoading = ref(true);
 
 onMounted(async () => {
-  const start = Date.now();
 
   authStore.initFromStorage();
 
@@ -19,9 +16,6 @@ onMounted(async () => {
     return;
   }
 
-  setTimeout(() => {
-    isLoading.value = false;
-  }, Math.max(0, 1000 - (Date.now() - start)));
 });
 
 /* Dados temporários — substituir pela API posteriormente */
@@ -48,7 +42,6 @@ const formatCurrency = (value: number) => {
 
 <template>
   <div class="light-page max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-8">
-    <AppLoader :visible="isLoading" />
 
     <main class="flex-1">
       <!-- Hero -->
