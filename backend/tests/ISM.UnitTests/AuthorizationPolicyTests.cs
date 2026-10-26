@@ -50,6 +50,32 @@ public sealed class AuthorizationPolicyTests
         managerResult.Succeeded.Should().BeTrue();
     }
 
+    [Theory]
+    [InlineData(IsmRoles.Admin, 10, true)]
+    [InlineData(IsmRoles.Manager, 10, true)]
+    [InlineData(IsmRoles.Chef, 10, false)]
+    [InlineData(IsmRoles.Waiter, 10, false)]
+    [InlineData(IsmRoles.Admin, null, false)]
+    public async Task RestaurantManagerOrAbove_ShouldOnlyAllowAdminAndManagerWithTenant(string role, int? restaurantId, bool expectedSuccess)
+    {
+        var result = await AuthorizeAsync(Principal(role, restaurantId), IsmPolicies.RestaurantManagerOrAbove);
+        result.Succeeded.Should().Be(expectedSuccess);
+    }
+
+    [Theory]
+    [InlineData(IsmRoles.Admin, 10, true)]
+    [InlineData(IsmRoles.Manager, 10, true)]
+    [InlineData(IsmRoles.Chef, 10, true)]
+    [InlineData(IsmRoles.Waiter, 10, true)]
+    [InlineData(IsmRoles.Chef, null, false)]
+    [InlineData(IsmRoles.Waiter, null, false)]
+    [InlineData(IsmRoles.Admin, null, false)]
+    public async Task RestaurantAnyUser_ShouldAllowAllOperationalRolesWithTenant(string role, int? restaurantId, bool expectedSuccess)
+    {
+        var result = await AuthorizeAsync(Principal(role, restaurantId), IsmPolicies.RestaurantAnyUser);
+        result.Succeeded.Should().Be(expectedSuccess);
+    }
+
     private static async Task<AuthorizationResult> AuthorizeAsync(ClaimsPrincipal principal, string policy)
     {
         var services = new ServiceCollection();
