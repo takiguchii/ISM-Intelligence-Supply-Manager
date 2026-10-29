@@ -87,6 +87,8 @@ export const useDashboardMetrics = (restaurantId: Ref<number | null>, requiresSe
       if (requestGeneration !== generation) return;
 
       const aiInsights: AgentInsight[] = [];
+      const priceAdjustments: PriceAdjustment[] = [];
+
       if (alertsResponse?.items) {
         for (const item of alertsResponse.items) {
           const sev: InsightSeverity =
@@ -94,16 +96,40 @@ export const useDashboardMetrics = (restaurantId: Ref<number | null>, requiresSe
           aiInsights.push({
             id: `alert-${item.id}`,
             icon: item.referenceEntityType === "Product" ? "Warning" : "Bell",
-            agent: item.referenceEntityType === "Product" ? "Agente de Estoque" : "Agente de Suprimentos",
+            agent: item.referenceEntityType === "Product" ? "Agente de Estoque" : item.referenceEntityType === "Dish" ? "Agente de Precificação" : "Agente de Suprimentos",
             severity: sev,
             title: item.title,
             description: item.message,
             secondaryLabel: "Ver Alertas"
           });
+
+          // Se for alerta de defasagem de CMV de prato, extrai dados para PriceAdjustment
+          if (item.referenceEntityType === "Dish" && item.payloadSerializedJson) {
+            try {
+              const payload = JSON.parse(item.payloadSerializedJson);
+              if (payload.DishName && payload.SuggestedPrice) {
+                const targetMargin = payload.TargetMarginPercent || 30;
+                const ingredientCost = payload.SuggestedPrice * (1 - targetMargin / 100);
+                const currentPrice = payload.CurrentCmvPercent > 0
+                  ? Number((ingredientCost / (payload.CurrentCmvPercent / 100)).toFixed(2))
+                  : payload.SuggestedPrice;
+                priceAdjustments.push({
+                  id: `adj-${item.id}`,
+                  name: payload.DishName,
+                  from: currentPrice,
+                  to: Number(payload.SuggestedPrice),
+                  direction: payload.SuggestedPrice >= currentPrice ? "up" : "down",
+                  reason: payload.Message || `Reajuste para manter margem de ${targetMargin}%`
+                });
+              }
+            } catch {
+              // Ignora caso payload não seja parseável
+            }
+          }
         }
       }
 
-      data.value = { ...metricsResponse, aiInsights, priceAdjustments: [] };
+      data.value = { ...metricsResponse, aiInsights, priceAdjustments };
       available.value = true;
     } catch (err: any) {
       if (requestGeneration !== generation) return;

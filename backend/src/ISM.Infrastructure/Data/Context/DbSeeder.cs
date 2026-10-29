@@ -73,7 +73,7 @@ public static class DbSeeder
         {
             restaurant = new Restaurant
             {
-                Name = "Gourmet ISM Restaurante & Bar",
+                Name = "Maki Sushi Bar & Cozinha Oriental",
                 CNPJ = "12345678000190",
                 Created = DateTime.UtcNow,
                 PlanId = planPro?.Id,
@@ -82,6 +82,11 @@ public static class DbSeeder
             };
 
             await context.Restaurants.AddAsync(restaurant);
+            await context.SaveChangesAsync();
+        }
+        else if (restaurant.Name == "Gourmet ISM Restaurante & Bar")
+        {
+            restaurant.Name = "Maki Sushi Bar & Cozinha Oriental";
             await context.SaveChangesAsync();
         }
 
@@ -513,7 +518,7 @@ public static class DbSeeder
             }
         }
 
-        // 7. Pedidos e Vendas históricas realistas (Restaurante em Marília/SP)
+        // 7. Pedidos e Vendas históricas realistas (Restaurante em Marília/SP - Maki Sushi Bar)
         if (!await context.Orders.AnyAsync(o => o.RestaurantId == restaurant.Id))
         {
             var dishes = await context.Dishes.Where(d => d.RestaurantId == restaurant.Id).ToListAsync();
@@ -522,20 +527,26 @@ public static class DbSeeder
                 var orders = new List<Order>();
                 var now = DateTime.UtcNow;
 
-                // Histórico de 14 dias para alimentar gráficos diários, margem e indicadores
+                // Histórico de 30 dias para volume mensal de restaurante médio
                 var random = new Random(42);
-                var tables = new[] { "Mesa 01", "Mesa 02", "Mesa 03", "Mesa 04", "Mesa 05", "Balcão 01", "Delivery 01" };
+                var tables = new[] { "Mesa 01", "Mesa 02", "Mesa 03", "Mesa 04", "Mesa 05", "Mesa 06", "Mesa 07", "Mesa 08", "Balcão 01", "Balcão 02", "Delivery iFood 101", "Delivery iFood 102" };
 
-                for (var daysAgo = 13; daysAgo >= 0; daysAgo--)
+                for (var daysAgo = 29; daysAgo >= 0; daysAgo--)
                 {
-                    var orderDate = now.AddDays(-daysAgo).Date.AddHours(12 + random.Next(0, 9)); // Horário de almoço/jantar
-                    var ordersToday = random.Next(3, 7);
+                    var dayDate = now.AddDays(-daysAgo).Date;
+                    var dayOfWeek = dayDate.DayOfWeek;
+                    var isWeekend = dayOfWeek == DayOfWeek.Friday || dayOfWeek == DayOfWeek.Saturday || dayOfWeek == DayOfWeek.Sunday;
+                    var ordersToday = isWeekend ? 15 : 10;
 
                     for (var i = 0; i < ordersToday; i++)
                     {
-                        var orderCreatedAt = orderDate.AddMinutes(random.Next(10, 180));
-                        var isPaid = daysAgo > 0 || i < ordersToday - 1; // Deixar algum em preparo hoje
-                        var status = isPaid ? OrderStatus.Paid : (i % 2 == 0 ? OrderStatus.Preparing : OrderStatus.Ready);
+                        var hour = (i % 2 == 0) ? (11 + random.Next(0, 3)) : (18 + random.Next(0, 5));
+                        var minute = random.Next(0, 55);
+                        var orderCreatedAt = dayDate.AddHours(hour).AddMinutes(minute);
+
+                        var isToday = daysAgo == 0;
+                        var isPaid = !isToday || i < ordersToday - 3;
+                        var status = isPaid ? OrderStatus.Paid : (i == ordersToday - 1 ? OrderStatus.Preparing : (i == ordersToday - 2 ? OrderStatus.Ready : OrderStatus.Submitted));
 
                         var order = new Order
                         {
@@ -576,69 +587,193 @@ public static class DbSeeder
             }
         }
 
-        // 8. Financeiro: Contas a Pagar e Receber realistas
+        // 8. Financeiro: Contas a Pagar e Receber realistas (Cenário Mensal de Médio Porte)
         if (!await context.FinanceEntries.AnyAsync(f => f.RestaurantId == restaurant.Id))
         {
             var now = DateTime.UtcNow;
             var financeEntries = new List<FinanceEntry>
             {
+                // Despesas Fixas Operacionais
                 new()
                 {
                     RestaurantId = restaurant.Id,
-                    Description = "Aluguel Comercial - Imóvel Centro Marília",
+                    Description = "Aluguel Comercial - Rua das Esmeraldas, Marília",
                     Type = FinanceEntryType.Expense,
-                    Amount = 3500.00m,
-                    DueDate = now.AddDays(5),
-                    SettledAtUtc = null,
-                    CreatedAtUtc = now
+                    Amount = 4800.00m,
+                    DueDate = now.AddDays(-15),
+                    SettledAtUtc = now.AddDays(-15),
+                    CreatedAtUtc = now.AddDays(-25)
                 },
                 new()
                 {
                     RestaurantId = restaurant.Id,
-                    Description = "Fornecedor Frigorífico Boi Nobre (Cortes Nobres)",
+                    Description = "Folha de Pagamento - Equipe Maki Sushi (Salários)",
                     Type = FinanceEntryType.Expense,
-                    Amount = 1840.50m,
-                    DueDate = now.AddDays(-2),
-                    SettledAtUtc = now.AddDays(-2),
-                    CreatedAtUtc = now.AddDays(-10)
+                    Amount = 14200.00m,
+                    DueDate = now.AddDays(-20),
+                    SettledAtUtc = now.AddDays(-20),
+                    CreatedAtUtc = now.AddDays(-28)
                 },
                 new()
                 {
                     RestaurantId = restaurant.Id,
-                    Description = "Energia Elétrica CPFL Paulista",
+                    Description = "CPFL Paulista - Energia Elétrica Restaurante",
                     Type = FinanceEntryType.Expense,
-                    Amount = 1120.80m,
-                    DueDate = now.AddDays(10),
-                    SettledAtUtc = null,
-                    CreatedAtUtc = now
+                    Amount = 2340.50m,
+                    DueDate = now.AddDays(-10),
+                    SettledAtUtc = now.AddDays(-10),
+                    CreatedAtUtc = now.AddDays(-20)
                 },
                 new()
                 {
                     RestaurantId = restaurant.Id,
-                    Description = "Fornecedor Hortifruti da Serra (Colheita Semanal)",
+                    Description = "Daem Marília - Água e Saneamento",
                     Type = FinanceEntryType.Expense,
-                    Amount = 740.00m,
+                    Amount = 480.20m,
+                    DueDate = now.AddDays(-12),
+                    SettledAtUtc = now.AddDays(-12),
+                    CreatedAtUtc = now.AddDays(-22)
+                },
+                new()
+                {
+                    RestaurantId = restaurant.Id,
+                    Description = "Honorários Contábeis - Escritório Marília",
+                    Type = FinanceEntryType.Expense,
+                    Amount = 1200.00m,
+                    DueDate = now.AddDays(-18),
+                    SettledAtUtc = now.AddDays(-18),
+                    CreatedAtUtc = now.AddDays(-28)
+                },
+                new()
+                {
+                    RestaurantId = restaurant.Id,
+                    Description = "Vivo Fibra Empresas 600Mbps - Internet e Telefonia",
+                    Type = FinanceEntryType.Expense,
+                    Amount = 320.00m,
+                    DueDate = now.AddDays(-8),
+                    SettledAtUtc = now.AddDays(-8),
+                    CreatedAtUtc = now.AddDays(-18)
+                },
+                new()
+                {
+                    RestaurantId = restaurant.Id,
+                    Description = "Gás GLP Industrial - Ultragaz Marília",
+                    Type = FinanceEntryType.Expense,
+                    Amount = 1150.00m,
                     DueDate = now.AddDays(-5),
                     SettledAtUtc = now.AddDays(-5),
+                    CreatedAtUtc = now.AddDays(-15)
+                },
+                // Contas a Pagar Futuras / Pendentes
+                new()
+                {
+                    RestaurantId = restaurant.Id,
+                    Description = "Fornecedor Mar Fresco Pescados - Quinzena Peixes",
+                    Type = FinanceEntryType.Expense,
+                    Amount = 3850.00m,
+                    DueDate = now.AddDays(3),
+                    SettledAtUtc = null,
+                    CreatedAtUtc = now
+                },
+                new()
+                {
+                    RestaurantId = restaurant.Id,
+                    Description = "Distribuidora Grãos Brasil - Arroz Especial e Farinhas",
+                    Type = FinanceEntryType.Expense,
+                    Amount = 1420.00m,
+                    DueDate = now.AddDays(6),
+                    SettledAtUtc = null,
+                    CreatedAtUtc = now
+                },
+                new()
+                {
+                    RestaurantId = restaurant.Id,
+                    Description = "EcoPack Embalagens - Caixas Delivery e Sacolas",
+                    Type = FinanceEntryType.Expense,
+                    Amount = 890.00m,
+                    DueDate = now.AddDays(8),
+                    SettledAtUtc = null,
+                    CreatedAtUtc = now
+                },
+                new()
+                {
+                    RestaurantId = restaurant.Id,
+                    Description = "Manutenção Preventiva Câmara Fria e Balcões",
+                    Type = FinanceEntryType.Expense,
+                    Amount = 750.00m,
+                    DueDate = now.AddDays(12),
+                    SettledAtUtc = null,
+                    CreatedAtUtc = now
+                },
+                // Fornecedores Insumos já liquidados
+                new()
+                {
+                    RestaurantId = restaurant.Id,
+                    Description = "Frigorífico Boi Nobre - Cortes Nobres Filé Mignon",
+                    Type = FinanceEntryType.Expense,
+                    Amount = 2680.00m,
+                    DueDate = now.AddDays(-4),
+                    SettledAtUtc = now.AddDays(-4),
+                    CreatedAtUtc = now.AddDays(-14)
+                },
+                new()
+                {
+                    RestaurantId = restaurant.Id,
+                    Description = "Hortifruti da Serra - Legumes, Folhas e Verduras",
+                    Type = FinanceEntryType.Expense,
+                    Amount = 940.00m,
+                    DueDate = now.AddDays(-2),
+                    SettledAtUtc = now.AddDays(-2),
                     CreatedAtUtc = now.AddDays(-12)
                 },
                 new()
                 {
                     RestaurantId = restaurant.Id,
-                    Description = "Evento Corporativo Fechado - Sinal Reserva",
-                    Type = FinanceEntryType.Income,
-                    Amount = 2500.00m,
-                    DueDate = now.AddDays(-1),
-                    SettledAtUtc = now.AddDays(-1),
-                    CreatedAtUtc = now.AddDays(-5)
+                    Description = "Laticínios Vale Real - Queijos e Laticínios",
+                    Type = FinanceEntryType.Expense,
+                    Amount = 1180.00m,
+                    DueDate = now.AddDays(-6),
+                    SettledAtUtc = now.AddDays(-6),
+                    CreatedAtUtc = now.AddDays(-16)
                 },
                 new()
                 {
                     RestaurantId = restaurant.Id,
-                    Description = "Venda de Voucher Presente / Consignado",
+                    Description = "Bebidas Premium Paulista - Cervejas e Refrigerantes",
+                    Type = FinanceEntryType.Expense,
+                    Amount = 2150.00m,
+                    DueDate = now.AddDays(-7),
+                    SettledAtUtc = now.AddDays(-7),
+                    CreatedAtUtc = now.AddDays(-17)
+                },
+                // Receitas Extras / Avulsas
+                new()
+                {
+                    RestaurantId = restaurant.Id,
+                    Description = "Evento Fechado Corporativo - Confraternização Unimar",
                     Type = FinanceEntryType.Income,
-                    Amount = 450.00m,
-                    DueDate = now.AddDays(3),
+                    Amount = 4500.00m,
+                    DueDate = now.AddDays(-14),
+                    SettledAtUtc = now.AddDays(-14),
+                    CreatedAtUtc = now.AddDays(-24)
+                },
+                new()
+                {
+                    RestaurantId = restaurant.Id,
+                    Description = "Locação Espaço Sushi Bar - Workshop Gastronômico",
+                    Type = FinanceEntryType.Income,
+                    Amount = 1800.00m,
+                    DueDate = now.AddDays(-7),
+                    SettledAtUtc = now.AddDays(-7),
+                    CreatedAtUtc = now.AddDays(-17)
+                },
+                new()
+                {
+                    RestaurantId = restaurant.Id,
+                    Description = "Sinal Reserva Evento de Fim de Ano",
+                    Type = FinanceEntryType.Income,
+                    Amount = 2000.00m,
+                    DueDate = now.AddDays(5),
                     SettledAtUtc = null,
                     CreatedAtUtc = now
                 }
