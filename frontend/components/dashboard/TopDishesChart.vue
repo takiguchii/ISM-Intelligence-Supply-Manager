@@ -9,23 +9,30 @@ const props = defineProps<{
     data: { name: string; pedidos: number }[];
 }>();
 
-const chartData = computed(() => ({
-    labels: props.data.map((d) => d.name),
-    datasets: [
-        {
-            label: "Pedidos",
-            data: props.data.map((d) => d.pedidos),
-            backgroundColor: "rgb(16, 185, 129)",
-            borderRadius: 6,
-            barThickness: 18
-        }
-    ]
-}));
+const chartData = computed(() => {
+    const hasData = props.data && props.data.length > 0;
+    return {
+        labels: hasData ? props.data.map((d) => d.name) : ["Nenhum prato"],
+        datasets: [
+            {
+                label: "Pedidos",
+                data: hasData ? props.data.map((d) => d.pedidos) : [0],
+                backgroundColor: "rgb(16, 185, 129)",
+                borderRadius: 6,
+                barThickness: 18
+            }
+        ]
+    };
+});
 
 const chartOptions = {
     indexAxis: "y" as const,
     responsive: true,
     maintainAspectRatio: false,
+    animation: {
+        duration: typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 1200,
+        easing: "easeOutQuart" as const
+    },
     plugins: {
         legend: { display: false },
         tooltip: {
@@ -40,6 +47,7 @@ const chartOptions = {
     },
     scales: {
         x: {
+            beginAtZero: true,
             grid: { color: "rgba(161, 161, 170, 0.15)" },
             ticks: { color: "rgb(113, 113, 122)", font: { size: 10 } }
         },
@@ -57,8 +65,8 @@ const chartOptions = {
             <h3 class="text-sm font-bold text-zinc-900 dark:text-white">Pratos mais pedidos</h3>
             <p class="text-xs text-zinc-500 dark:text-zinc-400">Top 5 — últimos 7 dias</p>
         </div>
-        <div class="h-64">
+        <ChartOnVisible>
             <Bar :data="chartData" :options="chartOptions" />
-        </div>
+        </ChartOnVisible>
     </div>
 </template>

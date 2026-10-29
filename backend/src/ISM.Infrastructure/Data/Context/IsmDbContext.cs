@@ -9,6 +9,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using ISM.Domain.Modules.DataImport;
 using ISM.Domain.Modules.Menu.Entities;
+using ISM.Domain.Modules.Orders;
+using ISM.Domain.Modules.Finance;
 
 namespace ISM.Infrastructure.Data.Context;
 
@@ -22,6 +24,9 @@ public sealed class IsmDbContext : DbContext
         _currentUser = currentUser;
     }
 
+    public DbSet<FinanceEntry> FinanceEntries => Set<FinanceEntry>();
+    public DbSet<Order> Orders => Set<Order>();
+    public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<StockMovement> StockMovements => Set<StockMovement>();
@@ -46,6 +51,45 @@ public sealed class IsmDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<FinanceEntry>(builder =>
+        {
+            builder.ToTable("finance_entries");
+            builder.HasKey(entry => entry.Id);
+            builder.Property(entry => entry.Description).HasMaxLength(150).IsRequired();
+            builder.Property(entry => entry.Type).HasConversion<int>();
+            builder.Property(entry => entry.Amount).HasColumnType("decimal(10,2)");
+            builder.HasIndex(entry => new { entry.RestaurantId, entry.DueDate });
+            builder.HasOne<Restaurant>().WithMany().HasForeignKey(entry => entry.RestaurantId).OnDelete(DeleteBehavior.Restrict);
+            builder.ApplyTenantQueryFilter(this);
+        });
+
+        modelBuilder.Entity<Order>(builder =>
+        {
+            builder.ToTable("orders");
+            builder.HasKey(order => order.Id);
+            builder.Property(order => order.TableReference).HasMaxLength(100).IsRequired();
+            builder.Property(order => order.Status).HasConversion<int>();
+            builder.Property(order => order.RequestId).HasMaxLength(36).IsRequired();
+            builder.Property(order => order.Version).IsConcurrencyToken();
+            builder.HasIndex(order => new { order.RestaurantId, order.RequestId }).IsUnique();
+            builder.HasIndex(order => new { order.RestaurantId, order.CreatedAtUtc });
+            builder.HasOne<Restaurant>().WithMany().HasForeignKey(order => order.RestaurantId).OnDelete(DeleteBehavior.Restrict);
+            builder.ApplyTenantQueryFilter(this);
+        });
+
+        modelBuilder.Entity<OrderItem>(builder =>
+        {
+            builder.ToTable("order_items");
+            builder.HasKey(item => item.Id);
+            builder.Property(item => item.DishName).HasMaxLength(150).IsRequired();
+            builder.Property(item => item.Observation).HasMaxLength(500).IsRequired();
+            builder.Property(item => item.UnitPrice).HasColumnType("decimal(10,2)");
+            builder.Property(item => item.UnitCost).HasColumnType("decimal(10,2)");
+            builder.HasOne(item => item.Order).WithMany(order => order.Items).HasForeignKey(item => item.OrderId).OnDelete(DeleteBehavior.Cascade);
+            builder.HasOne<Dish>().WithMany().HasForeignKey(item => item.DishId).OnDelete(DeleteBehavior.Restrict);
+            builder.ApplyTenantQueryFilter(this);
+        });
+
         modelBuilder.Entity<Plan>(builder =>
         {
             builder.ToTable("plans");

@@ -278,9 +278,11 @@ public sealed class CsvProductImporter : CsvImporterBase
             var cleaned = v
                 .Replace("R$", "", StringComparison.Ordinal)
                 .Replace(" ", "", StringComparison.Ordinal);
-            if (decimal.TryParse(cleaned, NumberStyles.Any, CultureInfo.GetCultureInfo("pt-BR"), out var dec))
-                return dec;
-            if (decimal.TryParse(cleaned, NumberStyles.Any, CultureInfo.InvariantCulture, out dec))
+            // NF-e and spreadsheets use a dot as decimal separator; pt-BR treats
+            // a dot as a thousands separator and would turn 15.0000 into 150000.
+            var culture = cleaned.Contains(',') && (!cleaned.Contains('.') || cleaned.LastIndexOf(',') > cleaned.LastIndexOf('.'))
+                ? CultureInfo.GetCultureInfo("pt-BR") : CultureInfo.InvariantCulture;
+            if (decimal.TryParse(cleaned, NumberStyles.Number, culture, out var dec))
                 return dec;
             throw new InvalidOperationException(
                 $"Campo '{fieldName}' valor inválido: '{v}' na linha {rowNumber}");

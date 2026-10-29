@@ -13,24 +13,34 @@ const props = defineProps<{
 
 const effectiveThreshold = computed(() => props.threshold ?? 120);
 
-const chartData = computed(() => ({
-    labels: props.data.map((d) => d.day),
-    datasets: [
-        {
-            label: "Pedidos",
-            data: props.data.map((d) => d.pedidos),
-            backgroundColor: props.data.map((d) =>
-                d.pedidos >= effectiveThreshold.value ? "rgb(245, 158, 11)" : "rgba(16, 185, 129, 0.65)"
-            ),
-            borderRadius: 6,
-            barThickness: 28
-        }
-    ]
-}));
+const chartData = computed(() => {
+    const defaultDays = ["seg.", "ter.", "qua.", "qui.", "sex.", "sáb.", "dom."];
+    const hasData = props.data && props.data.length > 0;
+    const labels = hasData ? props.data.map((d) => d.day) : defaultDays;
+    const values = hasData ? props.data.map((d) => d.pedidos) : defaultDays.map(() => 0);
+    return {
+        labels,
+        datasets: [
+            {
+                label: "Pedidos",
+                data: values,
+                backgroundColor: values.map((p) =>
+                    p >= effectiveThreshold.value ? "rgb(245, 158, 11)" : "rgba(16, 185, 129, 0.65)"
+                ),
+                borderRadius: 6,
+                barThickness: 28
+            }
+        ]
+    };
+});
 
 const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    animation: {
+        duration: typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 1200,
+        easing: "easeOutQuart" as const
+    },
     plugins: {
         legend: { display: false },
         tooltip: {
@@ -49,6 +59,7 @@ const chartOptions = {
             ticks: { color: "rgb(113, 113, 122)", font: { size: 11 } }
         },
         y: {
+            beginAtZero: true,
             grid: { color: "rgba(161, 161, 170, 0.15)" },
             ticks: { color: "rgb(113, 113, 122)", font: { size: 10 } }
         }
@@ -62,8 +73,8 @@ const chartOptions = {
             <h3 class="text-sm font-bold text-zinc-900 dark:text-white">Pedidos por dia da semana</h3>
             <p class="text-xs text-zinc-500 dark:text-zinc-400">Padrão das últimas 4 semanas</p>
         </div>
-        <div class="h-64">
+        <ChartOnVisible>
             <Bar :data="chartData" :options="chartOptions" />
-        </div>
+        </ChartOnVisible>
     </div>
 </template>

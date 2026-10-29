@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import AppLoader from '~/components/base/AppLoader.vue'
 import { useAuthStore } from '~/stores/auth'
 import { menuService } from '~/services/modules/menu/menuService'
 
@@ -50,7 +49,6 @@ const API_BASE =
   config.public?.apiBase ||
   'http://localhost:8080'
 
-const isLoading = ref(true)
 const isSidebarOpen = ref(false)
 
 const categories = ref<Category[]>([])
@@ -210,8 +208,7 @@ const handleApiError = (error: any) => {
     return
   }
 
-  errorMessage.value =
-    'Não foi possível concluir a operação. Tente novamente.'
+  errorMessage.value = error?.message || 'Não foi possível concluir a operação. Tente novamente.'
 }
 
 const normalizeArrayResponse = <T,>(response: any): T[] => {
@@ -231,7 +228,7 @@ const normalizeArrayResponse = <T,>(response: any): T[] => {
     return response.results
   }
 
-  return []
+  throw new Error('Resposta inválida ao consultar o cardápio.')
 }
 
 const getCategoryName = (categoryId?: number) => {
@@ -266,26 +263,8 @@ const getRestaurantId = (): number | undefined => {
 */
 
 const fetchCategories = async () => {
-  try {
-    const restaurantId = getRestaurantId()
-    const response = await menuService.getCategories(restaurantId || undefined)
-    const result = normalizeArrayResponse<Category>(response)
-    if (result && result.length > 0) {
-      categories.value = result
-      return
-    }
-  } catch (err) {
-    console.warn('Backend categories endpoint offline or error, using fallback:', err)
-  }
-
-  if (!categories.value.length) {
-    categories.value = [
-      { id: 1, name: 'Entradas', displayOrder: 1, isActive: true },
-      { id: 2, name: 'Pratos Principais', displayOrder: 2, isActive: true },
-      { id: 3, name: 'Bebidas', displayOrder: 3, isActive: true },
-      { id: 4, name: 'Sobremesas', displayOrder: 4, isActive: true }
-    ]
-  }
+  const response = await menuService.getCategories(getRestaurantId())
+  categories.value = normalizeArrayResponse<Category>(response)
 }
 
 const createCategory = async () => {
@@ -390,27 +369,8 @@ const deleteCategory = async (category: Category) => {
 */
 
 const fetchDishes = async () => {
-  try {
-    const restaurantId = getRestaurantId()
-    const response = await menuService.getDishes(restaurantId || undefined)
-    const result = normalizeArrayResponse<Dish>(response)
-    if (result && result.length > 0) {
-      dishes.value = result
-      return
-    }
-  } catch (err) {
-    console.warn('Backend dishes endpoint offline or error, using fallback:', err)
-  }
-
-  if (!dishes.value.length) {
-    dishes.value = [
-      { id: 1, name: 'Bruschetta Italiana', categoryId: 1, price: 32.00, cost: 12.00, isActive: true, highlight: true, description: 'Pão italiano, tomates rústicos, manjericão e azeite trufado.' },
-      { id: 2, name: 'Filé Mignon ao Poivre', categoryId: 2, price: 89.00, cost: 35.00, isActive: true, highlight: true, description: 'Medalhão alto com crosta de pimenta, acompanhado de risoto.' },
-      { id: 3, name: 'Salmão Grelhado', categoryId: 2, price: 78.00, cost: 30.00, isActive: true, highlight: false, description: 'Posta de salmão com legumes salteados na manteiga.' },
-      { id: 4, name: 'Suco Natural de Laranja', categoryId: 3, price: 12.00, cost: 3.50, isActive: true, highlight: false, description: 'Copo 400ml, espremido na hora.' },
-      { id: 5, name: 'Petit Gâteau', categoryId: 4, price: 34.00, cost: 10.00, isActive: true, highlight: true, description: 'Bolo quente de chocolate belga com sorvete de baunilha.' }
-    ]
-  }
+  const response = await menuService.getDishes(getRestaurantId())
+  dishes.value = normalizeArrayResponse<Dish>(response)
 }
 
 const createDish = async () => {
@@ -858,7 +818,11 @@ const handleCategoryChange = async (
   selectedCategory.value =
     categoryId
 
-  await fetchDishes()
+  try {
+    await fetchDishes()
+  } catch (error) {
+    handleApiError(error)
+  }
 }
 
 const clearFilters = async () => {
@@ -867,7 +831,11 @@ const clearFilters = async () => {
   statusFilter.value = 'all'
   highlightFilter.value = 'all'
 
-  await fetchDishes()
+  try {
+    await fetchDishes()
+  } catch (error) {
+    handleApiError(error)
+  }
 }
 
 /*
@@ -875,7 +843,6 @@ const clearFilters = async () => {
 */
 
 const loadPage = async () => {
-  const start = Date.now()
 
   errorMessage.value = ''
   successMessage.value = ''
@@ -895,19 +862,6 @@ const loadPage = async () => {
 
   } catch (error) {
     handleApiError(error)
-  } finally {
-    const elapsed =
-      Date.now() - start
-
-    setTimeout(
-      () => {
-        isLoading.value = false
-      },
-      Math.max(
-        0,
-        700 - elapsed
-      )
-    )
   }
 }
 
@@ -923,7 +877,6 @@ onMounted(loadPage)
     </section>
   </main>
   <div v-else class="light-page max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
-    <AppLoader :visible="isLoading" />
 
     <!-- MAIN -->
     <main class="flex-1">

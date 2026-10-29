@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
-import AppLoader from "~/components/base/AppLoader.vue";
+import { computed, onMounted, ref, watch } from "vue";
+import { apiClientWithAuth } from "~/services/api/client";
 import PageHeader from "~/components/dashboard/PageHeader.vue";
 import KpiCard from "~/components/dashboard/KpiCard.vue";
 import AiInsightCard from "~/components/dashboard/AiInsightCard.vue";
@@ -14,8 +14,11 @@ import { useDashboardMetrics } from "~/composables/useDashboardMetrics";
 
 const authStore = useAuthStore();
 const router = useRouter();
+const isSuperAdmin = computed(() => authStore.currentUser?.role === "Admin" && !authStore.currentUser?.restaurantId);
+const dashboardRestaurantId = ref<number | null>(null);
+const restaurants = ref<Array<{ id: number; name: string }>>([]);
+const restaurantsError = ref("");
 
-const isLoading = ref(true);
 
 const { refresh: refreshStatus } = await useSystemStatus();
 
@@ -23,8 +26,12 @@ const { refresh: refreshStatus } = await useSystemStatus();
 const {
   data: metrics,
   pending: metricsPending,
+  error: metricsError,
+  available: metricsAvailable,
   refresh: refreshMetrics
-} = useDashboardMetrics();
+} = useDashboardMetrics(dashboardRestaurantId, isSuperAdmin);
+
+watch(dashboardRestaurantId, () => { if (authStore.isAuthenticated) refreshMetrics(); });
 
 const handleRefreshAll = () => {
   refreshStatus();
@@ -32,8 +39,6 @@ const handleRefreshAll = () => {
 };
 
 onMounted(async () => {
-  const startTime = Date.now();
-
   // Verifica autenticação no cliente
   authStore.initFromStorage();
   if (!authStore.isAuthenticated) {
@@ -41,26 +46,24 @@ onMounted(async () => {
     return;
   }
 
+  if (isSuperAdmin.value) {
+    try { restaurants.value = await apiClientWithAuth<Array<{ id: number; name: string }>>("/api/restaurants"); }
+    catch (error) { console.error("Erro ao carregar restaurantes:", error); restaurantsError.value = "Não foi possível carregar os restaurantes."; }
+  }
+
   const home = homeForUser(authStore.currentUser);
   if (home !== "/") {
     await router.replace(home);
     return;
   }
+  await refreshMetrics();
 
-  const elapsedTime = Date.now() - startTime;
-  const minDuration = 800;
-  const remainingTime = Math.max(0, minDuration - elapsedTime);
 
-  setTimeout(() => {
-    isLoading.value = false;
-  }, remainingTime);
 });
 </script>
 
 <template>
   <div class="space-y-8 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
-    <!-- Overlay de Animação de Carregamento -->
-    <AppLoader :visible="isLoading" />
 
     <!-- Main Content Area -->
     <main class="flex-1 space-y-8">
@@ -89,8 +92,18 @@ onMounted(async () => {
         </div>
       </div>
 
+      <div v-if="isSuperAdmin" class="space-y-2">
+        <label for="dashboard-restaurant" class="text-sm font-semibold dark:text-zinc-200">Restaurante</label>
+        <select id="dashboard-restaurant" v-model="dashboardRestaurantId" class="block w-full max-w-sm rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-3 text-sm dark:text-white">
+          <option :value="null">Selecione um restaurante</option>
+          <option v-for="restaurant in restaurants" :key="restaurant.id" :value="restaurant.id">{{ restaurant.name }}</option>
+        </select>
+        <p v-if="restaurantsError" role="alert" class="text-sm text-red-500">{{ restaurantsError }}</p>
+      </div>
+
       <!-- Indicadores Principais -->
-      <section class="space-y-6">
+      <p v-if="metricsError" role="status" class="p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm text-zinc-600 dark:text-zinc-400">{{ metricsError }}</p>
+      <section v-if="metricsAvailable" class="space-y-6">
         <div class="flex items-center justify-between">
           <h2 class="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">Indicadores Principais</h2>
           <span v-if="metricsPending" class="text-xs font-mono text-zinc-500 flex items-center gap-2">
@@ -105,12 +118,14 @@ onMounted(async () => {
         </div>
 
         <!-- Insights dos Agentes de IA -->
-        <div class="space-y-3">
+        <div v-if="metrics.aiInsights.length" class="space-y-3">
           <h3 class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Insights dos Agentes IA</h3>
           <div class="grid gap-4 lg:grid-cols-3">
             <AiInsightCard v-for="insight in metrics.aiInsights" :key="insight.id" v-bind="insight" />
           </div>
         </div>
+
+        <p v-else class="text-sm text-zinc-500 dark:text-zinc-400">Insights e sugestões de preço ainda não estão disponíveis.</p>
 
         <!-- Receita vs. Custo -->
         <RevenueVsCostChart :data="metrics.revenueVsCost" />
@@ -122,7 +137,7 @@ onMounted(async () => {
         </div>
 
         <!-- Sugestões de reajuste de preço -->
-        <PriceAdjustmentsList :items="metrics.priceAdjustments" />
+        <PriceAdjustmentsList v-if="metrics.priceAdjustments.length" :items="metrics.priceAdjustments" />
       </section>
     </main>
   </div>

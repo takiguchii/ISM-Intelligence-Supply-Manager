@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { productService } from '~/services/modules/stock/productService'
-import AppLoader from '~/components/base/AppLoader.vue'
 
 // ==================== CONFIGURAÇÃO ====================
 const PAGE_SIZE = 8
@@ -251,7 +250,6 @@ onMounted(() => {
 
 <template>
   <div class="light-page max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
-    <AppLoader :visible="isLoading" />
 
     <!-- ==================== HEADER ==================== -->
     <section class="p-6 sm:p-8 rounded-2xl bg-gradient-to-r from-zinc-900 via-zinc-900/90 to-zinc-950 border border-zinc-800 shadow-xl flex flex-col md:flex-row md:items-start justify-between gap-6">

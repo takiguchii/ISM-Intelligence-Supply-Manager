@@ -1,4 +1,6 @@
-import { ref } from "vue";
+import { ref, type Ref } from "vue";
+import { apiClientWithAuth } from "~/services/api/client";
+import { getSystemAlerts } from "~/services/modules/system/systemService";
 
 export interface Kpi {
   id: string;
@@ -58,170 +60,84 @@ export interface DashboardMetrics {
   priceAdjustments: PriceAdjustment[];
 }
 
-const buildMockData = (): DashboardMetrics => ({
-  kpis: [
-    {
-      id: "receita-semanal",
-      label: "Receita Semanal",
-      value: "R$ 40,4k",
-      delta: "+12,4%",
-      trend: "up",
-      icon: "Money",
-      hint: "vs. semana anterior",
-    },
-    {
-      id: "margem-media",
-      label: "Margem Média",
-      value: "58,2%",
-      delta: "+3,1pp",
-      trend: "up",
-      icon: "TrendCharts",
-      hint: "meta 55%",
-    },
-    {
-      id: "giro-estoque",
-      label: "Giro de Estoque",
-      value: "2,4x",
-      delta: "-0,3x",
-      trend: "down",
-      icon: "Refresh",
-      hint: "abaixo da meta",
-    },
-    {
-      id: "itens-risco",
-      label: "Itens em Risco",
-      value: "7",
-      delta: "+2",
-      trend: "down",
-      icon: "WarnTriangleFilled",
-      hint: "estoque crítico",
-    },
-  ],
-  aiInsights: [
-    {
-      id: "precificacao",
-      icon: "Opportunity",
-      agent: "Agente de Precificação",
-      severity: "warning",
-      title: "Margem baixa no Polvo Grelhado",
-      description:
-        'Margem caiu para <strong class="text-white">31%</strong>. Sugiro ajuste de <strong class="text-white">R$ 78 → R$ 86</strong>.',
-      primaryLabel: "Aplicar",
-      primarySuccessMessage: "Novo preço aplicado",
-      secondaryLabel: "Detalhes",
-    },
-    {
-      id: "estoque",
-      icon: "ShoppingCart",
-      agent: "Agente de Estoque",
-      severity: "critical",
-      title: "Compra urgente: Camarão",
-      description:
-        'Estoque <strong class="text-white">2,1 kg</strong> · ruptura em <strong class="text-red-400">~18h</strong>.',
-      primaryLabel: "Gerar pedido",
-      primarySuccessMessage: "Pedido enviado",
-      secondaryLabel: "Adiar",
-    },
-    {
-      id: "cardapio",
-      icon: "ForkSpoon",
-      agent: "Agente de Cardápio",
-      severity: "info",
-      title: "Tiramisù em alta",
-      description:
-        '<strong class="text-white">+38%</strong> em vendas com margem de <strong class="text-emerald-400">72%</strong>.',
-      primaryLabel: "Promover",
-    },
-  ],
-  revenueVsCost: [
-    { day: "Seg", receita: 4200, custo: 2100 },
-    { day: "Ter", receita: 3800, custo: 1900 },
-    { day: "Qua", receita: 5100, custo: 2400 },
-    { day: "Qui", receita: 4800, custo: 2200 },
-    { day: "Sex", receita: 7200, custo: 3100 },
-    { day: "Sáb", receita: 8400, custo: 3500 },
-    { day: "Dom", receita: 6900, custo: 3000 },
-  ],
-  topDishes: [
-    { name: "Burguer Trufado", pedidos: 184 },
-    { name: "Risoto Funghi", pedidos: 142 },
-    { name: "Tiramisù", pedidos: 128 },
-    { name: "Salada Caesar", pedidos: 96 },
-    { name: "Polvo Grelhado", pedidos: 71 },
-  ],
-  weekdayOrders: [
-    { day: "Seg", pedidos: 62 },
-    { day: "Ter", pedidos: 54 },
-    { day: "Qua", pedidos: 78 },
-    { day: "Qui", pedidos: 84 },
-    { day: "Sex", pedidos: 142 },
-    { day: "Sáb", pedidos: 168 },
-    { day: "Dom", pedidos: 121 },
-  ],
-  priceAdjustments: [
-    {
-      id: "polvo",
-      name: "Polvo Grelhado",
-      from: 78,
-      to: 86,
-      direction: "up",
-      reason: "Margem 31% (meta 45%)",
-    },
-    {
-      id: "risoto",
-      name: "Risoto Funghi",
-      from: 62,
-      to: 68,
-      direction: "up",
-      reason: "Custo do funghi +14%",
-    },
-    {
-      id: "burguer",
-      name: "Burguer Trufado",
-      from: 48,
-      to: 52,
-      direction: "up",
-      reason: "Alta demanda + elasticidade",
-    },
-    {
-      id: "caesar",
-      name: "Salada Caesar",
-      from: 32,
-      to: 29,
-      direction: "down",
-      reason: "Baixa rotação, ganhar volume",
-    },
-    {
-      id: "tiramisu",
-      name: "Tiramisù",
-      from: 26,
-      to: 24,
-      direction: "down",
-      reason: "Estimular ticket de sobremesa",
-    },
-  ],
-});
-
-export const useDashboardMetrics = () => {
-  const data = ref<DashboardMetrics>(buildMockData());
+export const useDashboardMetrics = (restaurantId: Ref<number | null>, requiresSelection: Ref<boolean>) => {
+  const data = ref<DashboardMetrics>({ kpis: [], aiInsights: [], revenueVsCost: [], topDishes: [], weekdayOrders: [], priceAdjustments: [] });
   const pending = ref(false);
-  const error = ref<unknown>(null);
+  const error = ref<string | null>(null);
+  const available = ref(false);
+  let generation = 0;
 
   const refresh = async () => {
-    pending.value = true;
-    try {
-      // TODO: substituir pela chamada real, por exemplo:
-      // const response = await $fetch<DashboardMetrics>("/api/dashboard/metrics");
-      // data.value = response;
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      data.value = buildMockData();
-      error.value = null;
-    } catch (err) {
-      error.value = err;
-    } finally {
+    const requestGeneration = ++generation;
+    available.value = false;
+    if (requiresSelection.value && !restaurantId.value) {
       pending.value = false;
+      error.value = "Selecione um restaurante para consultar os indicadores.";
+      return;
+    }
+    pending.value = true;
+    error.value = null;
+    try {
+      const [metricsResponse, alertsResponse] = await Promise.all([
+        apiClientWithAuth<Omit<DashboardMetrics, "aiInsights" | "priceAdjustments">>("/api/dashboard/metrics", {
+          params: restaurantId.value ? { restaurantId: restaurantId.value } : undefined
+        }),
+        getSystemAlerts({ pageSize: 6, isDismissed: false }).catch(() => null)
+      ]);
+      if (requestGeneration !== generation) return;
+
+      const aiInsights: AgentInsight[] = [];
+      const priceAdjustments: PriceAdjustment[] = [];
+
+      if (alertsResponse?.items) {
+        for (const item of alertsResponse.items) {
+          const sev: InsightSeverity =
+            item.severity === "Critical" ? "critical" : item.severity === "Warning" ? "warning" : "info";
+          aiInsights.push({
+            id: `alert-${item.id}`,
+            icon: item.referenceEntityType === "Product" ? "Warning" : "Bell",
+            agent: item.referenceEntityType === "Product" ? "Agente de Estoque" : item.referenceEntityType === "Dish" ? "Agente de Precificação" : "Agente de Suprimentos",
+            severity: sev,
+            title: item.title,
+            description: item.message,
+            secondaryLabel: "Ver Alertas"
+          });
+
+          // Se for alerta de defasagem de CMV de prato, extrai dados para PriceAdjustment
+          if (item.referenceEntityType === "Dish" && item.payloadSerializedJson) {
+            try {
+              const payload = JSON.parse(item.payloadSerializedJson);
+              if (payload.DishName && payload.SuggestedPrice) {
+                const targetMargin = payload.TargetMarginPercent || 30;
+                const ingredientCost = payload.SuggestedPrice * (1 - targetMargin / 100);
+                const currentPrice = payload.CurrentCmvPercent > 0
+                  ? Number((ingredientCost / (payload.CurrentCmvPercent / 100)).toFixed(2))
+                  : payload.SuggestedPrice;
+                priceAdjustments.push({
+                  id: `adj-${item.id}`,
+                  name: payload.DishName,
+                  from: currentPrice,
+                  to: Number(payload.SuggestedPrice),
+                  direction: payload.SuggestedPrice >= currentPrice ? "up" : "down",
+                  reason: payload.Message || `Reajuste para manter margem de ${targetMargin}%`
+                });
+              }
+            } catch {
+              // Ignora caso payload não seja parseável
+            }
+          }
+        }
+      }
+
+      data.value = { ...metricsResponse, aiInsights, priceAdjustments };
+      available.value = true;
+    } catch (err: any) {
+      if (requestGeneration !== generation) return;
+      error.value = err?.data?.detail || err?.data?.message || "Não foi possível carregar os indicadores.";
+    } finally {
+      if (requestGeneration === generation) pending.value = false;
     }
   };
 
-  return { data, pending, error, refresh };
+  return { data, pending, error, available, refresh };
 };

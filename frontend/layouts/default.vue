@@ -6,6 +6,10 @@ const showContent = computed(() => isLoginPage.value || authReady.value);
 
 const themeStore = useThemeStore();
 const isSidebarOpen = ref(false);
+const toggleSidebar = () => {
+  isSidebarOpen.value = !isSidebarOpen.value;
+};
+provide("toggleSidebar", toggleSidebar);
 </script>
 
 <template>
@@ -23,12 +27,21 @@ const isSidebarOpen = ref(false);
       </template>
 
       <template v-else>
-        <AppNavbar @toggleSidebar="isSidebarOpen = !isSidebarOpen" />
-        <AppSidebar :isOpen="isSidebarOpen" @close="isSidebarOpen = false" />
-        <div class="flex-1">
-          <slot />
+        <ClientOnly>
+          <AppSidebar :isOpen="isSidebarOpen" @close="isSidebarOpen = false" />
+        </ClientOnly>
+        <div
+          :class="[
+            'flex-1 flex flex-col min-w-0 transition-[padding] duration-[400ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
+            isSidebarOpen ? 'pl-[min(256px,65vw)] lg:pl-[256px]' : 'pl-0'
+          ]"
+        >
+          <AppNavbar @toggleSidebar="toggleSidebar" />
+          <main v-card-reveal class="flex-1 min-w-0">
+            <slot />
+          </main>
+          <AppFooter />
         </div>
-        <AppFooter />
       </template>
     </template>
 
