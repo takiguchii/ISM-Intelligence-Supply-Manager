@@ -1,3 +1,11 @@
+<script setup lang="ts">
+import WaiterMock from '~/components/waiter/WaiterMock.vue'
+
+definePageMeta({
+  layout: 'default'
+})
+</script>
+
 <template>
-  <OrderBoard />
+  <WaiterMock view="home" />
 </template>
