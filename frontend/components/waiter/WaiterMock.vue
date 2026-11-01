@@ -179,17 +179,20 @@ function sendOrder() {
         </article>
       </section>
 
-      <nav class="flex flex-wrap gap-3" aria-label="Ações do garçom">
-        <NuxtLink to="/atendimento" class="primary">
-          Novo atendimento
+      <nav
+        class="flex flex-wrap justify-center gap-3"
+        aria-label="Ações do garçom"
+      >
+        <NuxtLink to="/atendimento" class="action-button">
+          <span class="action-text">Novo atendimento</span>
         </NuxtLink>
 
-        <NuxtLink to="/pedidos" class="secondary">
-          Acompanhar pedidos
+        <NuxtLink to="/pedidos" class="action-button">
+          <span class="action-text">Acompanhar pedidos</span>
         </NuxtLink>
 
-        <NuxtLink to="/cardapio" class="secondary">
-          Consultar cardápio
+        <NuxtLink to="/cardapio" class="action-button">
+          <span class="action-text">Consultar cardápio</span>
         </NuxtLink>
       </nav>
 
@@ -590,6 +593,28 @@ function sendOrder() {
     border border-zinc-300 bg-white px-3 py-2 text-sm
     font-medium hover:bg-zinc-100 dark:border-zinc-700
     dark:bg-zinc-900 dark:hover:bg-zinc-800;
+}
+
+.action-button {
+  @apply inline-flex items-center justify-center rounded-lg border-none
+    bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white
+    outline outline-2 outline-indigo-600 outline-offset-[-2px]
+    focus-visible:outline focus-visible:outline-2
+    focus-visible:outline-offset-2 focus-visible:outline-indigo-500;
+  transition: 400ms;
+}
+
+.action-button .action-text {
+  @apply font-bold;
+  transition: 400ms;
+}
+
+.action-button:hover {
+  @apply bg-transparent;
+}
+
+.action-button:hover .action-text {
+  @apply text-indigo-600 dark:text-indigo-400;
 }
 
 .badge {
