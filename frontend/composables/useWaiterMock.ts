@@ -25,7 +25,7 @@ export type WaiterStatus =
 
 export interface WaiterOrder {
   id: number
-  table: string
+  tableReference: string
   status: WaiterStatus
   items: WaiterItem[]
 }
@@ -97,7 +97,7 @@ export function useWaiterMock() {
   const orders = useState<WaiterOrder[]>('waiter-mock-orders', () => [
     {
       id: 1001,
-      table: '03',
+      tableReference: '03',
       status: 'Pronto',
       items: [
         {
@@ -111,7 +111,7 @@ export function useWaiterMock() {
     },
     {
       id: 1002,
-      table: '07',
+      tableReference: '07',
       status: 'Em preparo',
       items: [
         {
@@ -148,7 +148,7 @@ export function useWaiterMock() {
   )
 
   const occupiedTables = computed(
-    () => new Set(activeOrders.value.map(order => order.table)).size
+    () => new Set(activeOrders.value.map(order => order.tableReference)).size
   )
 
   function total(items: WaiterItem[]) {
@@ -202,7 +202,7 @@ export function useWaiterMock() {
 
     orders.value.unshift({
       id,
-      table: reference,
+      tableReference: reference,
       status: 'Enviado',
       items: cart.value.map(item => ({ ...item }))
     })
@@ -213,18 +213,25 @@ export function useWaiterMock() {
     return id
   }
 
-  function advanceOrder(id: number) {
+  function simulateKitchenStep(id: number) {
     const order = orders.value.find(item => item.id === id)
     if (!order) return
 
     const next: Partial<Record<WaiterStatus, WaiterStatus>> = {
       Enviado: 'Em preparo',
-      'Em preparo': 'Pronto',
-      Pronto: 'Entregue'
+      'Em preparo': 'Pronto'
     }
 
     const status = next[order.status]
     if (status) order.status = status
+  }
+
+  function confirmDelivery(id: number) {
+    const order = orders.value.find(item => item.id === id)
+    if (!order || order.status !== 'Pronto') return false
+
+    order.status = 'Entregue'
+    return true
   }
 
   return {
@@ -242,6 +249,7 @@ export function useWaiterMock() {
     addDish,
     changeQuantity,
     submitOrder,
-    advanceOrder
+    simulateKitchenStep,
+    confirmDelivery
   }
 }

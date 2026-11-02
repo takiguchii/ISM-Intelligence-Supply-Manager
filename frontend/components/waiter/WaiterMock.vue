@@ -22,13 +22,16 @@ const {
   addDish,
   changeQuantity,
   submitOrder,
-  advanceOrder
+  simulateKitchenStep,
+  confirmDelivery
 } = useWaiterMock()
 
 const search = ref('')
 const category = ref('Todos')
 const status = ref('Todos')
+const showActiveOnly = ref(true)
 const feedback = ref('')
+const orderFeedback = ref('')
 const isReviewOpen = ref(false)
 const isMobileCartOpen = ref(false)
 const isSubmitting = ref(false)
@@ -37,6 +40,10 @@ const recentlyAddedDishId = ref<number | null>(null)
 let addFeedbackTimeout: ReturnType<typeof setTimeout> | undefined
 
 const dishesPerPage = 6
+const simulatingOrderId = ref<number | null>(null)
+const deliveringOrderId = ref<number | null>(null)
+const statusChangingOrderId = ref<number | null>(null)
+let statusFeedbackTimeout: ReturnType<typeof setTimeout> | undefined
 
 const titles: Record<View, string> = {
   home: 'Área do Garçom',
@@ -68,12 +75,6 @@ const statusClasses: Record<WaiterStatus, string> = {
     'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
   Entregue:
     'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
-}
-
-const actionLabels: Partial<Record<WaiterStatus, string>> = {
-  Enviado: 'Simular início do preparo',
-  'Em preparo': 'Simular pedido pronto',
-  Pronto: 'Confirmar entrega'
 }
 
 function normalize(value: string) {
@@ -140,19 +141,37 @@ function addDishToCart(dish: (typeof dishes.value)[number]) {
 const filteredOrders = computed(() => {
   const term = normalize(search.value)
 
-  return orders.value.filter(order => {
+  return orders.value
+    .filter(order => {
     const matchesStatus =
       status.value === 'Todos' || order.status === status.value
+    const matchesActive = !showActiveOnly.value || order.status !== 'Entregue'
 
     const content = [
       order.id,
-      order.table,
-      ...order.items.map(item => item.name)
+      order.tableReference,
+      ...order.items.flatMap(item => [item.name, item.observation])
     ].join(' ')
 
-    return matchesStatus && normalize(content).includes(term)
-  })
+      return matchesStatus && matchesActive && normalize(content).includes(term)
+    })
+    .sort((first, second) => {
+      const priority: Record<WaiterStatus, number> = {
+        Pronto: 0,
+        'Em preparo': 1,
+        Enviado: 2,
+        Entregue: 3
+      }
+
+      return priority[first.status] - priority[second.status]
+    })
 })
+
+const activeOrderCount = computed(() => activeOrders.value.length)
+
+const kitchenSimulationOrders = computed(() =>
+  orders.value.filter(order => order.status === 'Enviado' || order.status === 'Em preparo')
+)
 
 const metrics = computed(() => [
   { label: 'Mesas em atendimento', value: occupiedTables.value },
@@ -195,6 +214,42 @@ function confirmOrder() {
   feedback.value = id
     ? `Pedido #${id} criado na demonstração.`
     : 'Não foi possível criar o pedido. Revise a mesa e os itens.'
+}
+
+function simulateKitchen(id: number) {
+  if (simulatingOrderId.value !== null) return
+
+  simulatingOrderId.value = id
+  simulateKitchenStep(id)
+  markStatusChange(id)
+  orderFeedback.value = `Atualização demonstrativa da cozinha aplicada ao pedido #${id}.`
+  simulatingOrderId.value = null
+}
+
+function markStatusChange(id: number) {
+  statusChangingOrderId.value = id
+
+  if (statusFeedbackTimeout) clearTimeout(statusFeedbackTimeout)
+  statusFeedbackTimeout = setTimeout(() => {
+    statusChangingOrderId.value = null
+  }, 600)
+}
+
+function deliverOrder(id: number) {
+  if (deliveringOrderId.value !== null) return
+
+  const order = orders.value.find(item => item.id === id)
+  if (!order || order.status !== 'Pronto') return
+
+  if (process.client && !window.confirm(`Confirmar entrega do pedido #${id}?`)) return
+
+  deliveringOrderId.value = id
+  const delivered = confirmDelivery(id)
+  if (delivered) markStatusChange(id)
+  orderFeedback.value = delivered
+    ? `Pedido #${id} marcado como entregue.`
+    : 'O pedido só pode ser entregue quando estiver pronto.'
+  deliveringOrderId.value = null
 }
 </script>
 
@@ -290,7 +345,7 @@ function confirmOrder() {
           >
             <div>
               <p class="font-semibold">
-                Mesa {{ order.table }} · Pedido #{{ order.id }}
+                Mesa {{ order.tableReference }} · Pedido #{{ order.id }}
               </p>
 
               <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
@@ -303,7 +358,7 @@ function confirmOrder() {
             <button
               type="button"
               class="primary"
-              @click="advanceOrder(order.id)"
+              @click="deliverOrder(order.id)"
             >
               Confirmar entrega
             </button>
@@ -724,110 +779,188 @@ function confirmOrder() {
 
     <!-- PEDIDOS -->
     <template v-else>
-      <div class="panel grid gap-3 sm:grid-cols-2">
-        <label class="field-label">
-          Buscar pedido
-          <input
-            v-model="search"
-            class="field"
-            type="search"
-            placeholder="Número, mesa ou prato"
-          />
-        </label>
+      <section class="panel space-y-4">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
+              Monitoramento operacional
+            </p>
+            <h2 class="mt-1 text-lg font-semibold">{{ activeOrderCount }} pedidos ativos</h2>
+          </div>
+          <span class="badge bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+            Prontos aparecem primeiro
+          </span>
+        </div>
 
-        <label class="field-label">
-          Situação
-          <select v-model="status" class="field">
-            <option value="Todos">Todos</option>
+        <div class="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-end">
+          <div class="min-w-0">
+            <label for="waiter-order-search" class="field-label">Buscar pedido</label>
+            <form class="search-form mt-2" role="search" @submit.prevent>
+              <button type="submit" aria-label="Buscar pedido">
+                <svg width="17" height="16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M7.667 12.667A5.333 5.333 0 107.667 2a5.333 5.333 0 000 10.667zM14.334 14l-2.9-2.9" stroke="currentColor" stroke-width="1.333" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+              <input
+                id="waiter-order-search"
+                v-model="search"
+                class="search-input"
+                type="search"
+                placeholder="Mesa, #pedido, prato ou observação"
+                autocomplete="off"
+              />
+              <button
+                v-if="search"
+                type="button"
+                class="search-reset"
+                aria-label="Limpar busca de pedidos"
+                @click="search = ''"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </form>
+            <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              Busca instantânea com normalização de acentos.
+            </p>
+          </div>
 
-            <option
-              v-for="item in statuses"
-              :key="item"
-              :value="item"
+          <label class="field-label min-w-0">
+            Situação
+            <select v-model="status" class="status-select field lg:min-w-40">
+              <option value="Todos">Todos</option>
+              <option v-for="item in statuses" :key="item" :value="item">
+                {{ item }}
+              </option>
+            </select>
+          </label>
+
+          <label class="toggle-filter">
+            <input v-model="showActiveOnly" type="checkbox" />
+            <span class="toggle-track" aria-hidden="true"><span class="toggle-thumb" /></span>
+            <span>Somente ativos</span>
+          </label>
+        </div>
+
+        <p v-if="orderFeedback" role="status" class="rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-sm text-indigo-800 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-200">
+          {{ orderFeedback }}
+        </p>
+      </section>
+
+      <section class="panel space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-semibold">Simulação da cozinha</h2>
+            <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              Controle demonstrativo separado das ações do garçom.
+            </p>
+          </div>
+          <span class="badge bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+            Mock local
+          </span>
+        </div>
+
+        <div v-if="!kitchenSimulationOrders.length" class="rounded-xl bg-zinc-100 p-4 text-sm text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+          Nenhum pedido aguardando atualização da cozinha.
+        </div>
+
+        <ul v-else class="grid gap-3 md:grid-cols-2">
+          <li
+            v-for="order in kitchenSimulationOrders"
+            :key="order.id"
+            class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 p-3 dark:border-zinc-800"
+          >
+            <div>
+              <p class="font-semibold">Pedido #{{ order.id }} · Mesa {{ order.tableReference }}</p>
+              <p class="text-xs text-zinc-500 dark:text-zinc-400">Estado atual: {{ order.status }}</p>
+            </div>
+            <button
+              type="button"
+              class="secondary min-h-11"
+              :disabled="simulatingOrderId !== null"
+              @click="simulateKitchen(order.id)"
             >
-              {{ item }}
-            </option>
-          </select>
-        </label>
-      </div>
+              {{ order.status === 'Enviado' ? 'Simular preparo' : 'Simular pronto' }}
+            </button>
+          </li>
+        </ul>
+      </section>
 
-      <p
-        v-if="!filteredOrders.length"
-        class="panel text-sm text-zinc-500 dark:text-zinc-400"
-      >
-        Nenhum pedido encontrado com esses filtros.
+      <p v-if="!filteredOrders.length" class="panel text-sm text-zinc-500 dark:text-zinc-400">
+        {{ showActiveOnly ? 'Nenhum pedido ativo encontrado com esses filtros.' : 'Nenhum pedido encontrado com esses filtros.' }}
       </p>
 
-      <section
+      <TransitionGroup
         v-else
+        name="order-list"
+        tag="section"
         class="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
       >
         <article
           v-for="order in filteredOrders"
           :key="order.id"
-          class="panel flex flex-col"
+          class="order-card panel flex min-w-0 flex-col"
+          :class="[
+            order.status === 'Pronto' ? 'order-card-ready' : '',
+            statusChangingOrderId === order.id ? 'order-card-status-changing' : ''
+          ]"
         >
-          <div
-            class="flex flex-wrap items-start justify-between gap-3"
-          >
-            <div>
-              <h2 class="text-lg font-semibold">
-                Mesa {{ order.table }}
-              </h2>
-
-              <p class="text-xs text-zinc-500 dark:text-zinc-400">
-                Pedido #{{ order.id }}
-              </p>
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="min-w-0">
+              <h2 class="truncate text-lg font-semibold">Mesa {{ order.tableReference }}</h2>
+              <p class="text-xs text-zinc-500 dark:text-zinc-400">Pedido #{{ order.id }}</p>
             </div>
-
             <span
-              class="badge"
-              :class="statusClasses[order.status]"
+              class="status-badge badge shrink-0"
+              :class="[
+                statusClasses[order.status],
+                statusChangingOrderId === order.id ? 'status-badge-changing' : ''
+              ]"
             >
               {{ order.status }}
             </span>
           </div>
 
-          <ul class="my-5 flex-1 space-y-3 text-sm">
-            <li
-              v-for="(item, index) in order.items"
-              :key="index"
-            >
-              <div class="flex justify-between gap-3">
-                <span>{{ item.quantity }}× {{ item.name }}</span>
-                <span>
-                  {{ money(item.price * item.quantity) }}
-                </span>
-              </div>
-
-              <p
-                v-if="item.observation"
-                class="mt-1 text-xs text-zinc-500
-                  dark:text-zinc-400"
-              >
-                Obs.: {{ item.observation }}
-              </p>
-            </li>
-          </ul>
-
-          <div
-            class="flex justify-between border-t border-zinc-200
-              pt-4 font-bold dark:border-zinc-800"
-          >
-            <span>Total</span>
-            <span>{{ money(total(order.items)) }}</span>
+          <div class="mt-4 flex items-center justify-between gap-3 text-sm">
+            <span class="text-zinc-500 dark:text-zinc-400">{{ order.items.length }} linhas na comanda</span>
+            <strong>{{ money(total(order.items)) }}</strong>
           </div>
 
+          <details class="order-details mt-4">
+            <summary class="cursor-pointer select-none text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+              Ver itens e observações
+            </summary>
+            <ul class="mt-3 space-y-3 text-sm">
+              <li v-for="(item, index) in order.items" :key="index" class="border-b border-zinc-200 pb-3 last:border-0 dark:border-zinc-800">
+                <div class="flex justify-between gap-3">
+                  <span>{{ item.quantity }}× {{ item.name }}</span>
+                  <span>{{ money(item.price * item.quantity) }}</span>
+                </div>
+                <p v-if="item.observation" class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                  Obs.: {{ item.observation }}
+                </p>
+              </li>
+            </ul>
+          </details>
+
           <button
-            v-if="actionLabels[order.status]"
+            v-if="order.status === 'Pronto'"
             type="button"
-            class="primary mt-4 w-full"
-            @click="advanceOrder(order.id)"
+            class="primary mt-4 min-h-11 w-full"
+            :disabled="deliveringOrderId !== null"
+            @click="deliverOrder(order.id)"
           >
-            {{ actionLabels[order.status] }}
+            {{ deliveringOrderId === order.id ? 'Confirmando...' : 'Confirmar entrega' }}
           </button>
+          <p v-else-if="order.status !== 'Entregue'" class="mt-4 rounded-lg bg-zinc-100 p-3 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+            Aguardando atualização da cozinha.
+          </p>
+          <p v-else class="mt-4 text-xs text-zinc-500 dark:text-zinc-400">
+            Entrega confirmada. Este pedido permanece no histórico.
+          </p>
         </article>
-      </section>
+      </TransitionGroup>
     </template>
   </main>
 </template>
@@ -982,6 +1115,110 @@ function confirmOrder() {
   padding-right: 0.25rem;
 }
 
+.order-card {
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.order-card-ready {
+  border-color: rgb(16 185 129 / 0.45);
+  box-shadow: 0 8px 24px rgb(16 185 129 / 0.08);
+}
+
+.order-card-status-changing {
+  animation: order-status-change 600ms ease both;
+}
+
+.status-badge {
+  transition: color 220ms ease, background-color 220ms ease, transform 220ms ease;
+}
+
+.status-badge-changing {
+  animation: status-badge-change 600ms ease both;
+}
+
+@keyframes order-status-change {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.012); }
+  100% { transform: scale(1); }
+}
+
+@keyframes status-badge-change {
+  0% { opacity: 0.55; transform: translateY(3px) scale(0.92); }
+  55% { opacity: 1; transform: translateY(0) scale(1.05); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.status-select {
+  cursor: pointer;
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.status-select:hover {
+  border-color: rgb(99 102 241 / 0.7);
+}
+
+.status-select:focus {
+  box-shadow: 0 0 0 3px rgb(99 102 241 / 0.16);
+}
+
+.toggle-filter {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.toggle-filter input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.toggle-track {
+  position: relative;
+  display: inline-flex;
+  width: 2.75rem;
+  height: 1.6rem;
+  align-items: center;
+  border-radius: 999px;
+  background: #d4d4d8;
+  padding: 0.2rem;
+  transition: background-color 220ms ease, box-shadow 220ms ease;
+}
+
+.toggle-thumb {
+  display: block;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 999px;
+  background: white;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
+  transition: transform 220ms ease;
+}
+
+.toggle-filter input:checked + .toggle-track {
+  background: #4f46e5;
+  box-shadow: 0 0 0 3px rgb(99 102 241 / 0.14);
+}
+
+.toggle-filter input:checked + .toggle-track .toggle-thumb {
+  transform: translateX(1.15rem);
+}
+
+.toggle-filter input:focus-visible + .toggle-track {
+  outline: 2px solid #818cf8;
+  outline-offset: 3px;
+}
+
+.order-details summary::marker {
+  color: rgb(99 102 241);
+}
+
 .primary {
   @apply inline-flex items-center justify-center rounded-lg
     bg-indigo-600 px-4 py-2 text-sm font-semibold text-white
@@ -1091,6 +1328,13 @@ function confirmOrder() {
   .filter-button,
   .dish-card,
   .dish-card-added,
+  .order-card,
+  .order-card-status-changing,
+  .status-badge,
+  .status-badge-changing,
+  .status-select,
+  .toggle-track,
+  .toggle-thumb,
   .dish-list-enter-active,
   .dish-list-leave-active,
   .dish-list-move {
