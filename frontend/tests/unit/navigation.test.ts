@@ -100,6 +100,15 @@ assert.deepEqual(
   "Chef deve ter estritamente as rotas operacionais de cozinha e cardápio na barra lateral"
 );
 
+const managerNav = navigationForUser(managerUser).map((item) => item.route);
+assert.deepEqual(
+  managerNav,
+  ["/", "/financeiro", "/pedidos", "/cardapio", "/estoque", "/fornecedores", "/funcionarios", "/integracoes", "/configuracoes"],
+  "Manager deve ver somente a navegação administrativa reorganizada"
+);
+assert.equal(managerNav.includes("/atendimento"), false, "Atendimento não deve aparecer no menu administrativo");
+assert.equal(managerNav.includes("/cozinha"), false, "Cozinha não deve aparecer no menu administrativo");
+
 const waiterNav = navigationForUser(waiterUser).map((item) => item.route);
 assert.deepEqual(
   waiterNav,
