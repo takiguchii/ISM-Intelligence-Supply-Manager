@@ -100,6 +100,16 @@ const filteredDishes = computed(() => {
   })
 })
 
+const categoryCounts = computed(() => {
+  const counts = new Map<string, number>()
+
+  for (const dish of dishes.value) {
+    counts.set(dish.category, (counts.get(dish.category) || 0) + 1)
+  }
+
+  return counts
+})
+
 const totalDishPages = computed(() =>
   Math.max(1, Math.ceil(filteredDishes.value.length / dishesPerPage))
 )
@@ -392,6 +402,24 @@ function deliverOrder(id: number) {
         </label>
       </section>
 
+      <section
+        v-else
+        class="panel flex flex-wrap items-center justify-between gap-4"
+      >
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
+            Consulta rápida
+          </p>
+          <h2 class="mt-1 text-lg font-semibold">Itens disponíveis no cardápio</h2>
+          <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+            Consulte preços e disponibilidade. Nada é adicionado à comanda nesta tela.
+          </p>
+        </div>
+        <NuxtLink to="/atendimento" class="action-button">
+          <span class="action-text">Criar pedido</span>
+        </NuxtLink>
+      </section>
+
       <div
         class="grid items-start gap-6"
         :class="{ 'xl:grid-cols-3': view === 'service' }"
@@ -465,9 +493,13 @@ function deliverOrder(id: number) {
                   type="button"
                   class="filter-button"
                   :class="category === item ? 'filter-button-active' : ''"
+                  :aria-pressed="category === item"
                   @click="category = item"
                 >
                   {{ item }}
+                  <span class="ml-1 text-xs opacity-70">
+                    {{ item === 'Todos' ? dishes.length : categoryCounts.get(item) || 0 }}
+                  </span>
                 </button>
               </div>
             </div>
@@ -529,6 +561,15 @@ function deliverOrder(id: number) {
               >
                 {{ dish.description }}
               </p>
+
+              <details v-if="view === 'menu'" class="menu-details mt-3">
+                <summary class="cursor-pointer text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+                  Ver detalhes
+                </summary>
+                <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+                  {{ dish.description || 'Descrição não informada.' }}
+                </p>
+              </details>
 
               <div
                 class="mt-5 flex items-center justify-between gap-3"
@@ -1219,6 +1260,10 @@ function deliverOrder(id: number) {
   color: rgb(99 102 241);
 }
 
+.menu-details summary::marker {
+  color: rgb(99 102 241);
+}
+
 .primary {
   @apply inline-flex items-center justify-center rounded-lg
     bg-indigo-600 px-4 py-2 text-sm font-semibold text-white
@@ -1250,23 +1295,26 @@ function deliverOrder(id: number) {
 
 .filter-button {
   @apply inline-flex min-h-11 items-center justify-center rounded-lg
-    border-none bg-indigo-600 px-4 py-2 text-sm font-semibold text-white
-    outline outline-2 outline-indigo-600 outline-offset-[-2px];
+    border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold
+    text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300;
   transition: 400ms;
 }
 
 .filter-button:hover,
 .filter-button:focus-visible {
-  @apply bg-transparent text-indigo-600 dark:text-indigo-400;
+  @apply border-indigo-500 bg-indigo-50 text-indigo-700
+    dark:border-indigo-400 dark:bg-indigo-950/60 dark:text-indigo-300;
 }
 
 .filter-button-active {
-  @apply bg-indigo-600 text-white;
+  @apply border-indigo-600 bg-indigo-600 text-white shadow-sm
+    dark:border-indigo-500 dark:bg-indigo-600;
 }
 
 .filter-button-active:hover,
 .filter-button-active:focus-visible {
-  @apply bg-transparent text-indigo-600 dark:text-indigo-400;
+  @apply border-indigo-700 bg-indigo-700 text-white
+    dark:border-indigo-400 dark:bg-indigo-500;
 }
 
 .action-button {
