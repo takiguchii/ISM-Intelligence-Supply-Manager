@@ -19,6 +19,7 @@ public sealed class SuppliersController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
     [ProducesResponseType(typeof(IReadOnlyList<SupplierResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<SupplierResponse>>> GetAll(CancellationToken cancellationToken)
     {
@@ -27,6 +28,7 @@ public sealed class SuppliersController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
     [ProducesResponseType(typeof(SupplierResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<SupplierResponse>> GetById(int id, CancellationToken cancellationToken)
