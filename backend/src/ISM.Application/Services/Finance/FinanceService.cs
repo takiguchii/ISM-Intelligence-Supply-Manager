@@ -10,16 +10,42 @@ public sealed class FinanceService(IFinanceEntryRepository entries, IOrderReposi
 {
     private static readonly TimeZoneInfo Zone = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
     private int RestaurantId => currentUser.RestaurantId is > 0 ? currentUser.RestaurantId.Value : throw new UnauthorizedAccessException("É necessário estar vinculado a um restaurante.");
-    public async Task<FinanceOverview> GetAsync(CancellationToken cancellationToken = default)
+    public async Task<FinanceOverview> GetAsync(int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken = default)
     {
+        pageNumber = Math.Max(1, pageNumber);
+        pageSize = Math.Clamp(pageSize, 1, 100);
         var tenant = RestaurantId;
         var all = await entries.GetAllAsync(tenant, cancellationToken);
+        var page = await entries.GetPageAsync(tenant, pageNumber, pageSize, cancellationToken);
+        var totalCount = await entries.CountAsync(tenant, cancellationToken);
         var allOrders = await orders.GetAllAsync(tenant, cancellationToken);
         var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, Zone);
         bool IsThisMonth(DateTime utc) { var local = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), Zone); return local.Year == now.Year && local.Month == now.Month && local <= now; }
         var sales = allOrders.Where(order => order.Status == OrderStatus.Paid && order.PaidAtUtc.HasValue && IsThisMonth(order.PaidAtUtc.Value)).Sum(order => order.Items.Sum(item => item.UnitPrice * item.Quantity));
         decimal Sum(FinanceEntryType type, bool settled) => all.Where(entry => entry.Type == type && (settled ? entry.SettledAtUtc.HasValue && IsThisMonth(entry.SettledAtUtc.Value) : !entry.SettledAtUtc.HasValue)).Sum(entry => entry.Amount);
-        return new FinanceOverview(new FinanceSummary(sales, Sum(FinanceEntryType.Income, true), Sum(FinanceEntryType.Expense, true), Sum(FinanceEntryType.Income, false), Sum(FinanceEntryType.Expense, false)), all.Select(Map).ToArray());
+        var currentMonthExpenses = all.Where(entry => entry.Type == FinanceEntryType.Expense && entry.SettledAtUtc.HasValue && IsThisMonth(entry.SettledAtUtc.Value));
+        var expensesByCategory = currentMonthExpenses.GroupBy(entry => string.IsNullOrWhiteSpace(entry.Category) ? "Outros" : entry.Category.Trim())
+            .Select(group => new FinanceExpenseBreakdown(group.Key, group.Sum(entry => entry.Amount)))
+            .OrderByDescending(item => item.Amount).ToArray();
+        var topSellingItems = allOrders.Where(order => order.Status == OrderStatus.Paid && order.PaidAtUtc.HasValue && IsThisMonth(order.PaidAtUtc.Value))
+            .SelectMany(order => order.Items).GroupBy(item => item.DishName)
+            .Select(group => new FinanceTopSellingItem(group.Key, group.Sum(item => item.Quantity), group.Sum(item => item.UnitPrice * item.Quantity)))
+            .OrderByDescending(item => item.Revenue).ThenBy(item => item.Name).Take(5).ToArray();
+        var cashFlow = Enumerable.Range(0, 6).Select(offset =>
+        {
+            var month = new DateTime(now.Year, now.Month, 1).AddMonths(offset - 5);
+            bool InMonth(DateTime utc) { var local = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), Zone); return local.Year == month.Year && local.Month == month.Month; }
+            var revenue = allOrders.Where(order => order.Status == OrderStatus.Paid && order.PaidAtUtc.HasValue && InMonth(order.PaidAtUtc.Value)).Sum(order => order.Items.Sum(item => item.UnitPrice * item.Quantity))
+                + all.Where(entry => entry.Type == FinanceEntryType.Income && entry.SettledAtUtc.HasValue && InMonth(entry.SettledAtUtc.Value)).Sum(entry => entry.Amount);
+            var expenses = all.Where(entry => entry.Type == FinanceEntryType.Expense && entry.SettledAtUtc.HasValue && InMonth(entry.SettledAtUtc.Value)).Sum(entry => entry.Amount);
+            return new FinanceCashFlowPoint(month.ToString("MM/yyyy"), revenue, expenses);
+        }).ToArray();
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+        var entryPage = new FinanceEntryPage(page.Select(Map).ToArray(), pageNumber, pageSize, totalCount, totalPages, pageNumber > 1, pageNumber < totalPages);
+        return new FinanceOverview(
+            new FinanceSummary(sales, Sum(FinanceEntryType.Income, true), Sum(FinanceEntryType.Expense, true), Sum(FinanceEntryType.Income, false), Sum(FinanceEntryType.Expense, false)),
+            entryPage,
+            new FinanceAnalytics(expensesByCategory, topSellingItems, cashFlow));
     }
     public async Task<FinanceEntryResponse> CreateAsync(FinanceEntryRequest request, CancellationToken cancellationToken = default)
     {
@@ -48,13 +74,13 @@ public sealed class FinanceService(IFinanceEntryRepository entries, IOrderReposi
     }
     private static void Validate(FinanceEntryRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Description) || request.Description.Trim().Length > 150 || !Enum.IsDefined(request.Type) || request.Amount <= 0 || request.Amount > 99999999.99m || request.DueDate == default)
+        if (string.IsNullOrWhiteSpace(request.Description) || request.Description.Trim().Length > 150 || string.IsNullOrWhiteSpace(request.Category) || request.Category.Trim().Length > 80 || !Enum.IsDefined(request.Type) || request.Amount <= 0 || request.Amount > 99999999.99m || request.DueDate == default)
             throw new InvalidOperationException("Informe descrição, tipo, valor e vencimento válidos.");
     }
     private static void Apply(FinanceEntry entry, FinanceEntryRequest request)
     {
-        entry.Description = request.Description.Trim(); entry.Type = request.Type; entry.Amount = request.Amount; entry.DueDate = request.DueDate.Date;
+        entry.Description = request.Description.Trim(); entry.Category = request.Category.Trim(); entry.Type = request.Type; entry.Amount = request.Amount; entry.DueDate = request.DueDate.Date;
         entry.SettledAtUtc = request.IsSettled ? entry.SettledAtUtc ?? DateTime.UtcNow : null;
     }
-    private static FinanceEntryResponse Map(FinanceEntry entry) => new(entry.Id, entry.Description, entry.Type, entry.Amount, entry.DueDate, entry.SettledAtUtc);
+    private static FinanceEntryResponse Map(FinanceEntry entry) => new(entry.Id, entry.Description, entry.Category, entry.Type, entry.Amount, entry.DueDate, entry.SettledAtUtc);
 }

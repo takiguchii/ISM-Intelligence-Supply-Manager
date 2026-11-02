@@ -587,6 +587,50 @@ public static class DbSeeder
             }
         }
 
+        // Mantém os KPIs do Dashboard preenchidos quando a massa demo existente ficou fora da janela recente.
+        if (!await context.Orders.AnyAsync(o => o.RestaurantId == restaurant.Id && o.Status == OrderStatus.Paid && o.PaidAtUtc >= DateTime.UtcNow.AddDays(-7)))
+        {
+            var recentDishes = await context.Dishes.Where(d => d.RestaurantId == restaurant.Id && d.IsActive).OrderBy(d => d.Id).Take(4).ToListAsync();
+            if (recentDishes.Count > 0)
+            {
+                var recentOrders = new List<Order>();
+                for (var daysAgo = 0; daysAgo < 7; daysAgo++)
+                {
+                    for (var index = 0; index < 2; index++)
+                    {
+                        var createdAt = DateTime.UtcNow.Date.AddDays(-daysAgo).AddHours(12 + index * 6);
+                        var order = new Order
+                        {
+                            RestaurantId = restaurant.Id,
+                            RequestId = Guid.NewGuid(),
+                            TableReference = $"Mesa demo {index + 1}",
+                            Status = OrderStatus.Paid,
+                            CreatedAtUtc = createdAt,
+                            PaidAtUtc = createdAt.AddMinutes(30),
+                            Version = 1,
+                            Items = new List<OrderItem>()
+                        };
+                        var dish = recentDishes[(daysAgo + index) % recentDishes.Count];
+                        order.Items.Add(new OrderItem
+                        {
+                            RestaurantId = restaurant.Id,
+                            DishId = dish.Id,
+                            DishName = dish.Name,
+                            Quantity = 1 + (index % 2),
+                            UnitPrice = dish.Price,
+                            UnitCost = dish.Cost,
+                            Observation = "Pedido demonstrativo.",
+                            CreatedAtUtc = createdAt
+                        });
+                        recentOrders.Add(order);
+                    }
+                }
+
+                await context.Orders.AddRangeAsync(recentOrders);
+                await context.SaveChangesAsync();
+            }
+        }
+
         // 8. Financeiro: Contas a Pagar e Receber realistas (Cenário Mensal de Médio Porte)
         if (!await context.FinanceEntries.AnyAsync(f => f.RestaurantId == restaurant.Id))
         {
@@ -598,6 +642,7 @@ public static class DbSeeder
                 {
                     RestaurantId = restaurant.Id,
                     Description = "Aluguel Comercial - Rua das Esmeraldas, Marília",
+                    Category = "Ocupação",
                     Type = FinanceEntryType.Expense,
                     Amount = 4800.00m,
                     DueDate = now.AddDays(-15),
@@ -608,6 +653,7 @@ public static class DbSeeder
                 {
                     RestaurantId = restaurant.Id,
                     Description = "Folha de Pagamento - Equipe Maki Sushi (Salários)",
+                    Category = "Pessoal",
                     Type = FinanceEntryType.Expense,
                     Amount = 14200.00m,
                     DueDate = now.AddDays(-20),
@@ -618,6 +664,7 @@ public static class DbSeeder
                 {
                     RestaurantId = restaurant.Id,
                     Description = "CPFL Paulista - Energia Elétrica Restaurante",
+                    Category = "Utilidades",
                     Type = FinanceEntryType.Expense,
                     Amount = 2340.50m,
                     DueDate = now.AddDays(-10),
@@ -628,6 +675,7 @@ public static class DbSeeder
                 {
                     RestaurantId = restaurant.Id,
                     Description = "Daem Marília - Água e Saneamento",
+                    Category = "Utilidades",
                     Type = FinanceEntryType.Expense,
                     Amount = 480.20m,
                     DueDate = now.AddDays(-12),
@@ -638,6 +686,7 @@ public static class DbSeeder
                 {
                     RestaurantId = restaurant.Id,
                     Description = "Honorários Contábeis - Escritório Marília",
+                    Category = "Serviços",
                     Type = FinanceEntryType.Expense,
                     Amount = 1200.00m,
                     DueDate = now.AddDays(-18),
@@ -648,6 +697,7 @@ public static class DbSeeder
                 {
                     RestaurantId = restaurant.Id,
                     Description = "Vivo Fibra Empresas 600Mbps - Internet e Telefonia",
+                    Category = "Utilidades",
                     Type = FinanceEntryType.Expense,
                     Amount = 320.00m,
                     DueDate = now.AddDays(-8),
@@ -658,6 +708,7 @@ public static class DbSeeder
                 {
                     RestaurantId = restaurant.Id,
                     Description = "Gás GLP Industrial - Ultragaz Marília",
+                    Category = "Utilidades",
                     Type = FinanceEntryType.Expense,
                     Amount = 1150.00m,
                     DueDate = now.AddDays(-5),
@@ -669,6 +720,7 @@ public static class DbSeeder
                 {
                     RestaurantId = restaurant.Id,
                     Description = "Fornecedor Mar Fresco Pescados - Quinzena Peixes",
+                    Category = "Insumos",
                     Type = FinanceEntryType.Expense,
                     Amount = 3850.00m,
                     DueDate = now.AddDays(3),
@@ -679,6 +731,7 @@ public static class DbSeeder
                 {
                     RestaurantId = restaurant.Id,
                     Description = "Distribuidora Grãos Brasil - Arroz Especial e Farinhas",
+                    Category = "Insumos",
                     Type = FinanceEntryType.Expense,
                     Amount = 1420.00m,
                     DueDate = now.AddDays(6),
@@ -689,6 +742,7 @@ public static class DbSeeder
                 {
                     RestaurantId = restaurant.Id,
                     Description = "EcoPack Embalagens - Caixas Delivery e Sacolas",
+                    Category = "Embalagens",
                     Type = FinanceEntryType.Expense,
                     Amount = 890.00m,
                     DueDate = now.AddDays(8),
@@ -699,6 +753,7 @@ public static class DbSeeder
                 {
                     RestaurantId = restaurant.Id,
                     Description = "Manutenção Preventiva Câmara Fria e Balcões",
+                    Category = "Manutenção",
                     Type = FinanceEntryType.Expense,
                     Amount = 750.00m,
                     DueDate = now.AddDays(12),
@@ -710,6 +765,7 @@ public static class DbSeeder
                 {
                     RestaurantId = restaurant.Id,
                     Description = "Frigorífico Boi Nobre - Cortes Nobres Filé Mignon",
+                    Category = "Insumos",
                     Type = FinanceEntryType.Expense,
                     Amount = 2680.00m,
                     DueDate = now.AddDays(-4),
@@ -720,6 +776,7 @@ public static class DbSeeder
                 {
                     RestaurantId = restaurant.Id,
                     Description = "Hortifruti da Serra - Legumes, Folhas e Verduras",
+                    Category = "Insumos",
                     Type = FinanceEntryType.Expense,
                     Amount = 940.00m,
                     DueDate = now.AddDays(-2),
@@ -730,6 +787,7 @@ public static class DbSeeder
                 {
                     RestaurantId = restaurant.Id,
                     Description = "Laticínios Vale Real - Queijos e Laticínios",
+                    Category = "Insumos",
                     Type = FinanceEntryType.Expense,
                     Amount = 1180.00m,
                     DueDate = now.AddDays(-6),
@@ -740,6 +798,7 @@ public static class DbSeeder
                 {
                     RestaurantId = restaurant.Id,
                     Description = "Bebidas Premium Paulista - Cervejas e Refrigerantes",
+                    Category = "Insumos",
                     Type = FinanceEntryType.Expense,
                     Amount = 2150.00m,
                     DueDate = now.AddDays(-7),
@@ -751,6 +810,7 @@ public static class DbSeeder
                 {
                     RestaurantId = restaurant.Id,
                     Description = "Evento Fechado Corporativo - Confraternização Unimar",
+                    Category = "Eventos",
                     Type = FinanceEntryType.Income,
                     Amount = 4500.00m,
                     DueDate = now.AddDays(-14),
@@ -761,6 +821,7 @@ public static class DbSeeder
                 {
                     RestaurantId = restaurant.Id,
                     Description = "Locação Espaço Sushi Bar - Workshop Gastronômico",
+                    Category = "Eventos",
                     Type = FinanceEntryType.Income,
                     Amount = 1800.00m,
                     DueDate = now.AddDays(-7),
@@ -771,6 +832,7 @@ public static class DbSeeder
                 {
                     RestaurantId = restaurant.Id,
                     Description = "Sinal Reserva Evento de Fim de Ano",
+                    Category = "Eventos",
                     Type = FinanceEntryType.Income,
                     Amount = 2000.00m,
                     DueDate = now.AddDays(5),
@@ -780,6 +842,36 @@ public static class DbSeeder
             };
 
             await context.FinanceEntries.AddRangeAsync(financeEntries);
+            await context.SaveChangesAsync();
+        }
+
+        // Complementa o mês corrente para que os gráficos financeiros tenham dados demonstrativos.
+        var monthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+        var currentMonthCategories = await context.FinanceEntries
+            .Where(f => f.RestaurantId == restaurant.Id && f.Type == FinanceEntryType.Expense && f.SettledAtUtc >= monthStart && f.SettledAtUtc <= DateTime.UtcNow)
+            .Select(f => f.Category)
+            .ToListAsync();
+        if (currentMonthCategories.Count < 4)
+        {
+            var currentMonthExpenses = new[]
+            {
+                new FinanceEntry { RestaurantId = restaurant.Id, Description = "Compra demonstrativa de hortifruti", Category = "Insumos", Type = FinanceEntryType.Expense, Amount = 860m },
+                new FinanceEntry { RestaurantId = restaurant.Id, Description = "Serviço demonstrativo de manutenção", Category = "Manutenção", Type = FinanceEntryType.Expense, Amount = 420m },
+                new FinanceEntry { RestaurantId = restaurant.Id, Description = "Consumo demonstrativo de energia", Category = "Utilidades", Type = FinanceEntryType.Expense, Amount = 690m },
+                new FinanceEntry { RestaurantId = restaurant.Id, Description = "Despesa demonstrativa de equipe", Category = "Pessoal", Type = FinanceEntryType.Expense, Amount = 1250m }
+            };
+            var now = DateTime.UtcNow;
+            for (var index = 0; index < currentMonthExpenses.Length; index++)
+            {
+                var expense = currentMonthExpenses[index];
+                if (currentMonthCategories.Contains(expense.Category)) continue;
+                expense.DueDate = now.AddMinutes(-index * 10);
+                expense.SettledAtUtc = expense.DueDate;
+                expense.CreatedAtUtc = expense.DueDate;
+                currentMonthCategories.Add(expense.Category);
+            }
+            currentMonthExpenses = currentMonthExpenses.Where(expense => expense.SettledAtUtc.HasValue).ToArray();
+            await context.FinanceEntries.AddRangeAsync(currentMonthExpenses);
             await context.SaveChangesAsync();
         }
     }

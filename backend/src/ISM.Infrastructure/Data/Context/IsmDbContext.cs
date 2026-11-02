@@ -56,6 +56,7 @@ public sealed class IsmDbContext : DbContext
             builder.ToTable("finance_entries");
             builder.HasKey(entry => entry.Id);
             builder.Property(entry => entry.Description).HasMaxLength(150).IsRequired();
+            builder.Property(entry => entry.Category).HasMaxLength(80).IsRequired().HasDefaultValue("Outros");
             builder.Property(entry => entry.Type).HasConversion<int>();
             builder.Property(entry => entry.Amount).HasColumnType("decimal(10,2)");
             builder.HasIndex(entry => new { entry.RestaurantId, entry.DueDate });

@@ -21,6 +21,11 @@ public sealed class FinanceFlowTests : IClassFixture<FoundationWebApplicationFac
         createdResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var created = (await createdResponse.Content.ReadFromJsonAsync<FinanceEntryResponse>())!;
         var initial = (await _client.GetFromJsonAsync<FinanceOverview>("/api/finance"))!;
+        initial.Entries.PageSize.Should().Be(10);
+        initial.Entries.TotalCount.Should().Be(1);
+        var paged = (await _client.GetFromJsonAsync<FinanceOverview>("/api/finance?pageNumber=1&pageSize=1"))!;
+        paged.Entries.Items.Should().ContainSingle();
+        paged.Entries.PageSize.Should().Be(1);
         initial.Summary.AccountsPayable.Should().Be(345.50m);
         input.IsSettled = true;
         input.Amount = 400m;
@@ -30,11 +35,11 @@ public sealed class FinanceFlowTests : IClassFixture<FoundationWebApplicationFac
         updated.Summary.Expenses.Should().Be(400m);
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", FoundationWebApplicationFactory.Token(IsmRoles.Manager, 921));
         (await _client.DeleteAsync($"/api/finance/{created.Id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await _client.GetFromJsonAsync<FinanceOverview>("/api/finance"))!.Entries.Should().BeEmpty();
+        (await _client.GetFromJsonAsync<FinanceOverview>("/api/finance"))!.Entries.Items.Should().BeEmpty();
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", FoundationWebApplicationFactory.Token(IsmRoles.Waiter, 920));
         (await _client.GetAsync("/api/finance")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", FoundationWebApplicationFactory.Token(IsmRoles.Manager, 920));
         (await _client.DeleteAsync($"/api/finance/{created.Id}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
-        (await _client.GetFromJsonAsync<FinanceOverview>("/api/finance"))!.Entries.Should().BeEmpty();
+        (await _client.GetFromJsonAsync<FinanceOverview>("/api/finance"))!.Entries.Items.Should().BeEmpty();
     }
 }

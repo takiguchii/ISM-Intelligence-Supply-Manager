@@ -9,7 +9,7 @@ namespace ISM.API.Controllers.Finance;
 [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
 public sealed class FinanceController(IFinanceService finance) : ControllerBase
 {
-    [HttpGet] public async Task<ActionResult<FinanceOverview>> Get(CancellationToken ct) => Ok(await finance.GetAsync(ct));
+    [HttpGet] public async Task<ActionResult<FinanceOverview>> Get([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, CancellationToken ct = default) => Ok(await finance.GetAsync(pageNumber, pageSize, ct));
     [HttpPost] public async Task<ActionResult<FinanceEntryResponse>> Create(FinanceEntryRequest request, CancellationToken ct) => Ok(await finance.CreateAsync(request, ct));
     [HttpPut("{id:int}")] public async Task<ActionResult<FinanceEntryResponse>> Update(int id, FinanceEntryRequest request, CancellationToken ct) { var entry = await finance.UpdateAsync(id, request, ct); return entry is null ? NotFound() : Ok(entry); }
     [HttpDelete("{id:int}")] public async Task<IActionResult> Delete(int id, CancellationToken ct) => await finance.DeleteAsync(id, ct) ? NoContent() : NotFound();
