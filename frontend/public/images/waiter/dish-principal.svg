@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 320" role="img" aria-labelledby="title">
+  <title>Ilustração de prato principal</title>
+  <defs><linearGradient id="bg" x1="0" x2="1"><stop stop-color="#064e3b"/><stop offset="1" stop-color="#0f766e"/></linearGradient></defs>
+  <rect width="800" height="320" fill="url(#bg)"/>
+  <ellipse cx="400" cy="170" rx="145" ry="95" fill="#f8fafc" opacity=".96"/>
+  <ellipse cx="400" cy="170" rx="105" ry="63" fill="#78350f"/>
+  <path d="M330 150c22-44 68-42 91-5 18-30 70-18 70 27-14 42-45 48-80 38-35 19-74 3-81-30z" fill="#a16207"/>
+  <circle cx="330" cy="197" r="19" fill="#22c55e"/><circle cx="485" cy="203" r="18" fill="#84cc16"/>
+</svg>

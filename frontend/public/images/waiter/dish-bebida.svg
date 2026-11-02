@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 320" role="img" aria-labelledby="title">
+  <title>Ilustração de bebida</title>
+  <defs><linearGradient id="bg" x1="0" x2="1"><stop stop-color="#1e3a8a"/><stop offset="1" stop-color="#0284c7"/></linearGradient></defs>
+  <rect width="800" height="320" fill="url(#bg)"/>
+  <path d="M320 75h160l-18 174c-2 18-16 31-34 31h-56c-18 0-32-13-34-31z" fill="#f8fafc" opacity=".93"/>
+  <path d="M326 132h148l-8 85H334z" fill="#f97316"/><path d="M434 72c26-48 37-57 48-57" fill="none" stroke="#bbf7d0" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="370" cy="112" r="12" fill="#fde047"/><circle cx="421" cy="153" r="10" fill="#fde047"/>
+</svg>

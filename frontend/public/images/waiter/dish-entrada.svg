@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 320" role="img" aria-labelledby="title">
+  <title>Ilustração de entrada</title>
+  <defs><linearGradient id="bg" x1="0" x2="1"><stop stop-color="#312e81"/><stop offset="1" stop-color="#7c3aed"/></linearGradient></defs>
+  <rect width="800" height="320" fill="url(#bg)"/>
+  <circle cx="400" cy="165" r="102" fill="#f8fafc" opacity=".95"/>
+  <circle cx="400" cy="165" r="78" fill="#f59e0b"/>
+  <circle cx="350" cy="132" r="24" fill="#ef4444"/><circle cx="430" cy="190" r="25" fill="#dc2626"/>
+  <circle cx="455" cy="130" r="18" fill="#16a34a"/><path d="M315 210c48 24 101 26 166-8" fill="none" stroke="#15803d" stroke-width="12" stroke-linecap="round"/>
+</svg>

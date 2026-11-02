@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 320" role="img" aria-labelledby="title">
+  <title>Ilustração de sobremesa</title>
+  <defs><linearGradient id="bg" x1="0" x2="1"><stop stop-color="#831843"/><stop offset="1" stop-color="#c026d3"/></linearGradient></defs>
+  <rect width="800" height="320" fill="url(#bg)"/>
+  <ellipse cx="400" cy="242" rx="142" ry="18" fill="#f8fafc" opacity=".9"/>
+  <path d="M300 225c0-54 28-94 100-94s100 40 100 94z" fill="#78350f"/>
+  <path d="M325 166c34 18 65 18 98 0 20-10 39 5 53 18-4-48-35-74-76-74-40 0-73 25-75 56z" fill="#fef3c7"/>
+  <circle cx="398" cy="102" r="19" fill="#ef4444"/><path d="M396 87c-2-17 11-26 25-27" fill="none" stroke="#22c55e" stroke-width="8" stroke-linecap="round"/>
+</svg>
