@@ -80,8 +80,8 @@ assert.equal(canAccessRoute(waiterUser, "/configuracoes"), false, "Waiter NÃO p
 // 4. Validar canAccessRoute para Manager (Gerente)
 assert.equal(canAccessRoute(managerUser, "/"), true, "Manager pode acessar /");
 assert.equal(canAccessRoute(managerUser, "/financeiro"), true, "Manager pode acessar /financeiro");
-assert.equal(canAccessRoute(managerUser, "/atendimento"), true, "Manager pode acessar /atendimento");
-assert.equal(canAccessRoute(managerUser, "/cozinha"), true, "Manager pode acessar /cozinha");
+assert.equal(canAccessRoute(managerUser, "/atendimento"), false, "Manager NÃO pode acessar /atendimento");
+assert.equal(canAccessRoute(managerUser, "/cozinha"), false, "Manager NÃO pode acessar /cozinha");
 assert.equal(canAccessRoute(managerUser, "/pedidos"), true, "Manager pode acessar /pedidos");
 assert.equal(canAccessRoute(managerUser, "/cardapio"), true, "Manager pode acessar /cardapio");
 assert.equal(canAccessRoute(managerUser, "/estoque"), true, "Manager pode acessar /estoque");

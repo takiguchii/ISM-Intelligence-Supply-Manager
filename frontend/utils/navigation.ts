@@ -55,8 +55,8 @@ export function homeForUser(user: User | null): string {
 export function canAccessRoute(user: User | null, path: string): boolean {
   if (!user || !isAppRole(user.role)) return false;
 
-  if (path === "/chef") return user.role === "Chef" && !!user.restaurantId;
-  if (path === "/garcom") return user.role === "Waiter" && !!user.restaurantId;
+  if (path === "/chef" || path === "/cozinha") return user.role === "Chef" && !!user.restaurantId;
+  if (path === "/garcom" || path === "/atendimento") return user.role === "Waiter" && !!user.restaurantId;
 
   const item = navigationItems.find((candidate) => candidate.route === path);
   if (!item) return true;
