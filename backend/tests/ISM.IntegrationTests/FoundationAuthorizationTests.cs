@@ -126,4 +126,17 @@ public sealed class FoundationWebApplicationFactory : WebApplicationFactory<Prog
         return new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken("ism-integration-tests", "ism-integration-tests", claims,
             expires: DateTime.UtcNow.AddMinutes(5), signingCredentials: credentials));
     }
+
+    public static string ExpiredToken(string role, int restaurantId)
+    {
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, "1"),
+            new(ClaimTypes.Role, role),
+            new("restaurantId", restaurantId.ToString())
+        };
+        var credentials = new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Secret)), SecurityAlgorithms.HmacSha256);
+        return new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken("ism-integration-tests", "ism-integration-tests", claims,
+            expires: DateTime.UtcNow.AddMinutes(-5), signingCredentials: credentials));
+    }
 }
