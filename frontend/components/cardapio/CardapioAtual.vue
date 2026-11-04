@@ -101,6 +101,45 @@ const newIngredient = ref({
   quantity: 0
 })
 
+const imagePreview = ref('')
+const fileInput = ref<HTMLInputElement | null>(null)
+const cameraInput = ref<HTMLInputElement | null>(null)
+
+const handleFileUpload = (e: Event) => {
+  const target = e.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  if (!file.type.startsWith('image/')) {
+    errorMessage.value = 'Por favor, selecione um arquivo de imagem válido.'
+    return
+  }
+
+  // Redimensiona ou converte para base64
+  const reader = new FileReader()
+  reader.onload = () => {
+    const result = reader.result as string
+    dishForm.value.urlImage = result
+    imagePreview.value = result
+  }
+  reader.readAsDataURL(file)
+}
+
+const triggerFileInput = () => {
+  fileInput.value?.click()
+}
+
+const triggerCameraInput = () => {
+  cameraInput.value?.click()
+}
+
+const clearImage = () => {
+  dishForm.value.urlImage = ''
+  imagePreview.value = ''
+  if (fileInput.value) fileInput.value.value = ''
+  if (cameraInput.value) cameraInput.value.value = ''
+}
+
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value
 }
@@ -521,6 +560,8 @@ const resetDishForm = () => {
     ingredients: []
   }
 
+  imagePreview.value = ''
+
   newIngredient.value = {
     productId: 0,
     quantity: 0
@@ -565,6 +606,8 @@ const openEditDishModal = (dish: Dish) => {
       })
     )
   }
+
+  imagePreview.value = dish.urlImage || ''
 
   showDishModal.value = true
 }
@@ -1316,14 +1359,100 @@ onMounted(loadPage)
                 </select>
               </div>
 
-              <!-- IMAGE -->
-              <div>
-                <label class="block text-xs font-semibold text-zinc-400 mb-2">
-                  URL da imagem
+              <!-- IMAGE: URL + FILE UPLOAD / CAMERA -->
+              <div class="md:col-span-2 space-y-3">
+                <label class="block text-xs font-semibold text-zinc-400">
+                  Foto / Imagem do Prato
                 </label>
 
-                <input v-model="dishForm.urlImage" type="url" placeholder="https://..."
-                  class="w-full px-4 py-3 rounded-xl bg-zinc-900 border border-zinc-800 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-zinc-600" />
+                <div class="flex flex-col lg:flex-row items-start gap-4">
+                  <!-- Componente de Upload com suporte a tema Claro/Escuro -->
+                  <div class="flex flex-col sm:flex-row gap-3 items-center">
+                    <label class="custum-file-upload" for="dish-file-upload">
+                      <div class="icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                          <g stroke-width="0" id="SVGRepo_bgCarrier"></g>
+                          <g stroke-linejoin="round" stroke-linecap="round" id="SVGRepo_tracerCarrier"></g>
+                          <g id="SVGRepo_iconCarrier">
+                            <path d="M10 1C9.73478 1 9.48043 1.10536 9.29289 1.29289L3.29289 7.29289C3.10536 7.48043 3 7.73478 3 8V20C3 21.6569 4.34315 23 6 23H7C7.55228 23 8 22.5523 8 22C8 21.4477 7.55228 21 7 21H6C5.44772 21 5 20.5523 5 20V9H10C10.5523 9 11 8.55228 11 8V3H18C18.5523 3 19 3.44772 19 4V9C19 9.55228 19.4477 10 20 10C20.5523 10 21 9.55228 21 9V4C21 2.34315 19.6569 1 18 1H10ZM9 7H6.41421L9 4.41421V7ZM14 15.5C14 14.1193 15.1193 13 16.5 13C17.8807 13 19 14.1193 19 15.5V16V17H20C21.1046 17 22 17.8954 22 19C22 20.1046 21.1046 21 20 21H13C11.8954 21 11 20.1046 11 19C11 17.8954 11.8954 17 13 17H14V16V15.5ZM16.5 11C14.142 11 12.2076 12.8136 12.0156 15.122C10.2825 15.5606 9 17.1305 9 19C9 21.2091 10.7909 23 13 23H20C22.2091 23 24 21.2091 24 19C24 17.1305 22.7175 15.5606 20.9844 15.122C20.7924 12.8136 18.858 11 16.5 11Z" clip-rule="evenodd" fill-rule="evenodd"></path>
+                          </g>
+                        </svg>
+                      </div>
+                      <div class="text">
+                        <span>Clique para carregar imagem</span>
+                      </div>
+                      <input
+                        id="dish-file-upload"
+                        ref="fileInput"
+                        type="file"
+                        accept="image/*"
+                        @change="handleFileUpload"
+                      />
+                    </label>
+
+                    <!-- Botão para tirar foto na hora (Câmera) -->
+                    <button
+                      type="button"
+                      @click="triggerCameraInput"
+                      class="h-[200px] w-28 sm:w-32 flex flex-col items-center justify-center gap-3 rounded-[10px] border-2 border-dashed border-zinc-700 hover:border-zinc-500 bg-zinc-900/60 hover:bg-zinc-800/80 transition-all text-xs font-semibold text-zinc-300 hover:text-white p-3 text-center"
+                    >
+                      <div class="p-3 rounded-full bg-zinc-800 text-zinc-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                      </div>
+                      <span>Tirar foto agora</span>
+                      <input
+                        ref="cameraInput"
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        class="hidden"
+                        @change="handleFileUpload"
+                      />
+                    </button>
+                  </div>
+
+                  <!-- Campo de URL manual mantido + Preview da Imagem -->
+                  <div class="flex-1 w-full space-y-3">
+                    <div>
+                      <span class="block text-xs font-semibold text-zinc-400 mb-2">
+                        Ou informe a URL da imagem
+                      </span>
+                      <input
+                        v-model="dishForm.urlImage"
+                        type="text"
+                        placeholder="https://..."
+                        class="w-full px-4 py-3 rounded-xl bg-zinc-900 border border-zinc-800 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-zinc-600"
+                        @input="imagePreview = dishForm.urlImage"
+                      />
+                    </div>
+
+                    <!-- Visualização prévia da imagem carregada/digitada -->
+                    <div v-if="dishForm.urlImage || imagePreview" class="relative rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 flex items-center gap-3">
+                      <div class="w-16 h-16 rounded-lg bg-zinc-950 overflow-hidden shrink-0 border border-zinc-700 flex items-center justify-center">
+                        <img
+                          :src="imagePreview || dishForm.urlImage"
+                          alt="Prévia do prato"
+                          class="w-full h-full object-cover"
+                          @error="imagePreview = ''"
+                        />
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <p class="text-xs font-bold text-white truncate">Imagem selecionada</p>
+                        <p class="text-[11px] text-zinc-400">Pronta para ser salva com o prato</p>
+                      </div>
+                      <button
+                        type="button"
+                        @click="clearImage"
+                        class="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-red-950/60 text-zinc-400 hover:text-red-300 text-xs font-semibold transition"
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <!-- PRICE -->
@@ -1590,3 +1719,93 @@ ingredient, index
     </Teleport>
   </div>
 </template>
+
+<style scoped>
+.custum-file-upload {
+  height: 200px;
+  width: min(300px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed #3f3f46;
+  background-color: #18181b;
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0px 48px 35px -48px rgba(0, 0, 0, 0.4);
+  transition: all 0.25s ease;
+}
+
+.custum-file-upload:hover {
+  border-color: #71717a;
+  background-color: #27272a;
+}
+
+.custum-file-upload .icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.custum-file-upload .icon svg {
+  height: 64px;
+  fill: #a1a1aa;
+  transition: fill 0.25s ease;
+}
+
+.custum-file-upload:hover .icon svg {
+  fill: #f4f4f5;
+}
+
+.custum-file-upload .text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.custum-file-upload .text span {
+  font-weight: 500;
+  font-size: 0.825rem;
+  color: #a1a1aa;
+  transition: color 0.25s ease;
+}
+
+.custum-file-upload:hover .text span {
+  color: #f4f4f5;
+}
+
+.custum-file-upload input {
+  display: none;
+}
+
+/* Modo claro (Light theme) */
+:global(html.light) .custum-file-upload {
+  border: 2px dashed #cacaca;
+  background-color: rgba(255, 255, 255, 1);
+  box-shadow: 0px 48px 35px -48px rgba(0, 0, 0, 0.1);
+}
+
+:global(html.light) .custum-file-upload:hover {
+  border-color: #9ca3af;
+  background-color: #f9fafb;
+}
+
+:global(html.light) .custum-file-upload .icon svg {
+  fill: rgba(75, 85, 99, 1);
+}
+
+:global(html.light) .custum-file-upload:hover .icon svg {
+  fill: rgba(17, 24, 39, 1);
+}
+
+:global(html.light) .custum-file-upload .text span {
+  color: rgba(75, 85, 99, 1);
+}
+
+:global(html.light) .custum-file-upload:hover .text span {
+  color: rgba(17, 24, 39, 1);
+}
+</style>

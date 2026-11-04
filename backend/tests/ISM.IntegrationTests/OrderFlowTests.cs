@@ -67,5 +67,15 @@ public sealed class OrderFlowTests : IClassFixture<FoundationWebApplicationFacto
         metrics.RevenueVsCost.Sum(point => point.Custo).Should().Be(30);
         metrics.TopDishes.Should().ContainSingle().Which.Pedidos.Should().Be(2);
         (await client.GetAsync("/api/dashboard/metrics?restaurantId=901")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        var adminPage = await client.GetFromJsonAsync<OrderPage>($"/api/orders/admin?pageNumber=1&pageSize=1");
+        adminPage!.Items.Should().ContainSingle(order => order.Id == created.Id);
+        var edited = await client.PutAsJsonAsync($"/api/orders/{created.Id}", new UpdateOrderRequest("Mesa administrativa", [new UpdateOrderItemRequest(90010, 1, "ajuste administrativo")], version));
+        edited.StatusCode.Should().Be(HttpStatusCode.OK);
+        var editedOrder = (await edited.Content.ReadFromJsonAsync<OrderResponse>())!;
+        editedOrder.TableReference.Should().Be("Mesa administrativa");
+        (await client.DeleteAsync($"/api/orders/{created.Id}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await client.GetAsync($"/api/orders/{created.Id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", FoundationWebApplicationFactory.Token(IsmRoles.Waiter, 900));
+        (await client.GetAsync("/api/orders/admin?pageNumber=1&pageSize=1")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 }

@@ -6,12 +6,26 @@ using ISM.Domain.Modules.Orders;
 
 namespace ISM.Application.Services.Orders;
 
-public sealed class OrderService(IOrderRepository orders, IDishRepository dishes, ICurrentUser currentUser) : IOrderService
+public sealed class OrderService(IOrderRepository orders, IDishRepository dishes, IUserRepository users, ICurrentUser currentUser) : IOrderService
 {
     private int RestaurantId => currentUser.RestaurantId is > 0 ? currentUser.RestaurantId.Value : throw new UnauthorizedAccessException("É necessário estar vinculado a um restaurante.");
 
     public async Task<IReadOnlyList<OrderResponse>> GetAllAsync(CancellationToken cancellationToken = default) =>
-        (await orders.GetAllAsync(RestaurantId, cancellationToken)).Select(Map).ToArray();
+        (await orders.GetAllAsync(RestaurantId, cancellationToken)).Select(order => Map(order)).ToArray();
+
+    public async Task<OrderPage> GetAdminPageAsync(int pageNumber = 1, int pageSize = 10, string? search = null, CancellationToken cancellationToken = default)
+    {
+        EnsureManager();
+        pageNumber = Math.Max(1, pageNumber);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        var restaurantId = RestaurantId;
+        var page = await orders.GetPageAsync(restaurantId, pageNumber, pageSize, search, cancellationToken);
+        var totalCount = await orders.CountAsync(restaurantId, search, cancellationToken);
+        var restaurantUsers = await users.GetByRestaurantIdAsync(restaurantId, cancellationToken);
+        var names = restaurantUsers.ToDictionary(user => user.Id, user => user.Name);
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+        return new OrderPage(page.Select(order => Map(order, names)).ToArray(), pageNumber, pageSize, totalCount, totalPages, pageNumber > 1, pageNumber < totalPages);
+    }
 
     public async Task<OrderResponse?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
@@ -32,7 +46,7 @@ public sealed class OrderService(IOrderRepository orders, IDishRepository dishes
             EnsureSameRequest(existing, request);
             return Map(existing);
         }
-        var order = new Order { RestaurantId = restaurantId, RequestId = request.RequestId, TableReference = request.TableReference.Trim() };
+        var order = new Order { RestaurantId = restaurantId, RequestId = request.RequestId, TableReference = request.TableReference.Trim(), CreatedByUserId = currentUser.UserId > 0 ? currentUser.UserId : null };
         foreach (var item in request.Items)
         {
             if (item.DishId <= 0 || item.Quantity is < 1 or > 1000 || item.Observation?.Length > 500)
@@ -45,6 +59,44 @@ public sealed class OrderService(IOrderRepository orders, IDishRepository dishes
         var saved = await orders.AddAsync(order, cancellationToken);
         EnsureSameRequest(saved, request);
         return Map(saved);
+    }
+
+    public async Task<OrderResponse?> UpdateAsync(int id, UpdateOrderRequest request, CancellationToken cancellationToken = default)
+    {
+        EnsureManager();
+        var restaurantId = RestaurantId;
+        if (string.IsNullOrWhiteSpace(request.TableReference) || request.TableReference.Trim().Length > 100 || request.Items is null || request.Items.Count is < 1 or > 100)
+            throw new InvalidOperationException("Informe a comanda e pelo menos um item válido.");
+        var order = await orders.GetByIdAsync(restaurantId, id, cancellationToken);
+        if (order is null) return null;
+        if (order.Version != request.Version) throw new InvalidOperationException("O pedido foi alterado. Atualize a tela e tente novamente.");
+        if (order.Status == OrderStatus.Cancelled) throw new InvalidOperationException("Pedidos cancelados não podem ser editados.");
+        var replacementItems = new List<OrderItem>();
+        foreach (var item in request.Items)
+        {
+            if (item.DishId <= 0 || item.Quantity is < 1 or > 1000 || item.Observation?.Length > 500)
+                throw new InvalidOperationException("Os itens do pedido são inválidos.");
+            var dish = await dishes.GetDishByIdAsync(item.DishId, cancellationToken);
+            if (dish is null || dish.RestaurantId != restaurantId || !dish.IsActive)
+                throw new InvalidOperationException("Um dos pratos não está disponível neste restaurante.");
+            replacementItems.Add(new OrderItem { RestaurantId = restaurantId, DishId = dish.Id, DishName = dish.Name, Quantity = item.Quantity, UnitPrice = dish.Price, UnitCost = dish.Cost, Observation = item.Observation?.Trim() ?? string.Empty });
+        }
+        order.TableReference = request.TableReference.Trim();
+        order.Items.Clear();
+        foreach (var item in replacementItems) order.Items.Add(item);
+        order.UpdatedAtUtc = DateTime.UtcNow;
+        order.Version++;
+        await orders.SaveChangesAsync(cancellationToken);
+        return Map(order);
+    }
+
+    public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
+    {
+        EnsureManager();
+        var order = await orders.GetByIdAsync(RestaurantId, id, cancellationToken);
+        if (order is null) return false;
+        await orders.DeleteAsync(order, cancellationToken);
+        return true;
     }
 
     public async Task<OrderResponse?> UpdateStatusAsync(int id, UpdateOrderStatusRequest request, CancellationToken cancellationToken = default)
@@ -81,6 +133,12 @@ public sealed class OrderService(IOrderRepository orders, IDishRepository dishes
             throw new InvalidOperationException("O identificador da requisição já foi usado para outro pedido.");
     }
 
-    private static OrderResponse Map(Order order) => new(order.Id, order.RequestId, order.TableReference, order.Status, order.CreatedAtUtc, order.PaidAtUtc, order.Version,
+    private void EnsureManager()
+    {
+        if (!currentUser.IsManagerOrAbove) throw new UnauthorizedAccessException("Apenas administradores e gerentes podem gerenciar pedidos.");
+    }
+
+    private static OrderResponse Map(Order order, IReadOnlyDictionary<int, string>? names = null) => new(order.Id, order.RequestId, order.TableReference, order.Status, order.CreatedAtUtc, order.PaidAtUtc, order.Version, order.CreatedByUserId,
+        order.CreatedByUserId.HasValue && names is not null && names.TryGetValue(order.CreatedByUserId.Value, out var name) ? name : null,
         order.Items.Select(item => new OrderItemResponse(item.DishId, item.DishName, item.Quantity, item.UnitPrice, item.UnitCost, item.Observation)).ToArray());
 }

@@ -18,6 +18,41 @@ public sealed class OrderRepository(IsmDbContext context) : IOrderRepository
             .Where(order => order.RestaurantId == restaurantId).OrderByDescending(order => order.CreatedAtUtc)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<Order>> GetPageAsync(int restaurantId, int pageNumber, int pageSize, string? search = null, CancellationToken cancellationToken = default)
+    {
+        var query = context.Orders.AsNoTracking().Include(order => order.Items)
+            .Where(order => order.RestaurantId == restaurantId);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+            query = query.Where(order =>
+                order.TableReference.Contains(term) ||
+                order.Id.ToString().Contains(term) ||
+                order.Items.Any(item => item.DishName.Contains(term)));
+        }
+
+        return await query
+            .OrderByDescending(order => order.CreatedAtUtc).ThenByDescending(order => order.Id)
+            .Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
+    }
+
+    public Task<int> CountAsync(int restaurantId, string? search = null, CancellationToken cancellationToken = default)
+    {
+        var query = context.Orders.Where(order => order.RestaurantId == restaurantId);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+            query = query.Where(order =>
+                order.TableReference.Contains(term) ||
+                order.Id.ToString().Contains(term) ||
+                order.Items.Any(item => item.DishName.Contains(term)));
+        }
+
+        return query.CountAsync(cancellationToken);
+    }
+
     public async Task<Order> AddAsync(Order order, CancellationToken cancellationToken = default)
     {
         context.Orders.Add(order);
@@ -43,5 +78,11 @@ public sealed class OrderRepository(IsmDbContext context) : IOrderRepository
         {
             throw new InvalidOperationException("O pedido foi alterado. Atualize a tela e tente novamente.", exception);
         }
+    }
+
+    public async Task DeleteAsync(Order order, CancellationToken cancellationToken = default)
+    {
+        context.Orders.Remove(order);
+        await context.SaveChangesAsync(cancellationToken);
     }
 }

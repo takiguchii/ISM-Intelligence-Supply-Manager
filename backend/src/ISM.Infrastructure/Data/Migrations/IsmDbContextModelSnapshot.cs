@@ -579,6 +579,9 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("PaidAtUtc")
                         .HasColumnType("datetime(6)");
 
