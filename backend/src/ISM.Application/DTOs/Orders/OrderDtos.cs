@@ -18,5 +18,8 @@ public sealed class CreateOrderItemRequest
 }
 
 public sealed record UpdateOrderStatusRequest(OrderStatus Status, int Version);
+public sealed record UpdateOrderRequest(string TableReference, List<UpdateOrderItemRequest> Items, int Version);
+public sealed record UpdateOrderItemRequest(int DishId, int Quantity, string? Observation);
 public sealed record OrderItemResponse(int DishId, string DishName, int Quantity, decimal UnitPrice, decimal UnitCost, string Observation);
-public sealed record OrderResponse(int Id, Guid RequestId, string TableReference, OrderStatus Status, DateTime CreatedAtUtc, DateTime? PaidAtUtc, int Version, IReadOnlyList<OrderItemResponse> Items);
+public sealed record OrderResponse(int Id, Guid RequestId, string TableReference, OrderStatus Status, DateTime CreatedAtUtc, DateTime? PaidAtUtc, int Version, int? CreatedByUserId, string? CreatedByName, IReadOnlyList<OrderItemResponse> Items);
+public sealed record OrderPage(IReadOnlyList<OrderResponse> Items, int PageNumber, int PageSize, int TotalCount, int TotalPages, bool HasPreviousPage, bool HasNextPage);

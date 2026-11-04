@@ -71,6 +71,27 @@ public sealed class FoundationAuthorizationTests : IClassFixture<FoundationWebAp
 
         (await _client.GetAsync("/api/menu/dishes")).StatusCode.Should().Be(HttpStatusCode.OK);
     }
+
+    [Theory]
+    [InlineData(IsmRoles.Waiter)]
+    [InlineData(IsmRoles.Chef)]
+    public async Task OperationalRoles_CannotReadAdministrativeSupplyData(string role)
+    {
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", FoundationWebApplicationFactory.Token(role, 10));
+
+        (await _client.GetAsync("/api/suppliers")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await _client.GetAsync("/api/stock/products")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await _client.GetAsync("/api/stock/products/paged")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Manager_CanReadAdministrativeSupplyData()
+    {
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", FoundationWebApplicationFactory.Token(IsmRoles.Manager, 10));
+
+        (await _client.GetAsync("/api/suppliers")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await _client.GetAsync("/api/stock/products/paged")).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
 }
 
 public sealed class FoundationWebApplicationFactory : WebApplicationFactory<Program>
@@ -104,5 +125,18 @@ public sealed class FoundationWebApplicationFactory : WebApplicationFactory<Prog
         var credentials = new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Secret)), SecurityAlgorithms.HmacSha256);
         return new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken("ism-integration-tests", "ism-integration-tests", claims,
             expires: DateTime.UtcNow.AddMinutes(5), signingCredentials: credentials));
+    }
+
+    public static string ExpiredToken(string role, int restaurantId)
+    {
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, "1"),
+            new(ClaimTypes.Role, role),
+            new("restaurantId", restaurantId.ToString())
+        };
+        var credentials = new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Secret)), SecurityAlgorithms.HmacSha256);
+        return new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken("ism-integration-tests", "ism-integration-tests", claims,
+            expires: DateTime.UtcNow.AddMinutes(-5), signingCredentials: credentials));
     }
 }

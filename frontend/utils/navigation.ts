@@ -4,10 +4,10 @@ export type AppRole = "Admin" | "Manager" | "Chef" | "Waiter";
 
 export type NavigationCategory =
   | "VISÃO GERAL"
+  | "GESTÃO OPERACIONAL"
   | "FINANCEIRO"
-  | "MOVIMENTAÇÕES"
-  | "CADASTROS"
-  | "SISTEMA";
+  | "ADMINISTRAÇÃO"
+  | "MOVIMENTAÇÕES";
 
 export type NavigationItem = {
   id: string;
@@ -15,6 +15,7 @@ export type NavigationItem = {
   icon: string;
   route: string;
   roles: readonly AppRole[];
+  navigationRoles?: readonly AppRole[];
   category?: NavigationCategory;
   requiresRestaurant?: boolean;
 };
@@ -25,15 +26,15 @@ const managementRoles = ["Admin", "Manager"] as const;
 export const navigationItems: readonly NavigationItem[] = [
   { id: "dashboard", label: "Dashboard", icon: "dashboard", route: "/", roles: ["Admin", "Manager"], category: "VISÃO GERAL" },
   { id: "financeiro", label: "Financeiro", icon: "wallet", route: "/financeiro", roles: managementRoles, category: "FINANCEIRO", requiresRestaurant: true },
-  { id: "atendimento", label: "Atendimento", icon: "tray", route: "/atendimento", roles: ["Admin", "Manager", "Waiter"], category: "MOVIMENTAÇÕES", requiresRestaurant: true },
-  { id: "cozinha", label: "Cozinha", icon: "chef-hat", route: "/cozinha", roles: ["Admin", "Manager", "Chef"], category: "MOVIMENTAÇÕES", requiresRestaurant: true },
-  { id: "pedidos", label: "Pedidos", icon: "clipboard-list", route: "/pedidos", roles: restaurantRoles, category: "MOVIMENTAÇÕES", requiresRestaurant: true },
-  { id: "cardapio", label: "Cardápio", icon: "menu", route: "/cardapio", roles: restaurantRoles, category: "CADASTROS", requiresRestaurant: true },
-  { id: "estoque", label: "Estoque", icon: "boxes", route: "/estoque", roles: managementRoles, category: "CADASTROS", requiresRestaurant: true },
-  { id: "fornecedores", label: "Fornecedores", icon: "truck", route: "/fornecedores", roles: managementRoles, category: "CADASTROS", requiresRestaurant: true },
-  { id: "funcionarios", label: "Funcionários", icon: "users", route: "/funcionarios", roles: managementRoles, category: "CADASTROS", requiresRestaurant: true },
-  { id: "integracoes", label: "Integrações", icon: "plug", route: "/integracoes", roles: managementRoles, category: "SISTEMA", requiresRestaurant: true },
-  { id: "configuracoes", label: "Configurações", icon: "gear", route: "/configuracoes", roles: managementRoles, category: "SISTEMA", requiresRestaurant: true }
+  { id: "atendimento", label: "Atendimento", icon: "tray", route: "/atendimento", roles: ["Admin", "Manager", "Waiter"], navigationRoles: ["Waiter"], category: "MOVIMENTAÇÕES", requiresRestaurant: true },
+  { id: "cozinha", label: "Cozinha", icon: "chef-hat", route: "/cozinha", roles: ["Admin", "Manager", "Chef"], navigationRoles: ["Chef"], category: "MOVIMENTAÇÕES", requiresRestaurant: true },
+  { id: "pedidos", label: "Pedidos", icon: "clipboard-list", route: "/pedidos", roles: restaurantRoles, category: "GESTÃO OPERACIONAL", requiresRestaurant: true },
+  { id: "cardapio", label: "Cardápio", icon: "menu", route: "/cardapio", roles: restaurantRoles, category: "GESTÃO OPERACIONAL", requiresRestaurant: true },
+  { id: "estoque", label: "Estoque", icon: "boxes", route: "/estoque", roles: managementRoles, category: "GESTÃO OPERACIONAL", requiresRestaurant: true },
+  { id: "fornecedores", label: "Fornecedores", icon: "truck", route: "/fornecedores", roles: managementRoles, category: "GESTÃO OPERACIONAL", requiresRestaurant: true },
+  { id: "funcionarios", label: "Funcionários", icon: "users", route: "/funcionarios", roles: managementRoles, category: "ADMINISTRAÇÃO", requiresRestaurant: true },
+  { id: "integracoes", label: "Integrações", icon: "plug", route: "/integracoes", roles: managementRoles, category: "ADMINISTRAÇÃO", requiresRestaurant: true },
+  { id: "configuracoes", label: "Configurações", icon: "gear", route: "/configuracoes", roles: managementRoles, category: "ADMINISTRAÇÃO", requiresRestaurant: true }
 ];
 
 const roleHome: Record<AppRole, string> = {
@@ -54,8 +55,8 @@ export function homeForUser(user: User | null): string {
 export function canAccessRoute(user: User | null, path: string): boolean {
   if (!user || !isAppRole(user.role)) return false;
 
-  if (path === "/chef") return user.role === "Chef" && !!user.restaurantId;
-  if (path === "/garcom") return user.role === "Waiter" && !!user.restaurantId;
+  if (path === "/chef" || path === "/cozinha") return user.role === "Chef" && !!user.restaurantId;
+  if (path === "/garcom" || path === "/atendimento") return user.role === "Waiter" && !!user.restaurantId;
 
   const item = navigationItems.find((candidate) => candidate.route === path);
   if (!item) return true;
@@ -77,6 +78,8 @@ export function navigationForUser(user: User | null): NavigationItem[] {
   };
 
   return [homeItem, ...navigationItems.filter((item) =>
-    item.route !== home && canAccessRoute(user, item.route)
+    item.route !== home &&
+    (item.navigationRoles ?? item.roles).includes(user.role) &&
+    canAccessRoute(user, item.route)
   )];
 }

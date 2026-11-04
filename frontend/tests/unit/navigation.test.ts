@@ -80,8 +80,8 @@ assert.equal(canAccessRoute(waiterUser, "/configuracoes"), false, "Waiter NÃO p
 // 4. Validar canAccessRoute para Manager (Gerente)
 assert.equal(canAccessRoute(managerUser, "/"), true, "Manager pode acessar /");
 assert.equal(canAccessRoute(managerUser, "/financeiro"), true, "Manager pode acessar /financeiro");
-assert.equal(canAccessRoute(managerUser, "/atendimento"), true, "Manager pode acessar /atendimento");
-assert.equal(canAccessRoute(managerUser, "/cozinha"), true, "Manager pode acessar /cozinha");
+assert.equal(canAccessRoute(managerUser, "/atendimento"), false, "Manager NÃO pode acessar /atendimento");
+assert.equal(canAccessRoute(managerUser, "/cozinha"), false, "Manager NÃO pode acessar /cozinha");
 assert.equal(canAccessRoute(managerUser, "/pedidos"), true, "Manager pode acessar /pedidos");
 assert.equal(canAccessRoute(managerUser, "/cardapio"), true, "Manager pode acessar /cardapio");
 assert.equal(canAccessRoute(managerUser, "/estoque"), true, "Manager pode acessar /estoque");
@@ -99,6 +99,15 @@ assert.deepEqual(
   ["/chef", "/cozinha", "/pedidos", "/cardapio"],
   "Chef deve ter estritamente as rotas operacionais de cozinha e cardápio na barra lateral"
 );
+
+const managerNav = navigationForUser(managerUser).map((item) => item.route);
+assert.deepEqual(
+  managerNav,
+  ["/", "/financeiro", "/pedidos", "/cardapio", "/estoque", "/fornecedores", "/funcionarios", "/integracoes", "/configuracoes"],
+  "Manager deve ver somente a navegação administrativa reorganizada"
+);
+assert.equal(managerNav.includes("/atendimento"), false, "Atendimento não deve aparecer no menu administrativo");
+assert.equal(managerNav.includes("/cozinha"), false, "Cozinha não deve aparecer no menu administrativo");
 
 const waiterNav = navigationForUser(waiterUser).map((item) => item.route);
 assert.deepEqual(

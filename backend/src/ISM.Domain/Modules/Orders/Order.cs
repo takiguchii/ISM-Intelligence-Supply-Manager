@@ -7,6 +7,7 @@ public enum OrderStatus { Submitted, Preparing, Ready, Completed, Paid, Cancelle
 public sealed class Order : BaseEntity
 {
     public int RestaurantId { get; set; }
+    public int? CreatedByUserId { get; set; }
     public Guid RequestId { get; set; }
     public string TableReference { get; set; } = string.Empty;
     public OrderStatus Status { get; set; } = OrderStatus.Submitted;

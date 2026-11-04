@@ -19,6 +19,7 @@ public sealed class ProductsController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
     [ProducesResponseType(typeof(IReadOnlyList<ProductResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<ProductResponse>>> GetAll(CancellationToken cancellationToken)
     {
@@ -27,6 +28,7 @@ public sealed class ProductsController : ControllerBase
     }
 
     [HttpGet("paged")]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
     [ProducesResponseType(typeof(PagedResult<ProductResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<PagedResult<ProductResponse>>> GetPaged(
         [FromQuery] int? pageNumber = null,
@@ -47,6 +49,7 @@ public sealed class ProductsController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
     [ProducesResponseType(typeof(ProductResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ProductResponse>> GetById(int id, CancellationToken cancellationToken)

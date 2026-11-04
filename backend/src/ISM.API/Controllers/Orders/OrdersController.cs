@@ -14,6 +14,11 @@ public sealed class OrdersController(IOrderService orders) : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<OrderResponse>>> GetAll(CancellationToken cancellationToken) => Ok(await orders.GetAllAsync(cancellationToken));
 
+    [HttpGet("admin")]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
+    public async Task<ActionResult<OrderPage>> GetAdminPage([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, [FromQuery] string? search = null, CancellationToken cancellationToken = default) =>
+        Ok(await orders.GetAdminPageAsync(pageNumber, pageSize, search, cancellationToken));
+
     [HttpGet("{id:int}")]
     public async Task<ActionResult<OrderResponse>> GetById(int id, CancellationToken cancellationToken)
     {
@@ -34,4 +39,17 @@ public sealed class OrdersController(IOrderService orders) : ControllerBase
         var order = await orders.UpdateStatusAsync(id, request, cancellationToken);
         return order is null ? NotFound() : Ok(order);
     }
+
+    [HttpPut("{id:int}")]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
+    public async Task<ActionResult<OrderResponse>> Update(int id, UpdateOrderRequest request, CancellationToken cancellationToken)
+    {
+        var order = await orders.UpdateAsync(id, request, cancellationToken);
+        return order is null ? NotFound() : Ok(order);
+    }
+
+    [HttpDelete("{id:int}")]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
+    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken) =>
+        await orders.DeleteAsync(id, cancellationToken) ? NoContent() : NotFound();
 }
