@@ -1,10 +1,5 @@
 namespace ISM.Application.DTOs.Notifications;
 
-public sealed class NotificationPresentationOptions
-{
-    public string PublicAppUrl { get; set; } = "http://localhost:3000";
-}
-
 public sealed record NotificationScenario(string Id, string Label, string Description);
 public sealed record NotificationAlertOption(int Id, string Title, string Category);
 public sealed record NotificationScenarioCatalog(IReadOnlyList<NotificationScenario> Examples, IReadOnlyList<NotificationAlertOption> Alerts);

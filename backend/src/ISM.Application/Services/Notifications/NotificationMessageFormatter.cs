@@ -72,9 +72,7 @@ public static class NotificationMessageFormatter
                 : content.Recommendation,
             Priority = alert.Severity switch { AlertSeverity.Danger => "Crítico", AlertSeverity.Warning => "Atenção", _ => "Informativo" }
         };
-        if (!Uri.TryCreate(publicAppUrl.TrimEnd('/') + content.Path, UriKind.Absolute, out var uri) ||
-            uri.Scheme is not ("http" or "https") || !string.IsNullOrEmpty(uri.UserInfo))
-            throw new InvalidOperationException("Configure um endereço HTTP ou HTTPS válido para os links do ISM.");
+        var uri = NotificationLinkService.CreateActionUri(content.Path, publicAppUrl);
         var zone = TimeZoneInfo.TryFindSystemTimeZoneById(timeZone, out var configuredZone)
             ? configuredZone : TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
         var utc = DateTime.SpecifyKind(occurredAtUtc, DateTimeKind.Utc);

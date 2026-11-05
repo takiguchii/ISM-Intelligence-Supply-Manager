@@ -11,7 +11,7 @@ namespace ISM.Infrastructure.Notifications;
 
 public sealed class NotificationDeliveryService(IsmDbContext db, INotificationTransport transport,
     IOptions<SmtpOptions> smtp, IOptions<WhatsAppOptions> whatsapp,
-    ILogger<NotificationDeliveryService> logger, IOptions<NotificationPresentationOptions>? presentation = null) : INotificationDeliveryService
+    ILogger<NotificationDeliveryService> logger) : INotificationDeliveryService
 {
     public NotificationChannelsStatus GetChannelsStatus() => new(smtp.Value.IsConfigured, whatsapp.Value.IsConfigured);
 
@@ -47,7 +47,7 @@ public sealed class NotificationDeliveryService(IsmDbContext db, INotificationTr
         else if (alertId.HasValue) throw new InvalidOperationException("O alerta real só pode ser usado no cenário de alerta existente.");
         return NotificationMessageFormatter.Render(scenario, channel, restaurant?.Name ?? "Seu restaurante",
             restaurant?.TimeZone ?? "America/Sao_Paulo", alert?.GeneratedAtUtc ?? DateTime.UtcNow,
-            presentation?.Value.PublicAppUrl ?? "http://localhost:3000", true, alert);
+            NotificationLinkService.PublicAppUrl, true, alert);
     }
 
     public Task<long> QueueTestAsync(int userId, string channel, CancellationToken ct = default) =>

@@ -119,7 +119,7 @@ Os testes não criam alertas operacionais nem modificam estoque, compras, cardá
 
 Na apresentação, use primeiro estoque baixo (reposição), depois aumento de preço (decisão de compra) e margem do prato (impacto no cardápio). O histórico diferencia os envios de teste. É permitido enviar cenários diferentes em sequência; a repetição do mesmo cenário, alerta de origem e canal é limitada a um envio por minuto.
 
-Defina `NOTIFICATIONS_PUBLIC_APP_URL` no `.env` com o endereço pelo qual os destinatários acessam o ISM. O padrão `http://localhost:3000` funciona no computador do servidor; para abrir no celular, use um endereço de rede acessível. Após alterar, execute `docker compose up -d backend`.
+Os links das notificações apontam para `https://ism.altvia.cloud`, definido em `NotificationLinkService`. As rotas de estoque, fornecedores, cardápio e configurações são acrescentadas conforme o alerta. Não é necessário alterar variáveis de ambiente no servidor; para trocar o domínio, atualize esse serviço e publique o backend.
 
 Rotas adicionais autenticadas:
 

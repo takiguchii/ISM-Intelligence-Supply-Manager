@@ -141,13 +141,13 @@ public sealed class NotificationDeliveryTests
         catalog.Examples.Should().HaveCount(6);
         catalog.Alerts.Should().ContainSingle(a => a.Id == ownAlert.Id);
         var example = await service.PreviewAsync(1, "email", "stock-low", null);
-        example.Html.Should().Contain("DADOS ILUSTRATIVOS");
+        example.Html.Should().Contain("DADOS ILUSTRATIVOS").And.Contain("https://ism.altvia.cloud/estoque");
         (await db.Set<NotificationDelivery>().CountAsync()).Should().Be(0);
         var action = () => service.PreviewAsync(1, "email", "existing-alert", otherAlert.Id);
         await action.Should().ThrowAsync<InvalidOperationException>();
         var real = await service.PreviewAsync(1, "whatsapp", "existing-alert", ownAlert.Id);
         real.Source.Should().Contain("ALERTA REAL");
-        real.Text.Should().Contain(ownAlert.Message);
+        real.Text.Should().Contain(ownAlert.Message).And.Contain("https://ism.altvia.cloud/estoque");
         var id = await service.QueueScenarioAsync(1, "email", "stock-low", null);
         var delivery = await db.Set<NotificationDelivery>().SingleAsync(d => d.Id == id);
         delivery.IsTest.Should().BeTrue();

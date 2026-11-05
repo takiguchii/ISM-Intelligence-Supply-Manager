@@ -60,7 +60,6 @@ public static class ServiceCollectionExtensions
         });
         services.AddHttpContextAccessor();
         services.AddHttpClient();
-        services.Configure<ISM.Application.DTOs.Notifications.NotificationPresentationOptions>(configuration.GetSection("Notifications"));
         services.Configure<ISM.Application.DTOs.Notifications.SmtpOptions>(configuration.GetSection("Notifications:Smtp"));
         services.Configure<ISM.Application.DTOs.Notifications.WhatsAppOptions>(configuration.GetSection("Notifications:WhatsApp"));
         services.AddHttpClient<ISM.Infrastructure.Notifications.NotificationTransport>(client => client.Timeout = TimeSpan.FromSeconds(25));

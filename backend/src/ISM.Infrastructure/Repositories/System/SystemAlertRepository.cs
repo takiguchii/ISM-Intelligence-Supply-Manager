@@ -1,8 +1,6 @@
 using ISM.Domain.Interfaces;
 using ISM.Domain.Entities;
-using ISM.Application.DTOs.Notifications;
 using ISM.Application.Services.Notifications;
-using Microsoft.Extensions.Options;
 using ISM.Domain.Modules.System.Entities;
 using ISM.Domain.Modules.System.Enums;
 using ISM.Infrastructure.Data.Context;
@@ -14,12 +12,9 @@ public sealed class SystemAlertRepository : ISystemAlertRepository
 {
     private readonly IsmDbContext _dbContext;
 
-    private readonly string _publicAppUrl;
-
-    public SystemAlertRepository(IsmDbContext dbContext, IOptions<NotificationPresentationOptions>? presentation = null)
+    public SystemAlertRepository(IsmDbContext dbContext)
     {
         _dbContext = dbContext;
-        _publicAppUrl = presentation?.Value.PublicAppUrl ?? "http://localhost:3000";
     }
 
     public async Task<SystemAlert?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
@@ -92,7 +87,7 @@ public sealed class SystemAlertRepository : ISystemAlertRepository
                 var restaurant = _dbContext.Restaurants.Local.FirstOrDefault(r => r.Id == alert.RestaurantId);
                 var message = NotificationMessageFormatter.Render(NotificationMessageFormatter.ScenarioFor(alert.AlertType), channel,
                     restaurant?.Name ?? "Seu restaurante", restaurant?.TimeZone ?? "America/Sao_Paulo",
-                    alert.GeneratedAtUtc, _publicAppUrl, false, alert);
+                    alert.GeneratedAtUtc, NotificationLinkService.PublicAppUrl, false, alert);
                 _dbContext.Set<NotificationDelivery>().Add(new()
                 {
                     Alert = alert, UserId = user.Id, RestaurantId = alert.RestaurantId,

@@ -39,7 +39,6 @@ services:
       ConnectionStrings__DefaultConnection: Server=mysql;Port=3306;Database=${MYSQL_DATABASE};User=${MYSQL_USER};Password=${MYSQL_PASSWORD};
       Database__Provider: MySql
       DataProtection__KeyPath: /var/lib/ism/keys
-      Notifications__PublicAppUrl: ${NOTIFICATIONS_PUBLIC_APP_URL:-http://localhost:3000}
       Notifications__Smtp__Enabled: ${SMTP_ENABLED:-false}
       Notifications__Smtp__Host: ${SMTP_HOST:-}
       Notifications__Smtp__Port: ${SMTP_PORT:-587}
