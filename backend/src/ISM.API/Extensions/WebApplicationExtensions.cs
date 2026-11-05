@@ -19,6 +19,7 @@ public static class WebApplicationExtensions
         app.UseCors("AllowFrontend");
         app.UseAuthentication();
         app.UseAuthorization();
+        app.UseRateLimiter();
         app.MapControllers();
 
         return app;

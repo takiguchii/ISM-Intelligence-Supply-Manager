@@ -32,3 +32,6 @@ backend/TestResults/
 .sandbox-cache/
 AGENTS.md
 
+
+# Resultados locais dos testes .NET
+**/TestResults/

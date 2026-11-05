@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { getSystemAlerts, markAlertAsRead } from "~/services/modules/system/systemService";
+import { settingsService } from "~/services/modules/system/settingsService";
 import type { SystemAlertResponse } from "~/types/system";
 
 const props = defineProps<{
@@ -24,8 +25,16 @@ const fetchAlerts = async () => {
   loading.value = true;
   errorMessage.value = "";
   try {
-    const result = await getSystemAlerts({ pageSize: 20 });
-    alerts.value = result.items;
+    const [result, preferences] = await Promise.all([
+      getSystemAlerts({ pageSize: 200 }), settingsService.notifications()
+    ]);
+    alerts.value = result.items.filter(alert => {
+      const type = String(alert.alertType);
+      if (type.includes("Stock")) return preferences.stock;
+      if (type.includes("Supplier")) return preferences.suppliers;
+      if (type.includes("Dish") || type.includes("Cmv")) return preferences.menu;
+      return true;
+    });
   } catch (error) {
     console.error("Erro ao carregar alertas:", error);
     errorMessage.value = "Não foi possível carregar os alertas. Tente novamente.";
@@ -62,9 +71,12 @@ const handleAction = async (alertItem: SystemAlertResponse) => {
   }
 };
 
+watch(() => props.isOpen, open => { if (open) fetchAlerts(); });
 onMounted(() => {
   fetchAlerts();
+  window.addEventListener("ism-notification-preferences", fetchAlerts);
 });
+onUnmounted(() => window.removeEventListener("ism-notification-preferences", fetchAlerts));
 
 defineExpose({
   unreadCount,

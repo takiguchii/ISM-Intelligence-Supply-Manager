@@ -10,9 +10,11 @@ const runtimeConfig = useRuntimeConfig();
 
 const loginForm = ref({
   email: "",
-  password: ""
+  password: "",
+  twoFactorCode: ""
 });
 
+const requiresTwoFactor = ref(false);
 const submitting = ref(false);
 const errorMessage = ref("");
 
@@ -259,10 +261,12 @@ const handleLogin = async () => {
   try {
     await authStore.login({
       email: loginForm.value.email,
-      password: loginForm.value.password
+      password: loginForm.value.password,
+      twoFactorCode: loginForm.value.twoFactorCode || undefined
     });
     router.push(redirectPath.value);
   } catch (err) {
+    if ((err as any)?.data?.requiresTwoFactor) requiresTwoFactor.value = true;
     errorMessage.value = handleExtractError(err);
   } finally {
     submitting.value = false;
@@ -319,6 +323,7 @@ const handleLogin = async () => {
               </div>
             </div>
 
+            <p v-if="route.query.passwordChanged" role="status" class="mb-4 text-sm text-emerald-200">Senha atualizada. Entre com sua nova senha.</p>
             <div v-if="errorMessage" class="mb-6 w-full">
               <div class="flex items-start gap-3 p-4 rounded-xl bg-red-500/10 border-red-500/40 text-red-200 text-sm backdrop-blur">
                 <svg class="w-5 h-5 flex-shrink-0 mt-0.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -374,6 +379,11 @@ const handleLogin = async () => {
                     @keyup.enter="handleLogin"
                   />
                 </div>
+              </div>
+
+              <div v-if="requiresTwoFactor" class="space-y-2">
+                <label for="two-factor-code" class="block text-sm font-medium text-emerald-100">Código de autenticação ou recuperação</label>
+                <input id="two-factor-code" v-model="loginForm.twoFactorCode" autocomplete="one-time-code" maxlength="32" required class="w-full h-12 px-4 rounded-xl bg-slate-900/75 text-white border border-emerald-600/40" />
               </div>
 
               <button

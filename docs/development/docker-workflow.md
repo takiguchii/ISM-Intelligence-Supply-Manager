@@ -35,3 +35,7 @@ docker compose --profile tools run --rm db-migrate
 ```bash
 docker compose --profile tools run --rm db-reset
 ```
+
+## Configurações da aplicação
+
+Veja [Configurações](settings.md) para edição do restaurante, aparência, notificações, segurança e assinaturas demonstrativas.

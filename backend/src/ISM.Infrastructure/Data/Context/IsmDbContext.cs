@@ -51,6 +51,43 @@ public sealed class IsmDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<NotificationDelivery>(builder =>
+        {
+            builder.ToTable("notification_deliveries");
+            builder.HasKey(d => d.Id);
+            builder.Property(d => d.Channel).HasMaxLength(16);
+            builder.Property(d => d.Status).HasMaxLength(16).IsConcurrencyToken();
+            builder.Property(d => d.Attempts).IsConcurrencyToken();
+            builder.Property(d => d.Recipient).HasMaxLength(150);
+            builder.Property(d => d.Subject).HasMaxLength(200);
+            builder.Property(d => d.Body).HasMaxLength(6000);
+            builder.Property(d => d.HtmlBody).HasMaxLength(30000);
+            builder.Property(d => d.Scenario).HasMaxLength(40);
+            builder.Property(d => d.LastError).HasMaxLength(300);
+            builder.HasOne(d => d.Alert).WithMany().HasForeignKey(d => d.AlertId).OnDelete(DeleteBehavior.Cascade);
+            builder.HasIndex(d => new { d.AlertId, d.UserId, d.Channel }).IsUnique();
+            builder.HasIndex(d => new { d.Status, d.NextAttemptAtUtc });
+            builder.HasOne<User>().WithMany().HasForeignKey(d => d.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<DemoInvoice>(builder =>
+        {
+            builder.ToTable("demo_invoices");
+            builder.HasKey(i => i.Id);
+            builder.Property(i => i.PlanName).HasMaxLength(50);
+            builder.Property(i => i.Amount).HasPrecision(10, 2);
+            builder.HasIndex(i => new { i.RestaurantId, i.CreatedAtUtc });
+            builder.HasOne<Restaurant>().WithMany().HasForeignKey(i => i.RestaurantId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<AuthSession>(builder =>
+        {
+            builder.ToTable("auth_sessions");
+            builder.HasKey(s => s.Id);
+            builder.Property(s => s.Id).HasMaxLength(36);
+            builder.Property(s => s.Device).HasMaxLength(300);
+            builder.Property(s => s.IpAddress).HasMaxLength(64);
+            builder.HasIndex(s => new { s.UserId, s.ExpiresAtUtc });
+            builder.HasOne<User>().WithMany().HasForeignKey(s => s.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
         modelBuilder.Entity<FinanceEntry>(builder =>
         {
             builder.ToTable("finance_entries");
@@ -258,6 +295,9 @@ public sealed class IsmDbContext : DbContext
             builder.Property(r => r.CNPJ).HasMaxLength(14).IsRequired();
             builder.HasIndex(r => r.CNPJ).IsUnique();
             builder.Property(r => r.Created).HasColumnType("datetime(6)").IsRequired();
+            builder.Property(r => r.ServiceFeePercent).HasPrecision(5, 2);
+            builder.Property(r => r.DeliveryFee).HasPrecision(10, 2);
+            builder.Property(r => r.PackagingFee).HasPrecision(10, 2);
             builder.Property(r => r.PlanId);
             builder.Property(r => r.TrialEndAtUtc).HasColumnType("datetime(6)");
             builder.Property(r => r.IsPlanActive).IsRequired();
@@ -346,6 +386,11 @@ public sealed class IsmDbContext : DbContext
             builder.HasIndex(u => u.Email).IsUnique();
             builder.Property(u => u.PasswordHash).HasMaxLength(512).IsRequired();
             builder.Property(u => u.Role).HasMaxLength(50).IsRequired();
+            builder.Property(u => u.LastTotpStep).IsConcurrencyToken();
+            builder.Property(u => u.RecoveryCodeHashes).IsConcurrencyToken();
+            builder.Property(u => u.NotificationEmailAddress).HasMaxLength(150);
+            builder.Property(u => u.WhatsAppPhone).HasMaxLength(16);
+            builder.Property(u => u.TwoFactorSecret).HasMaxLength(2000);
             builder.Property(u => u.IsActive).IsRequired();
             builder.Property(u => u.CreatedAtUtc).HasColumnType("datetime(6)").IsRequired();
             builder.Property(u => u.UpdatedAtUtc).HasColumnType("datetime(6)");

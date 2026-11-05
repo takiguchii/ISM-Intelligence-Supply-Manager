@@ -7,6 +7,7 @@ export interface User {
 }
 
 export interface LoginRequest {
+  twoFactorCode?: string;
   email: string;
   password: string;
 }

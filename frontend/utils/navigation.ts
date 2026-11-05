@@ -34,7 +34,7 @@ export const navigationItems: readonly NavigationItem[] = [
   { id: "fornecedores", label: "Fornecedores", icon: "truck", route: "/fornecedores", roles: managementRoles, category: "GESTÃO OPERACIONAL", requiresRestaurant: true },
   { id: "funcionarios", label: "Funcionários", icon: "users", route: "/funcionarios", roles: managementRoles, category: "ADMINISTRAÇÃO", requiresRestaurant: true },
   { id: "integracoes", label: "Integrações", icon: "plug", route: "/integracoes", roles: managementRoles, category: "ADMINISTRAÇÃO", requiresRestaurant: true },
-  { id: "configuracoes", label: "Configurações", icon: "gear", route: "/configuracoes", roles: managementRoles, category: "ADMINISTRAÇÃO", requiresRestaurant: true }
+  { id: "configuracoes", label: "Configurações", icon: "gear", route: "/configuracoes", roles: managementRoles, category: "ADMINISTRAÇÃO" }
 ];
 
 const roleHome: Record<AppRole, string> = {

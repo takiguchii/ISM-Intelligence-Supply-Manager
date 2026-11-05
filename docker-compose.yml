@@ -38,6 +38,20 @@ services:
       NUGET_HTTP_CACHE_PATH: /root/.nuget/http-cache
       ConnectionStrings__DefaultConnection: Server=mysql;Port=3306;Database=${MYSQL_DATABASE};User=${MYSQL_USER};Password=${MYSQL_PASSWORD};
       Database__Provider: MySql
+      DataProtection__KeyPath: /var/lib/ism/keys
+      Notifications__PublicAppUrl: ${NOTIFICATIONS_PUBLIC_APP_URL:-http://localhost:3000}
+      Notifications__Smtp__Enabled: ${SMTP_ENABLED:-false}
+      Notifications__Smtp__Host: ${SMTP_HOST:-}
+      Notifications__Smtp__Port: ${SMTP_PORT:-587}
+      Notifications__Smtp__Security: ${SMTP_SECURITY:-StartTls}
+      Notifications__Smtp__Username: ${SMTP_USERNAME:-}
+      Notifications__Smtp__Password: ${SMTP_PASSWORD:-}
+      Notifications__Smtp__FromAddress: ${SMTP_FROM_ADDRESS:-}
+      Notifications__Smtp__FromName: ${SMTP_FROM_NAME:-ISM}
+      Notifications__WhatsApp__Enabled: ${WHATSAPP_ENABLED:-false}
+      Notifications__WhatsApp__BaseUrl: ${WHATSAPP_BASE_URL:-http://whatsapp:3000}
+      Notifications__WhatsApp__ApiKey: ${WHATSAPP_API_KEY:-}
+      Notifications__WhatsApp__Session: ${WHATSAPP_SESSION:-default}
       Cors__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://frontend:3000}
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
       SEED_PASSWORD: ${SEED_PASSWORD:-}
@@ -58,6 +72,7 @@ services:
     volumes:
       - ./backend:/workspace/backend:z
       - nuget_packages:/root/.nuget/packages
+      - data_protection_keys:/var/lib/ism/keys
     networks:
       ism-network:
         aliases:
@@ -144,6 +159,7 @@ services:
 volumes:
   mysql_data:
     name: ism_mysql_${ISM_BRANCH_SLUG:-default}
+  data_protection_keys:
   nuget_packages:
   frontend_node_modules:
   frontend_nuxt:

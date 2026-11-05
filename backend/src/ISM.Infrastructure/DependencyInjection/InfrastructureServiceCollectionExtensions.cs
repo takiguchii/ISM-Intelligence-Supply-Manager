@@ -53,6 +53,8 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IFinanceEntryRepository, FinanceEntryRepository>();
         services.AddScoped<IRestaurantRepository, RestaurantRepository>();
+        services.AddScoped<ISM.Application.Interfaces.Restaurant.IDemoSubscriptionService, ISM.Infrastructure.Services.DemoSubscriptionService>();
+        services.AddScoped<IAuthSessionRepository, AuthSessionRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IImportAuditRepository, ImportAuditRepository>();
         services.AddScoped<ITmpAuthorizationRepository, TmpAuthorizationRepository>();

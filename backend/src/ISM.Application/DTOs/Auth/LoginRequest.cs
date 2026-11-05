@@ -4,6 +4,9 @@ namespace ISM.Application.DTOs;
 
 public sealed class LoginRequest
 {
+    [StringLength(32)]
+    public string? TwoFactorCode { get; set; }
+
     [Required(ErrorMessage = "O e-mail é obrigatório.")]
     [EmailAddress(ErrorMessage = "E-mail em formato inválido.")]
     public string Email { get; set; } = string.Empty;
