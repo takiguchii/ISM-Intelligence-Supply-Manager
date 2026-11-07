@@ -82,4 +82,4 @@ Limitações da verificação: Docker e .NET não estão instalados neste ambien
     npm run build
     ```
 
-Nenhum PR foi aberto. A branch é entregue para validação do usuário.
+Nenhum PR foi aberto. A branch foi criada localmente. A publicação remota foi bloqueada: o conector GitHub retornou 403 (Resource not accessible by integration) e o git push local não dispõe de credenciais. O pacote de entrega inclui um Git bundle para importar a branch no clone do usuário.
