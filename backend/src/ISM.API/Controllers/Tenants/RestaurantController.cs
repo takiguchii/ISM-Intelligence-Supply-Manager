@@ -43,6 +43,8 @@ public sealed class RestaurantController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<RestaurantDto>> Create([FromBody] RestaurantDto dto, CancellationToken cancellationToken)
     {
+        if (!TimeZoneInfo.TryFindSystemTimeZoneById(dto.TimeZone, out _))
+            ModelState.AddModelError(nameof(dto.TimeZone), "Fuso horário inválido.");
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
@@ -56,6 +58,8 @@ public sealed class RestaurantController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(int id, [FromBody] RestaurantDto dto, CancellationToken cancellationToken)
     {
+        if (!TimeZoneInfo.TryFindSystemTimeZoneById(dto.TimeZone, out _))
+            ModelState.AddModelError(nameof(dto.TimeZone), "Fuso horário inválido.");
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 

@@ -1,4 +1,6 @@
 using ISM.Domain.Interfaces;
+using ISM.Domain.Entities;
+using ISM.Application.Services.Notifications;
 using ISM.Domain.Modules.System.Entities;
 using ISM.Domain.Modules.System.Enums;
 using ISM.Infrastructure.Data.Context;
@@ -71,6 +73,34 @@ public sealed class SystemAlertRepository : ISystemAlertRepository
     public async Task<SystemAlert> CreateAsync(SystemAlert alert, CancellationToken cancellationToken = default)
     {
         _dbContext.Set<SystemAlert>().Add(alert);
+        var recipients = await _dbContext.Users.IgnoreQueryFilters()
+            .Where(u => u.IsActive && u.RestaurantId == alert.RestaurantId &&
+                (u.Role == "Admin" || u.Role == "Manager") &&
+                (u.EmailNotificationsEnabled || u.WhatsAppNotificationsEnabled))
+            .ToListAsync(cancellationToken);
+        await _dbContext.Restaurants.FirstOrDefaultAsync(r => r.Id == alert.RestaurantId, cancellationToken);
+        var now = DateTime.UtcNow;
+        foreach (var user in recipients.Where(u => NotificationPolicy.CanReceive(u, alert)))
+        {
+            void Queue(string channel, string recipient)
+            {
+                var restaurant = _dbContext.Restaurants.Local.FirstOrDefault(r => r.Id == alert.RestaurantId);
+                var message = NotificationMessageFormatter.Render(NotificationMessageFormatter.ScenarioFor(alert.AlertType), channel,
+                    restaurant?.Name ?? "Seu restaurante", restaurant?.TimeZone ?? "America/Sao_Paulo",
+                    alert.GeneratedAtUtc, NotificationLinkService.PublicAppUrl, false, alert);
+                _dbContext.Set<NotificationDelivery>().Add(new()
+                {
+                    Alert = alert, UserId = user.Id, RestaurantId = alert.RestaurantId,
+                    Channel = channel, Recipient = recipient, Subject = message.Subject, Body = message.Text,
+                    HtmlBody = message.Html, Scenario = message.Scenario,
+                    CreatedAtUtc = now, NextAttemptAtUtc = now
+                });
+            }
+            if (user.EmailNotificationsEnabled)
+                Queue("email", user.NotificationEmailAddress ?? user.Email);
+            if (user.WhatsAppNotificationsEnabled && !string.IsNullOrWhiteSpace(user.WhatsAppPhone))
+                Queue("whatsapp", user.WhatsAppPhone);
+        }
         await _dbContext.SaveChangesAsync(cancellationToken);
         return alert;
     }

@@ -117,3 +117,7 @@ assert.deepEqual(
 );
 
 console.log("Todos os testes de autorização e navegação de perfis passaram com sucesso!");
+
+const platformAdmin = { id: 100, name: "Plataforma", email: "platform@test.local", role: "Admin", restaurantId: null } as User;
+assert.equal(canAccessRoute(platformAdmin, "/configuracoes"), true, "Administrador da plataforma pode configurar o remetente compartilhado");
+assert.equal(canAccessRoute(platformAdmin, "/estoque"), false, "Configurações não concedem acesso a operações de restaurante");

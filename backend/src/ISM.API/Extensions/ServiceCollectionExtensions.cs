@@ -1,4 +1,5 @@
 using System.Text;
+using Microsoft.AspNetCore.DataProtection;
 using System.Security.Claims;
 using ISM.API.HostedServices;
 using ISM.API.Security;
@@ -43,8 +44,28 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddApiServices(this IServiceCollection services, IConfiguration configuration)
     {
+        var dataProtection = services.AddDataProtection().SetApplicationName("ISM");
+        if (configuration["DataProtection:KeyPath"] is { Length: > 0 } keyPath)
+            dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keyPath));
+        services.AddScoped<ITwoFactorProtector, TwoFactorProtector>();
+        services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.AddPolicy("auth", context => System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+                context.Connection.RemoteIpAddress?.ToString() ?? "local",
+                _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 30, Window = TimeSpan.FromMinutes(1), QueueLimit = 0
+                }));
+        });
         services.AddHttpContextAccessor();
         services.AddHttpClient();
+        services.Configure<ISM.Application.DTOs.Notifications.SmtpOptions>(configuration.GetSection("Notifications:Smtp"));
+        services.Configure<ISM.Application.DTOs.Notifications.WhatsAppOptions>(configuration.GetSection("Notifications:WhatsApp"));
+        services.AddHttpClient<ISM.Infrastructure.Notifications.NotificationTransport>(client => client.Timeout = TimeSpan.FromSeconds(25));
+        services.AddTransient<ISM.Application.Interfaces.Notifications.INotificationTransport>(sp => sp.GetRequiredService<ISM.Infrastructure.Notifications.NotificationTransport>());
+        services.AddTransient<ISM.Application.Interfaces.Notifications.IWhatsAppConnection>(sp => sp.GetRequiredService<ISM.Infrastructure.Notifications.NotificationTransport>());
+        services.AddScoped<ISM.Application.Interfaces.Notifications.INotificationDeliveryService, ISM.Infrastructure.Notifications.NotificationDeliveryService>();
 
         services.AddControllers();
         services.AddEndpointsApiExplorer();
@@ -108,6 +129,30 @@ public static class ServiceCollectionExtensions
                     ValidAudience = jwtOptions.Audience,
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SecretKey)),
                     ClockSkew = TimeSpan.Zero
+                };
+                options.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = async context =>
+                    {
+                        var userIdValue = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+                        if (!int.TryParse(userIdValue, out var userId)) { context.Fail("Usuário inválido."); return; }
+                        var sessionId = context.Principal?.FindFirstValue("sid");
+                        var users = context.HttpContext.RequestServices.GetRequiredService<ISM.Domain.Interfaces.IUserRepository>();
+                        var user = await users.GetByIdAsync(userId, context.HttpContext.RequestAborted);
+                        if (user is { IsActive: false }) { context.Fail("Usuário inativo."); return; }
+                        if (sessionId == null)
+                        {
+                            // Tokens emitidos antes da inclusão das sessões expiram normalmente,
+                            // mas deixam de ser aceitos após uma troca de senha.
+                            if (user?.PasswordChangedAtUtc != null) context.Fail("Entre novamente.");
+                            return;
+                        }
+                        var sessions = context.HttpContext.RequestServices.GetRequiredService<ISM.Domain.Interfaces.IAuthSessionRepository>();
+                        var session = await sessions.FindAsync(sessionId, context.HttpContext.RequestAborted);
+                        if (user == null || session == null || session.UserId != userId ||
+                            session.RevokedAtUtc != null || session.ExpiresAtUtc <= DateTime.UtcNow)
+                            context.Fail("Sessão encerrada. Entre novamente.");
+                    }
                 };
             });
 
@@ -223,6 +268,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPricingAgent, PricingCmvService>();
         services.AddScoped<ISystemAlertService, SystemAlertService>();
         services.AddHostedService<AgentsBackgroundScheduler>();
+        services.AddHostedService<NotificationDeliveryWorker>();
 
         return services;
     }

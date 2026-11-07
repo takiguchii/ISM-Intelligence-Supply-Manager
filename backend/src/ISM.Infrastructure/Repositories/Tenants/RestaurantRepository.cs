@@ -16,13 +16,13 @@ public sealed class RestaurantRepository : IRestaurantRepository
 
     public async Task<ISM.Domain.Entities.Restaurant?> GetRestaurantByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Restaurants
+        return await _dbContext.Restaurants.Include(r => r.Plan)
             .FirstOrDefaultAsync(restaurant => restaurant.Id == id, cancellationToken);
     }
 
     public async Task<IReadOnlyList<ISM.Domain.Entities.Restaurant>> GetAllRestaurantsAsync(CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Restaurants.ToListAsync(cancellationToken);
+        return await _dbContext.Restaurants.Include(r => r.Plan).ToListAsync(cancellationToken);
     }
 
     public async Task AddRestaurantAsync(ISM.Domain.Entities.Restaurant restaurant, CancellationToken cancellationToken = default)

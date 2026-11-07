@@ -69,6 +69,7 @@ onUnmounted(() => {
   <header :class="['h-16 border-b backdrop-blur-xl sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between', themeStore.isDark ? 'border-zinc-800/80 bg-zinc-900/60' : 'border-[#D4D4D4] bg-white/95 text-[#2B2B2B]']">
     <div class="flex items-center gap-4">
       <button
+        data-sidebar-toggle
         @click="emit('toggleSidebar')"
         type="button"
         :class="['p-2 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2', themeStore.isDark ? 'text-zinc-300 hover:text-white hover:bg-zinc-800/80 focus:ring-zinc-600' : 'text-[#2B2B2B] hover:bg-[#D4D4D4] focus:ring-[#B3B3B3]']"

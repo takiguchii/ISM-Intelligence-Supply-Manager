@@ -58,9 +58,7 @@ const isItemActive = (item: NavigationItem) => {
 const selectItem = (item: NavigationItem) => {
   if (!item.route) return;
   router.push(item.route);
-  if (typeof window !== "undefined" && window.innerWidth < 1024) {
-    emit("close");
-  }
+  emit("close");
 };
 
 const avatarFailed = ref(false);

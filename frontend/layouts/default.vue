@@ -9,6 +9,11 @@ const isSidebarOpen = ref(false);
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value;
 };
+const closeSidebarOnOutsideClick = (event: MouseEvent) => {
+  const target = event.target;
+  if (target instanceof Element && target.closest('[data-sidebar-toggle]')) return;
+  isSidebarOpen.value = false;
+};
 provide("toggleSidebar", toggleSidebar);
 </script>
 
@@ -31,6 +36,7 @@ provide("toggleSidebar", toggleSidebar);
           <AppSidebar :isOpen="isSidebarOpen" @close="isSidebarOpen = false" />
         </ClientOnly>
         <div
+          @click.capture="closeSidebarOnOutsideClick"
           :class="[
             'flex-1 flex flex-col min-w-0 transition-[padding] duration-[400ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
             isSidebarOpen ? 'pl-[min(256px,65vw)] lg:pl-[256px]' : 'pl-0'

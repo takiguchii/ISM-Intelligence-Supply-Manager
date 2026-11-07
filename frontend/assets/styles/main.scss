@@ -205,3 +205,18 @@ html.light .pulse-orb {
     to { opacity: 1; transform: translateY(0); }
   }
 }
+
+// Preferências de acessibilidade e densidade da conta.
+html[data-density="compact"] table th,
+html[data-density="compact"] table td { padding-top: 0.4rem !important; padding-bottom: 0.4rem !important; }
+html.ism-reduce-motion *, html.ism-reduce-motion *::before, html.ism-reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+html.ism-reduce-motion .ism-card-reveal { opacity: 1 !important; transform: none !important; }
+html.ism-high-contrast:not(.dark) .text-zinc-500 { color: #3f3f46 !important; }
+html.ism-high-contrast.dark .text-zinc-500,
+html.ism-high-contrast.dark .text-zinc-400 { color: #e4e4e7 !important; }
+html.ism-high-contrast .border { border-color: currentColor !important; }

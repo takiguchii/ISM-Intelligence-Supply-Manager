@@ -46,6 +46,8 @@ public sealed class RestaurantProfileController : ControllerBase
         if (!_currentUser.RestaurantId.HasValue)
             return BadRequest("Usuário não pertence a um restaurante.");
 
+        if (!TimeZoneInfo.TryFindSystemTimeZoneById(dto.TimeZone, out _))
+            ModelState.AddModelError(nameof(dto.TimeZone), "Fuso horário inválido.");
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
@@ -79,6 +81,8 @@ public sealed class RestaurantProfileController : ControllerBase
         [FromBody] RestaurantDto dto,
         CancellationToken ct)
     {
+        if (!TimeZoneInfo.TryFindSystemTimeZoneById(dto.TimeZone, out _))
+            ModelState.AddModelError(nameof(dto.TimeZone), "Fuso horário inválido.");
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 

@@ -3,8 +3,8 @@
 #
 # Implementa FISICAMENTE a "Golden Rule de Migrations EF Core" do DEV_GUIDELINES.md.
 # Objetivo: NUNCA permitir que alguém comite alterações em arquivos de
-# migration (*.Designer.cs / InitialCreate / IsmDbContextModelSnapshot.cs)
-# que JÁ EXISTIAM na develop.
+# migration (*.Designer.cs / InitialCreate)
+# que JÁ EXISTIAM na develop. O snapshot atualiza com migrations novas.
 #
 # Motivação: Migrations EF são uma trilha auditável imutável do schema.
 # Tocar em migration já mergeada produz os erros de "Unknown column",
@@ -69,7 +69,18 @@ fi
 # ------------------------------------
 VIOLATIONS=()
 SAFE_NEW=()
+HAS_NEW_MIGRATION=false
 for file in "${MIGRATION_FILES_STAGED[@]}"; do
+  if [[ "$file" =~ /[0-9]+_[^/]+\.cs$ && "$file" != *.Designer.cs ]] &&
+     ! git cat-file -e "$DEVELOP_REF:$file" 2>/dev/null; then
+    HAS_NEW_MIGRATION=true
+  fi
+done
+for file in "${MIGRATION_FILES_STAGED[@]}"; do
+  # EF mantém o estado atual do modelo no snapshot; migrations históricas seguem imutáveis.
+  if [[ "$file" == */IsmDbContextModelSnapshot.cs && "$HAS_NEW_MIGRATION" == true ]]; then
+    continue
+  fi
 
   EXISTE_NA_DEVELOP=$(git cat-file -t "$DEVELOP_REF:$file" 2>/dev/null || true)
 

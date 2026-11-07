@@ -55,12 +55,27 @@ public sealed class RestaurantService : IRestaurantService
         if (restaurant == null)
             return false;
 
-        restaurant.Name = dto.Name;
+        if (!TimeZoneInfo.TryFindSystemTimeZoneById(dto.TimeZone, out _))
+            throw new ArgumentException("Fuso horário inválido.");
+        restaurant.Name = dto.Name.Trim();
         restaurant.CNPJ = dto.CNPJ;
+        restaurant.TimeZone = dto.TimeZone;
+        restaurant.Currency = dto.Currency;
+        restaurant.Language = dto.Language;
+        restaurant.Address = dto.Address;
+        restaurant.Phone = dto.Phone;
+        restaurant.ContactEmail = dto.ContactEmail;
+        restaurant.OpeningHours = dto.OpeningHours;
+        restaurant.LogoDataUrl = dto.LogoDataUrl;
+        restaurant.ServiceFeePercent = dto.ServiceFeePercent;
+        restaurant.DeliveryFee = dto.DeliveryFee;
+        restaurant.PackagingFee = dto.PackagingFee;
+
         restaurant.UpdatedAtUtc = DateTime.UtcNow;
 
         _restaurantRepository.Update(restaurant);
-        return await _restaurantRepository.SaveChangesAsync(cancellationToken);
+        await _restaurantRepository.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
@@ -79,7 +94,22 @@ public sealed class RestaurantService : IRestaurantService
         {
             Id = restaurant.Id,
             Name = restaurant.Name,
-            CNPJ = restaurant.CNPJ
+            CNPJ = restaurant.CNPJ,
+            TimeZone = restaurant.TimeZone,
+            Currency = restaurant.Currency,
+            Language = restaurant.Language,
+            Address = restaurant.Address,
+            Phone = restaurant.Phone,
+            ContactEmail = restaurant.ContactEmail,
+            OpeningHours = restaurant.OpeningHours,
+            LogoDataUrl = restaurant.LogoDataUrl,
+            ServiceFeePercent = restaurant.ServiceFeePercent,
+            DeliveryFee = restaurant.DeliveryFee,
+            PackagingFee = restaurant.PackagingFee,
+            PlanName = restaurant.Plan?.Name,
+            MonthlyPrice = restaurant.Plan?.MonthlyPrice ?? 0,
+            IsPlanActive = restaurant.IsPlanActive,
+            TrialEndAtUtc = restaurant.TrialEndAtUtc
         };
     }
 }
