@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { useWaiterMock } from '~/composables/useWaiterMock'
-import type { WaiterStatus } from '~/composables/useWaiterMock'
+import { computed, ref, watch, onUnmounted } from 'vue'
+import { useWaiter, isActiveOrder, waiterError, type WaiterStatus } from '~/composables/useWaiter'
 
 type View = 'home' | 'service' | 'orders' | 'menu'
 
@@ -22,9 +21,8 @@ const {
   addDish,
   changeQuantity,
   submitOrder,
-  simulateKitchenStep,
-  confirmDelivery
-} = useWaiterMock()
+  confirmDelivery, isSubmitting, menuLoading, ordersLoading, menuError, ordersError, refreshMenu, refreshOrders
+} = useWaiter()
 
 const search = ref('')
 const category = ref('Todos')
@@ -34,13 +32,11 @@ const feedback = ref('')
 const orderFeedback = ref('')
 const isReviewOpen = ref(false)
 const isMobileCartOpen = ref(false)
-const isSubmitting = ref(false)
 const dishPage = ref(1)
 const recentlyAddedDishId = ref<number | null>(null)
 let addFeedbackTimeout: ReturnType<typeof setTimeout> | undefined
 
 const dishesPerPage = 6
-const simulatingOrderId = ref<number | null>(null)
 const deliveringOrderId = ref<number | null>(null)
 const statusChangingOrderId = ref<number | null>(null)
 let statusFeedbackTimeout: ReturnType<typeof setTimeout> | undefined
@@ -63,7 +59,7 @@ const statuses: WaiterStatus[] = [
   'Enviado',
   'Em preparo',
   'Pronto',
-  'Entregue'
+  'Entregue', 'Pago', 'Cancelado'
 ]
 
 const statusClasses: Record<WaiterStatus, string> = {
@@ -73,6 +69,8 @@ const statusClasses: Record<WaiterStatus, string> = {
     'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
   Pronto:
     'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
+  Pago: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300',
+  Cancelado: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
   Entregue:
     'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
 }
@@ -138,6 +136,12 @@ function dishImage(categoryName: string) {
   return images[categoryName] || '/images/waiter/dish-principal.svg'
 }
 
+function imageFallback(event: Event, categoryName: string) {
+  const image = event.target as HTMLImageElement
+  image.onerror = null
+  image.src = dishImage(categoryName)
+}
+
 function addDishToCart(dish: (typeof dishes.value)[number]) {
   addDish(dish)
   recentlyAddedDishId.value = dish.id
@@ -155,7 +159,7 @@ const filteredOrders = computed(() => {
     .filter(order => {
     const matchesStatus =
       status.value === 'Todos' || order.status === status.value
-    const matchesActive = !showActiveOnly.value || order.status !== 'Entregue'
+    const matchesActive = !showActiveOnly.value || isActiveOrder(order.status)
 
     const content = [
       order.id,
@@ -170,7 +174,7 @@ const filteredOrders = computed(() => {
         Pronto: 0,
         'Em preparo': 1,
         Enviado: 2,
-        Entregue: 3
+        Entregue: 3, Pago: 4, Cancelado: 5
       }
 
       return priority[first.status] - priority[second.status]
@@ -178,10 +182,6 @@ const filteredOrders = computed(() => {
 })
 
 const activeOrderCount = computed(() => activeOrders.value.length)
-
-const kitchenSimulationOrders = computed(() =>
-  orders.value.filter(order => order.status === 'Enviado' || order.status === 'Em preparo')
-)
 
 const metrics = computed(() => [
   { label: 'Mesas em atendimento', value: occupiedTables.value },
@@ -212,28 +212,19 @@ function closeReview() {
   if (!isSubmitting.value) isReviewOpen.value = false
 }
 
-function confirmOrder() {
+async function confirmOrder() {
   if (!canReviewOrder.value) return
-
-  isSubmitting.value = true
-  const id = submitOrder()
-  isSubmitting.value = false
-  isReviewOpen.value = false
-  isMobileCartOpen.value = false
-
-  feedback.value = id
-    ? `Pedido #${id} criado na demonstração.`
-    : 'Não foi possível criar o pedido. Revise a mesa e os itens.'
-}
-
-function simulateKitchen(id: number) {
-  if (simulatingOrderId.value !== null) return
-
-  simulatingOrderId.value = id
-  simulateKitchenStep(id)
-  markStatusChange(id)
-  orderFeedback.value = `Atualização demonstrativa da cozinha aplicada ao pedido #${id}.`
-  simulatingOrderId.value = null
+  feedback.value = ''
+  try {
+    const id = await submitOrder()
+    if (!id) return
+    isReviewOpen.value = false
+    isMobileCartOpen.value = false
+    feedback.value = `Pedido #${id} enviado para a cozinha.`
+  } catch (error) {
+    feedback.value = error instanceof Error && error.name === 'WaiterValidationError' ? error.message : waiterError(error)
+    isReviewOpen.value = false
+  }
 }
 
 function markStatusChange(id: number) {
@@ -245,7 +236,7 @@ function markStatusChange(id: number) {
   }, 600)
 }
 
-function deliverOrder(id: number) {
+async function deliverOrder(id: number) {
   if (deliveringOrderId.value !== null) return
 
   const order = orders.value.find(item => item.id === id)
@@ -254,13 +245,17 @@ function deliverOrder(id: number) {
   if (process.client && !window.confirm(`Confirmar entrega do pedido #${id}?`)) return
 
   deliveringOrderId.value = id
-  const delivered = confirmDelivery(id)
-  if (delivered) markStatusChange(id)
-  orderFeedback.value = delivered
-    ? `Pedido #${id} marcado como entregue.`
-    : 'O pedido só pode ser entregue quando estiver pronto.'
-  deliveringOrderId.value = null
+  try {
+    const delivered = await confirmDelivery(id)
+    if (delivered) markStatusChange(id)
+    orderFeedback.value = delivered ? `Pedido #${id} marcado como entregue.` : 'Atualize a lista e verifique o status do pedido.'
+  } catch (error) { orderFeedback.value = waiterError(error) }
+  finally { deliveringOrderId.value = null }
 }
+onUnmounted(() => {
+  if (addFeedbackTimeout) clearTimeout(addFeedbackTimeout)
+  if (statusFeedbackTimeout) clearTimeout(statusFeedbackTimeout)
+})
 </script>
 
 <template>
@@ -287,18 +282,19 @@ function deliverOrder(id: number) {
         class="badge bg-indigo-100 text-indigo-700
           dark:bg-indigo-950 dark:text-indigo-300"
       >
-        Demonstração
+        Atendimento
       </span>
     </header>
 
-    <p
-      class="rounded-xl border border-indigo-200 bg-indigo-50 p-3
-        text-sm text-indigo-800 dark:border-indigo-900
-        dark:bg-indigo-950/40 dark:text-indigo-200"
-    >
-      Dados fictícios. As ações são simuladas e reiniciam ao atualizar
-      a página.
-    </p>
+    <div class="flex flex-wrap items-center gap-3">
+      <button type="button" class="secondary" :disabled="menuLoading || ordersLoading" @click="refreshMenu(); refreshOrders()">Atualizar dados</button>
+      <span v-if="menuLoading || ordersLoading" role="status" class="text-sm text-zinc-500">Carregando dados...</span>
+      <span v-else class="text-xs text-zinc-500">Pedidos atualizados automaticamente a cada 10 segundos.</span>
+    </div>
+    <p v-if="menuError" role="alert" class="panel text-red-600">Cardápio: {{ menuError }}</p>
+    <p v-if="ordersError" role="alert" class="panel text-red-600">Pedidos: {{ ordersError }}</p>
+    <p v-if="feedback" role="status" class="panel">{{ feedback }}</p>
+    <p v-if="orderFeedback && view === 'home'" role="status" class="panel">{{ orderFeedback }}</p>
 
     <!-- INÍCIO -->
     <template v-if="view === 'home'">
@@ -340,7 +336,7 @@ function deliverOrder(id: number) {
         <h2 class="text-lg font-semibold">Prontos para entrega</h2>
 
         <p
-          v-if="!readyOrders.length"
+          v-if="!ordersLoading && !ordersError && !readyOrders.length"
           class="mt-4 text-sm text-zinc-500 dark:text-zinc-400"
         >
           Nenhum pedido aguardando entrega.
@@ -378,7 +374,7 @@ function deliverOrder(id: number) {
     </template>
 
     <!-- ATENDIMENTO E CARDÁPIO -->
-    <template v-else-if="view === 'service' || view === 'menu'">
+    <fieldset v-else-if="view === 'service' || view === 'menu'" :disabled="isSubmitting" class="min-w-0 space-y-6">
       <section
         v-if="view === 'service'"
         class="panel space-y-3"
@@ -394,8 +390,9 @@ function deliverOrder(id: number) {
           Mesa / identificação
           <input
             v-model="table"
+            :disabled="isSubmitting"
             class="field"
-            maxlength="30"
+            maxlength="100"
             placeholder="Ex.: 04 ou João"
             autocomplete="off"
           />
@@ -525,7 +522,8 @@ function deliverOrder(id: number) {
               :class="{ 'dish-card-added': recentlyAddedDishId === dish.id }"
             >
               <img
-                :src="dishImage(dish.category)"
+                :src="dish.urlImage || dishImage(dish.category)"
+                @error="imageFallback($event, dish.category)"
                 :alt="`Ilustração de ${dish.name}`"
                 class="dish-image h-32 w-full object-cover sm:h-36"
               />
@@ -580,7 +578,7 @@ function deliverOrder(id: number) {
                   v-if="view === 'service'"
                   type="button"
                   class="primary"
-                  :disabled="!dish.available"
+                  :disabled="!dish.available || isSubmitting"
                   :aria-label="`Adicionar ${dish.name}`"
                   @click="addDishToCart(dish)"
                 >
@@ -712,8 +710,9 @@ function deliverOrder(id: number) {
                 </summary>
                 <input
                   v-model="item.observation"
+                  maxlength="500"
+                  :disabled="isSubmitting"
                   class="field"
-                  maxlength="200"
                   placeholder="Ex.: sem cebola"
                 />
               </details>
@@ -737,13 +736,7 @@ function deliverOrder(id: number) {
             Revisar pedido
           </button>
 
-          <p
-            v-if="feedback"
-            role="status"
-            class="text-sm text-indigo-600 dark:text-indigo-300"
-          >
-            {{ feedback }}
-          </p>
+
         </aside>
       </div>
 
@@ -816,7 +809,7 @@ function deliverOrder(id: number) {
           </section>
         </div>
       </Transition>
-    </template>
+    </fieldset>
 
     <!-- PEDIDOS -->
     <template v-else>
@@ -889,45 +882,6 @@ function deliverOrder(id: number) {
         </p>
       </section>
 
-      <section class="panel space-y-4">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 class="text-lg font-semibold">Simulação da cozinha</h2>
-            <p class="text-sm text-zinc-500 dark:text-zinc-400">
-              Controle demonstrativo separado das ações do garçom.
-            </p>
-          </div>
-          <span class="badge bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-            Mock local
-          </span>
-        </div>
-
-        <div v-if="!kitchenSimulationOrders.length" class="rounded-xl bg-zinc-100 p-4 text-sm text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-          Nenhum pedido aguardando atualização da cozinha.
-        </div>
-
-        <ul v-else class="grid gap-3 md:grid-cols-2">
-          <li
-            v-for="order in kitchenSimulationOrders"
-            :key="order.id"
-            class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 p-3 dark:border-zinc-800"
-          >
-            <div>
-              <p class="font-semibold">Pedido #{{ order.id }} · Mesa {{ order.tableReference }}</p>
-              <p class="text-xs text-zinc-500 dark:text-zinc-400">Estado atual: {{ order.status }}</p>
-            </div>
-            <button
-              type="button"
-              class="secondary min-h-11"
-              :disabled="simulatingOrderId !== null"
-              @click="simulateKitchen(order.id)"
-            >
-              {{ order.status === 'Enviado' ? 'Simular preparo' : 'Simular pronto' }}
-            </button>
-          </li>
-        </ul>
-      </section>
-
       <p v-if="!filteredOrders.length" class="panel text-sm text-zinc-500 dark:text-zinc-400">
         {{ showActiveOnly ? 'Nenhum pedido ativo encontrado com esses filtros.' : 'Nenhum pedido encontrado com esses filtros.' }}
       </p>
@@ -994,11 +948,11 @@ function deliverOrder(id: number) {
           >
             {{ deliveringOrderId === order.id ? 'Confirmando...' : 'Confirmar entrega' }}
           </button>
-          <p v-else-if="order.status !== 'Entregue'" class="mt-4 rounded-lg bg-zinc-100 p-3 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+          <p v-else-if="isActiveOrder(order.status)" class="mt-4 rounded-lg bg-zinc-100 p-3 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
             Aguardando atualização da cozinha.
           </p>
           <p v-else class="mt-4 text-xs text-zinc-500 dark:text-zinc-400">
-            Entrega confirmada. Este pedido permanece no histórico.
+            {{ order.status }}. Este pedido permanece no histórico.
           </p>
         </article>
       </TransitionGroup>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useAuthStore } from '~/stores/auth'
-import WaiterMock from '~/components/waiter/WaiterMock.vue'
+import WaiterPanel from '~/components/waiter/WaiterPanel.vue'
 import AtendimentoAtual from '~/components/atendimento/AtendimentoAtual.vue'
 
 definePageMeta({ layout: 'default' })
@@ -13,6 +13,6 @@ const isWaiter = computed(
 </script>
 
 <template>
-  <WaiterMock v-if="isWaiter" view="service" />
+  <WaiterPanel v-if="isWaiter" view="service" />
   <AtendimentoAtual v-else />
 </template>

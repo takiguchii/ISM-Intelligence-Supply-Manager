@@ -6,7 +6,8 @@
     "dev": "nuxt dev --host 0.0.0.0 --port 3000",
     "build": "nuxt build",
     "preview": "nuxt preview --host 0.0.0.0 --port 3000",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "test:waiter": "node --test tests/unit/waiter.test.cjs"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",
