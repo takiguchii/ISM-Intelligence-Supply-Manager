@@ -73,16 +73,22 @@ async function loadWhatsApp() {
 }
 onMounted(async () => {
   try {
-    const [prefs, status, catalog] = await Promise.all([
-      settingsService.notifications(), apiClientWithAuth<Channels>("/api/me/notifications/channels"),
-      apiClientWithAuth<{ examples: Scenario[]; alerts: AlertOption[] }>("/api/me/notifications/scenarios")
-    ]);
+    const status = await apiClientWithAuth<Channels>("/api/me/notifications/channels");
     if (disposed) return;
-    preferences.value = prefs; channels.value = status;
-    scenarios.value = catalog.examples; realAlerts.value = catalog.alerts;
-    await loadPreview();
+    channels.value = status;
+    if (!isPlatformAdmin.value) {
+      const [prefs, catalog] = await Promise.all([
+        settingsService.notifications(),
+        apiClientWithAuth<{ examples: Scenario[]; alerts: AlertOption[] }>("/api/me/notifications/scenarios")
+      ]);
+      if (disposed) return;
+      preferences.value = prefs;
+      scenarios.value = catalog.examples;
+      realAlerts.value = catalog.alerts;
+      await loadPreview();
+    }
   } catch (e) { if (!disposed) error.value = settingsError(e); }
-  await Promise.all([loadHistory(), loadWhatsApp()]);
+  await Promise.all([isPlatformAdmin.value ? Promise.resolve() : loadHistory(), loadWhatsApp()]);
   if (!disposed) pollTimer = setInterval(() => {
     if (!document.hidden) { void loadHistory(); void loadWhatsApp(); }
   }, 5000);
@@ -136,7 +142,7 @@ async function loadQr() {
 </script>
 <template>
   <div class="space-y-6">
-    <div class="settings-card">
+    <div v-if="!isPlatformAdmin" class="settings-card">
       <h2>Canais de notificação</h2>
       <p class="settings-hint">Receba novos alertas na central, por e-mail ou pelo WhatsApp. O envio externo começa após salvar suas preferências e configurar o serviço.</p>
       <p v-if="error" role="alert" class="text-red-600 dark:text-red-400">{{ error }}</p>
@@ -194,7 +200,7 @@ async function loadQr() {
       <div class="flex flex-wrap gap-3"><button type="button" class="settings-primary" :disabled="whatsappBusy || whatsappStatus === 'WORKING'" @click="connectWhatsApp">Iniciar conexão</button><button type="button" class="settings-secondary" :disabled="whatsappBusy || whatsappStatus !== 'SCAN_QR_CODE'" @click="loadQr">Mostrar / atualizar QR Code</button></div>
       <img v-if="qrUrl" :src="qrUrl" alt="QR Code para conectar o WhatsApp remetente" class="w-64 h-64 rounded-lg bg-white p-2" />
     </div>
-    <div class="settings-card">
+    <div v-if="!isPlatformAdmin" class="settings-card">
       <h2>Histórico de envios</h2>
       <p class="settings-hint">“Aceito pelo servidor” confirma o envio ao SMTP ou WhatsApp; não confirma leitura nem chegada à caixa de entrada.</p>
       <p v-if="historyError" role="alert" class="text-red-600 dark:text-red-400">{{ historyError }}</p>
