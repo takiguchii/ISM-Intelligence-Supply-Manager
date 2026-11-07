@@ -7,11 +7,13 @@ using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.Extensions.Options;
 using MimeKit;
+using Microsoft.Extensions.Logging;
 
 namespace ISM.Infrastructure.Notifications;
 
 public sealed class NotificationTransport(IOptions<SmtpOptions> smtpOptions,
-    IOptions<WhatsAppOptions> whatsappOptions, HttpClient http) : INotificationTransport, IWhatsAppConnection
+    IOptions<WhatsAppOptions> whatsappOptions, HttpClient http,
+    ILogger<NotificationTransport> logger) : INotificationTransport, IWhatsAppConnection
 {
     private readonly SmtpOptions _smtp = smtpOptions.Value;
     private readonly WhatsAppOptions _whatsapp = whatsappOptions.Value;
@@ -34,7 +36,10 @@ public sealed class NotificationTransport(IOptions<SmtpOptions> smtpOptions,
         await client.SendAsync(message, ct);
         // SendAsync já confirmou a aceitação pelo SMTP; uma falha no QUIT não deve reenviar.
         try { await client.DisconnectAsync(true, ct); }
-        catch (Exception) when (!ct.IsCancellationRequested) { }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            logger.LogDebug(ex, "SMTP aceitou a entrega {DeliveryId}, mas falhou ao encerrar a conexão.", delivery.Id);
+        }
     }
 
     private HttpRequestMessage Request(HttpMethod method, string path)

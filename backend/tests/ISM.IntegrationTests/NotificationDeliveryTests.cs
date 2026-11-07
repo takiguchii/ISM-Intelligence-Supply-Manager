@@ -33,7 +33,7 @@ public sealed class NotificationDeliveryTests
             var transport = new NotificationTransport(Options.Create(new SmtpOptions
             {
                 Enabled = true, Host = "127.0.0.1", Port = port, Security = "None", FromAddress = "sender@example.test"
-            }), Options.Create(new WhatsAppOptions()), new HttpClient());
+            }), Options.Create(new WhatsAppOptions()), new HttpClient(), NullLogger<NotificationTransport>.Instance);
             await transport.SendEmailAsync(new NotificationDelivery
             {
                 Id = 42, Recipient = "recipient@example.test", Subject = "ISM — Estoque",
@@ -55,7 +55,7 @@ public sealed class NotificationDeliveryTests
         var transport = new NotificationTransport(Options.Create(new SmtpOptions()), Options.Create(new WhatsAppOptions
         {
             Enabled = true, BaseUrl = "http://whatsapp.test/", ApiKey = "test-key", Session = "default"
-        }), new HttpClient(handler));
+        }), new HttpClient(handler), NullLogger<NotificationTransport>.Instance);
         await transport.SendWhatsAppAsync(new NotificationDelivery { Recipient = "+5511999999999", Body = "stock-alert" }, default);
         handler.Path.Should().Be("/api/sendText");
         handler.Key.Should().Be("test-key");
