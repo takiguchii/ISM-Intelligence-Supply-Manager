@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useAuthStore } from '~/stores/auth'
-import WaiterMock from '~/components/waiter/WaiterMock.vue'
+import WaiterPanel from '~/components/waiter/WaiterPanel.vue'
 import OrderBoard from '~/components/orders/OrderBoard.vue'
 import AdminOrderBoard from '~/components/orders/AdminOrderBoard.vue'
 
@@ -15,7 +15,7 @@ const isManager = computed(() => ['Admin', 'Manager'].includes(authStore.current
 </script>
 
 <template>
-  <WaiterMock v-if="isWaiter" view="orders" />
+  <WaiterPanel v-if="isWaiter" view="orders" />
   <AdminOrderBoard v-else-if="isManager" />
   <OrderBoard v-else />
 </template>
