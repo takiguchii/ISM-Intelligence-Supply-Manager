@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import WaiterPanel from '~/components/waiter/WaiterPanel.vue'
 import OrderBoard from '~/components/orders/OrderBoard.vue'
+import KitchenHistory from '~/components/kitchen/KitchenHistory.vue'
 import AdminOrderBoard from '~/components/orders/AdminOrderBoard.vue'
 
 definePageMeta({ layout: 'default' })
@@ -17,5 +18,6 @@ const isManager = computed(() => ['Admin', 'Manager'].includes(authStore.current
 <template>
   <WaiterPanel v-if="isWaiter" view="orders" />
   <AdminOrderBoard v-else-if="isManager" />
+  <KitchenHistory v-else-if="authStore.currentUser?.role === 'Chef'" />
   <OrderBoard v-else />
 </template>

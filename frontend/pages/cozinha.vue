@@ -1,3 +1,3 @@
 <template>
-  <OrderBoard kitchen />
+  <KitchenPanel />
 </template>
