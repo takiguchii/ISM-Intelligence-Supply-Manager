@@ -34,7 +34,10 @@ O backend, as migrations, os serviços HTTP existentes e as telas específicas d
 - Permissões: removida a simulação de cozinha; o garçom confirma entrega somente de pedidos prontos. A API mantém suas regras de autorização e isolamento por restaurante.
 - Histórico: Pago e Cancelado podem ser consultados desmarcando Somente ativos. Não foram adicionados botões de pagamento ou cancelamento nesta entrega.
 
-## Verificação realizada
+## Verificação original da implementação
+
+A revisão posterior com Docker, MySQL e navegador reais está em
+[Revisão local da integração do garçom — 12/11/2026](revisao-integracao-garcom.md).
 
 - npm ci --no-audit --no-fund: concluído, usando o lockfile existente.
 - npm run build: aprovado (Nuxt, cliente e servidor).
