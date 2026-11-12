@@ -15,6 +15,7 @@ public sealed class Dish : BaseEntity
     public decimal Price { get; set; } 
     public decimal Cost { get; set; }
     public decimal? TargetMarginPercent { get; set; } //margem de lucro esperada
+    public int PriceRevision { get; set; }
     public bool IsActive { get; set; } = true;
     public bool Highlight { get; set; } = false;
     public string? UrlImage { get; set; }

@@ -32,6 +32,9 @@ using ISM.Application.Services.DataImport.Readers;
 using ISM.Infrastructure.Data.Options;
 using ISM.Infrastructure.DependencyInjection;
 using ISM.Infrastructure.Services;
+using ISM.Infrastructure.AI;
+using ISM.Application.Interfaces.Assistant;
+using ISM.Application.Services.Assistant;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Hosting;
@@ -60,6 +63,13 @@ public static class ServiceCollectionExtensions
         });
         services.AddHttpContextAccessor();
         services.AddHttpClient();
+        services.Configure<AssistantAiOptions>(configuration.GetSection(AssistantAiOptions.SectionName));
+        services.AddHttpClient<ILlmTextProvider, OllamaTextProvider>((sp, client) =>
+        {
+            var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AssistantAiOptions>>().Value;
+            client.BaseAddress = new Uri(options.OllamaBaseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(Math.Clamp(options.TimeoutSeconds, 3, 120));
+        });
         services.Configure<ISM.Application.DTOs.Notifications.SmtpOptions>(configuration.GetSection("Notifications:Smtp"));
         services.Configure<ISM.Application.DTOs.Notifications.WhatsAppOptions>(configuration.GetSection("Notifications:WhatsApp"));
         services.AddHttpClient<ISM.Infrastructure.Notifications.NotificationTransport>(client => client.Timeout = TimeSpan.FromSeconds(25));
@@ -267,6 +277,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISupplierAgent, SupplierAgent>();
         services.AddScoped<IPricingAgent, PricingCmvService>();
         services.AddScoped<ISystemAlertService, SystemAlertService>();
+        services.AddScoped<IAssistantService, AssistantService>();
         services.AddHostedService<AgentsBackgroundScheduler>();
         services.AddHostedService<NotificationDeliveryWorker>();
 
