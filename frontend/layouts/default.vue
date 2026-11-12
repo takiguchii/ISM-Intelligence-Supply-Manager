@@ -1,5 +1,7 @@
 <script setup lang="ts">
-const authReady = inject<Ref<boolean>>("authReady", ref(true));
+// A identidade vem do armazenamento local; servidor e cliente começam na mesma tela.
+const authReady = ref(false);
+onMounted(() => { authReady.value = true; });
 const route = useRoute();
 const isLoginPage = computed(() => route.path === "/login");
 const showContent = computed(() => isLoginPage.value || authReady.value);
