@@ -7,7 +7,8 @@
     "build": "nuxt build",
     "preview": "nuxt preview --host 0.0.0.0 --port 3000",
     "postinstall": "nuxt prepare",
-    "test:waiter": "node --test tests/unit/waiter.test.cjs"
+    "test:waiter": "node --test tests/unit/waiter.test.cjs",
+    "test:system-alerts": "node --experimental-strip-types --test tests/unit/systemAlerts.test.ts"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",
