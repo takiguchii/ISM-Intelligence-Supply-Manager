@@ -16,13 +16,13 @@ export interface SystemStatus {
   enabledModules: EnabledModule[];
 }
 
-export type AlertSeverity = "Info" | "Warning" | "Critical";
+export type AlertSeverity = "Info" | "Warning" | "Critical" | "Danger";
 
 export interface SystemAlertResponse {
   id: number;
   restaurantId: number;
-  alertType: string;
-  severity: AlertSeverity;
+  alertType: string | number;
+  severity: AlertSeverity | number;
   title: string;
   message: string;
   referenceEntityType?: string | null;

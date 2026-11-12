@@ -3,16 +3,20 @@ import { computed, onMounted, ref, watch } from "vue";
 import { apiClientWithAuth } from "~/services/api/client";
 import PageHeader from "~/components/dashboard/PageHeader.vue";
 import KpiCard from "~/components/dashboard/KpiCard.vue";
-import AiInsightCard from "~/components/dashboard/AiInsightCard.vue";
 import RevenueVsCostChart from "~/components/dashboard/RevenueVsCostChart.vue";
 import TopDishesChart from "~/components/dashboard/TopDishesChart.vue";
 import WeekdayOrdersChart from "~/components/dashboard/WeekdayOrdersChart.vue";
-import PriceAdjustmentsList from "~/components/dashboard/PriceAdjustmentsList.vue";
+import AiInsightCard from "~/components/dashboard/AiInsightCard.vue";
+import AgentInsightDetails from "~/components/dashboard/AgentInsightDetails.vue";
 import { useAuthStore } from "~/stores/auth";
 import { homeForUser } from "~/utils/navigation";
 import { useDashboardMetrics } from "~/composables/useDashboardMetrics";
+import { useAssistantUi } from "~/composables/useAssistantUi";
+import { useSystemAlertCenter } from "~/composables/useSystemAlertCenter";
 
 const authStore = useAuthStore();
+const assistantUi = useAssistantUi();
+const alertCenter = useSystemAlertCenter();
 const router = useRouter();
 const isSuperAdmin = computed(() => authStore.currentUser?.role === "Admin" && !authStore.currentUser?.restaurantId);
 const dashboardRestaurantId = ref<number | null>(null);
@@ -30,8 +34,19 @@ const {
   available: metricsAvailable,
   refresh: refreshMetrics
 } = useDashboardMetrics(dashboardRestaurantId, isSuperAdmin);
+const selectedInsight = ref<typeof metrics.value.aiInsights[number] | null>(null);
 
 watch(dashboardRestaurantId, () => { if (authStore.isAuthenticated) refreshMetrics(); });
+watch(alertCenter.alerts, () => { if (metricsAvailable.value) refreshMetrics(); });
+
+const alertForInsight = (insight: typeof selectedInsight.value) => insight ? alertCenter.alerts.value.find(alert => alert.id === insight.alertId) || null : null;
+const openInsightDetails = (insight: typeof selectedInsight.value) => { selectedInsight.value = insight; };
+const converseAboutInsight = (insight: typeof selectedInsight.value) => {
+  const alert = alertForInsight(insight);
+  selectedInsight.value = null;
+  if (alert) assistantUi.openChat(alert);
+  else assistantUi.openGeneralChat();
+};
 
 const handleRefreshAll = () => {
   refreshStatus();
@@ -117,15 +132,11 @@ onMounted(async () => {
           <KpiCard v-for="kpi in metrics.kpis" :key="kpi.id" v-bind="kpi" />
         </div>
 
-        <!-- Insights dos Agentes de IA -->
-        <div v-if="metrics.aiInsights.length" class="space-y-3">
-          <h3 class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Insights dos Agentes IA</h3>
-          <div class="grid gap-4 lg:grid-cols-3">
-            <AiInsightCard v-for="insight in metrics.aiInsights" :key="insight.id" v-bind="insight" />
-          </div>
-        </div>
-
-        <p v-else class="text-sm text-zinc-500 dark:text-zinc-400">Insights e sugestões de preço ainda não estão disponíveis.</p>
+        <section aria-labelledby="agent-insights-title" class="space-y-3">
+          <div class="flex items-center justify-between gap-3"><div><h3 id="agent-insights-title" class="text-sm font-bold text-zinc-800 dark:text-zinc-200">Insights e alertas dos agentes</h3><p class="mt-0.5 text-xs text-zinc-500">Estoque, precificação e fornecedores em cartões compactos.</p></div><button v-if="metrics.aiInsights.length" type="button" class="text-xs font-semibold text-indigo-600 hover:underline dark:text-indigo-300" @click="alertCenter.refresh(false)">Atualizar alertas</button></div>
+          <div v-if="metrics.aiInsights.length" class="grid gap-3 lg:grid-cols-3"><AiInsightCard v-for="insight in metrics.aiInsights" :key="insight.id" :insight="insight" @details="openInsightDetails(insight)" @converse="converseAboutInsight(insight)" /></div>
+          <p v-else class="rounded-xl border border-dashed border-zinc-300 px-4 py-3 text-xs text-zinc-500 dark:border-zinc-700">Nenhum alerta persistido dos agentes neste momento.</p>
+        </section>
 
         <!-- Receita vs. Custo -->
         <RevenueVsCostChart :data="metrics.revenueVsCost" />
@@ -136,9 +147,8 @@ onMounted(async () => {
           <WeekdayOrdersChart :data="metrics.weekdayOrders" />
         </div>
 
-        <!-- Sugestões de reajuste de preço -->
-        <PriceAdjustmentsList v-if="metrics.priceAdjustments.length" :items="metrics.priceAdjustments" />
       </section>
+      <AgentInsightDetails :insight="selectedInsight" :open="Boolean(selectedInsight)" @close="selectedInsight = null" @converse="converseAboutInsight(selectedInsight)" />
     </main>
   </div>
 </template>

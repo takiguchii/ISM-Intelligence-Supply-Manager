@@ -265,7 +265,7 @@ onMounted(async () => {
       <!-- ========================================================= -->
       <!-- BANNER DO AGENTE (APENAS ÍCONE CAMINHÃO E MENSAGEM SIMPLIFICADA) -->
       <!-- ========================================================= -->
-      <div class="rounded-2xl bg-zinc-900/70 border border-zinc-800/80 p-4 sm:p-5 mb-8 border-l-4 border-l-cyan-500 shadow-xl flex items-center gap-3.5">
+      <div class="rounded-2xl bg-zinc-900/70 border border-zinc-800/80 p-4 sm:p-5 mb-8 border-l-4 border-l-cyan-500 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
         <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -273,8 +273,9 @@ onMounted(async () => {
           </svg>
         </div>
         <span class="text-sm font-semibold text-zinc-200">
-          Agente de Fornecedores em construção
+          Análises de fornecedores no ISM Assist
         </span>
+        <button type="button" class="shrink-0 rounded-xl border border-cyan-400/30 px-3 py-2 text-xs font-semibold text-cyan-300 hover:bg-cyan-400/10" @click="window.dispatchEvent(new CustomEvent('ism-assistant-open'))">Abrir Assistente</button>
       </div>
 
       <!-- ========================================================= -->

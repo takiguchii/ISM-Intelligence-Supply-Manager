@@ -68,6 +68,10 @@ onMounted(refresh);
       <div><h1 class="text-2xl font-bold dark:text-white">Financeiro</h1><p class="text-sm text-zinc-500">Receitas e despesas do mês atual; contas pendentes de todos os períodos.</p></div>
       <div class="flex gap-2"><button class="px-4 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 text-sm" :disabled="loading" @click="refresh">Atualizar</button><button class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm" @click="openForm()">Nova movimentação</button></div>
     </div>
+    <section class="flex flex-col gap-3 rounded-2xl border border-indigo-200 bg-indigo-50/70 p-4 dark:border-indigo-500/20 dark:bg-indigo-950/20 sm:flex-row sm:items-center sm:justify-between">
+      <div><p class="text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">Contexto operacional</p><p class="mt-1 text-sm text-zinc-700 dark:text-zinc-300">Alertas de CMV, estoque e fornecedores ficam reunidos no ISM Assist para não se perderem entre os módulos.</p></div>
+      <button type="button" class="shrink-0 rounded-xl border border-indigo-300 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 dark:border-indigo-400/30 dark:text-indigo-300 dark:hover:bg-indigo-500/10" @click="window.dispatchEvent(new CustomEvent('ism-assistant-open'))">Abrir Assistente</button>
+    </section>
     <p v-if="error" role="alert" class="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300">{{ error }}</p>
     <p v-if="success" role="status" class="text-sm text-emerald-600">{{ success }}</p>
     <p v-if="loading && !overview" class="text-sm text-zinc-500">Carregando financeiro...</p>

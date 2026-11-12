@@ -1,70 +1,30 @@
 import { ref, type Ref } from "vue";
 import { apiClientWithAuth } from "~/services/api/client";
-import { getSystemAlerts } from "~/services/modules/system/systemService";
+import { useSystemAlertCenter } from "~/composables/useSystemAlertCenter";
+import { aggregateAgentCards, type AgentCardViewModel, type AgentKind, type AgentSeverity } from "~/types/agentExperience";
 
-export interface Kpi {
-  id: string;
-  label: string;
-  value: string;
-  delta: string;
-  trend: "up" | "down";
-  icon: string;
-  hint?: string;
-}
+export interface Kpi { id: string; label: string; value: string; delta: string; trend: "up" | "down"; icon: string; hint?: string; }
+export type InsightSeverity = AgentSeverity;
+export interface AgentInsight extends AgentCardViewModel { id: string; icon: AgentKind; }
+export interface RevenueVsCostPoint { day: string; receita: number; custo: number; }
+export interface TopDish { name: string; pedidos: number; }
+export interface WeekdayOrders { day: string; pedidos: number; }
+export interface PriceAdjustment { id: string; name: string; from: number; to: number; direction: "up" | "down"; reason: string; }
+export interface DashboardMetrics { kpis: Kpi[]; aiInsights: AgentInsight[]; revenueVsCost: RevenueVsCostPoint[]; topDishes: TopDish[]; weekdayOrders: WeekdayOrders[]; priceAdjustments: PriceAdjustment[]; }
 
-export type InsightSeverity = "info" | "warning" | "critical";
-
-export interface AgentInsight {
-  id: string;
-  icon: string;
-  agent: string;
-  severity: InsightSeverity;
-  title: string;
-  description: string;
-  primaryLabel?: string;
-  primarySuccessMessage?: string;
-  secondaryLabel?: string;
-}
-
-export interface RevenueVsCostPoint {
-  day: string;
-  receita: number;
-  custo: number;
-}
-
-export interface TopDish {
-  name: string;
-  pedidos: number;
-}
-
-export interface WeekdayOrders {
-  day: string;
-  pedidos: number;
-}
-
-export interface PriceAdjustment {
-  id: string;
-  name: string;
-  from: number;
-  to: number;
-  direction: "up" | "down";
-  reason: string;
-}
-
-export interface DashboardMetrics {
-  kpis: Kpi[];
-  aiInsights: AgentInsight[];
-  revenueVsCost: RevenueVsCostPoint[];
-  topDishes: TopDish[];
-  weekdayOrders: WeekdayOrders[];
-  priceAdjustments: PriceAdjustment[];
-}
+const errorCards = (message: string): AgentInsight[] => (["stock", "pricing", "suppliers"] as const).map(agent => ({
+  id: `${agent}-error`, agent, icon: agent, label: agent === "stock" ? "Estoque" : agent === "pricing" ? "Precificação" : "Fornecedores",
+  title: "Alertas indisponíveis", description: message, severity: "unknown", mood: "error", attentionLevel: "critical",
+  alertId: null, alertIds: [], unreadCount: 0, generatedAtUtc: null, referenceEntityType: null, referenceEntityId: null,
+  facts: {}, state: "error"
+}));
 
 export const useDashboardMetrics = (restaurantId: Ref<number | null>, requiresSelection: Ref<boolean>) => {
   const data = ref<DashboardMetrics>({ kpis: [], aiInsights: [], revenueVsCost: [], topDishes: [], weekdayOrders: [], priceAdjustments: [] });
   const pending = ref(false);
   const error = ref<string | null>(null);
   const available = ref(false);
+  const alertCenter = useSystemAlertCenter();
   let generation = 0;
 
   const refresh = async () => {
@@ -78,58 +38,16 @@ export const useDashboardMetrics = (restaurantId: Ref<number | null>, requiresSe
     pending.value = true;
     error.value = null;
     try {
-      const [metricsResponse, alertsResponse] = await Promise.all([
-        apiClientWithAuth<Omit<DashboardMetrics, "aiInsights" | "priceAdjustments">>("/api/dashboard/metrics", {
-          params: restaurantId.value ? { restaurantId: restaurantId.value } : undefined
-        }),
-        getSystemAlerts({ pageSize: 6, isDismissed: false }).catch(() => null)
+      const [metricsResponse] = await Promise.all([
+        apiClientWithAuth<Omit<DashboardMetrics, "aiInsights" | "priceAdjustments">>("/api/dashboard/metrics", { params: restaurantId.value ? { restaurantId: restaurantId.value } : undefined }),
+        alertCenter.ensureLoaded()
       ]);
       if (requestGeneration !== generation) return;
-
-      const aiInsights: AgentInsight[] = [];
-      const priceAdjustments: PriceAdjustment[] = [];
-
-      if (alertsResponse?.items) {
-        for (const item of alertsResponse.items) {
-          const sev: InsightSeverity =
-            item.severity === "Critical" ? "critical" : item.severity === "Warning" ? "warning" : "info";
-          aiInsights.push({
-            id: `alert-${item.id}`,
-            icon: item.referenceEntityType === "Product" ? "Warning" : "Bell",
-            agent: item.referenceEntityType === "Product" ? "Agente de Estoque" : item.referenceEntityType === "Dish" ? "Agente de Precificação" : "Agente de Suprimentos",
-            severity: sev,
-            title: item.title,
-            description: item.message,
-            secondaryLabel: "Ver Alertas"
-          });
-
-          // Se for alerta de defasagem de CMV de prato, extrai dados para PriceAdjustment
-          if (item.referenceEntityType === "Dish" && item.payloadSerializedJson) {
-            try {
-              const payload = JSON.parse(item.payloadSerializedJson);
-              if (payload.DishName && payload.SuggestedPrice) {
-                const targetMargin = payload.TargetMarginPercent || 30;
-                const ingredientCost = payload.SuggestedPrice * (1 - targetMargin / 100);
-                const currentPrice = payload.CurrentCmvPercent > 0
-                  ? Number((ingredientCost / (payload.CurrentCmvPercent / 100)).toFixed(2))
-                  : payload.SuggestedPrice;
-                priceAdjustments.push({
-                  id: `adj-${item.id}`,
-                  name: payload.DishName,
-                  from: currentPrice,
-                  to: Number(payload.SuggestedPrice),
-                  direction: payload.SuggestedPrice >= currentPrice ? "up" : "down",
-                  reason: payload.Message || `Reajuste para manter margem de ${targetMargin}%`
-                });
-              }
-            } catch {
-              // Ignora caso payload não seja parseável
-            }
-          }
-        }
-      }
-
-      data.value = { ...metricsResponse, aiInsights, priceAdjustments };
+      const scopedAlerts = alertCenter.alerts.value.filter(item => !requiresSelection.value || item.restaurantId === restaurantId.value);
+      const aiInsights = alertCenter.error.value
+        ? errorCards(alertCenter.error.value)
+        : aggregateAgentCards(scopedAlerts).map(card => ({ ...card, id: `${card.agent}-summary`, icon: card.agent }));
+      data.value = { ...metricsResponse, aiInsights, priceAdjustments: [] };
       available.value = true;
     } catch (err: any) {
       if (requestGeneration !== generation) return;

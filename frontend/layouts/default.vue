@@ -5,6 +5,8 @@ const isLoginPage = computed(() => route.path === "/login");
 const showContent = computed(() => isLoginPage.value || authReady.value);
 
 const themeStore = useThemeStore();
+const authStore = useAuthStore();
+const canShowAssistant = computed(() => !isLoginPage.value && authReady.value && ["Admin", "Manager"].includes(authStore.userRole || "") && Boolean(authStore.currentUser?.restaurantId));
 const isSidebarOpen = ref(false);
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value;
@@ -47,6 +49,9 @@ provide("toggleSidebar", toggleSidebar);
             <slot />
           </main>
           <AppFooter />
+          <ClientOnly>
+            <AssistantMascot v-if="canShowAssistant" />
+          </ClientOnly>
         </div>
       </template>
     </template>
