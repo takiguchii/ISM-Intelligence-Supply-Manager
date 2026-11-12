@@ -120,10 +120,10 @@ export function useWaiter() {
       return saved.id
     } finally { isSubmitting.value = false; mutationInFlight = false }
   }
-  async function confirmDelivery(id: number) {
+  async function confirmDelivery(id: number, expectedVersion?: number) {
     if (mutationInFlight) return false
     const order = rawOrders.value.find(item => item.id === id)
-    if (!order || order.status !== OrderStatus.Ready) return false
+    if (!order || order.status !== OrderStatus.Ready || (expectedVersion !== undefined && order.version !== expectedVersion)) return false
     revision++
     mutationInFlight = true
     try {

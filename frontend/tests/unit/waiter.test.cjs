@@ -62,3 +62,11 @@ test('valida mesa, limite de itens e observações antes da API', async () => {
   const { api, calls } = setup(); await assert.rejects(api.submitOrder()); fill(api);
   api.cart.value[0].observation = 'a'.repeat(501); await assert.rejects(api.submitOrder()); assert.equal(calls.length, 0);
 });
+test('não entrega uma versão alterada enquanto a confirmação estava aberta', async () => {
+  const { api, service } = setup(); await api.refreshOrders();
+  const versionShownInDialog = api.orders.value[0].version;
+  service.list = async () => [order(2, 5)]; await api.refreshOrders();
+  let writes = 0; service.updateStatus = async () => { writes++; return order(3, 6); };
+  assert.equal(await api.confirmDelivery(10, versionShownInDialog), false);
+  assert.equal(writes, 0); assert.equal(api.orders.value[0].status, 'Pronto');
+});

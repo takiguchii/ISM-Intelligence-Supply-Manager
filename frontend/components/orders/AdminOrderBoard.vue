@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { useConfirmation } from "~/composables/useConfirmation";
 import { orderService, OrderStatus, type Order, type OrderPage, type UpdateOrder } from "~/services/modules/orders/orderService";
+
+const confirmation = useConfirmation();
 
 const page = ref<OrderPage | null>(null);
 const loading = ref(false);
@@ -96,8 +99,8 @@ function nextStatus(order: Order): { status: OrderStatus; label: string } | null
 
 async function changeStatus(order: Order, status: OrderStatus) {
   if (saving.value) return;
-  if (status === OrderStatus.Paid && !window.confirm(`Confirmar recebimento de ${money(total(order))}?`)) return;
-  if (status === OrderStatus.Cancelled && !window.confirm(`Cancelar o pedido #${order.id}?`)) return;
+  if (status === OrderStatus.Paid && !(await confirmation.ask({ title: "Registrar pagamento", message: "Confirme apenas se o pagamento desta comanda já foi recebido.", context: `Pedido #${order.id} · Mesa ${order.tableReference}`, detail: `Valor recebido: ${money(total(order))}`, confirmLabel: "Confirmar recebimento", tone: "success" }))) return;
+  if (status === OrderStatus.Cancelled && !(await confirmation.ask({ title: "Cancelar pedido", message: "O pedido será encerrado como cancelado. Confira a comanda antes de continuar.", context: `Pedido #${order.id} · Mesa ${order.tableReference}`, confirmLabel: "Cancelar pedido", tone: "danger" }))) return;
   saving.value = true;
   error.value = "";
   try {
@@ -141,13 +144,10 @@ async function saveEdit() {
 }
 
 async function remove(order: Order) {
-  if (
-    saving.value ||
-    !window.confirm(
-      `Excluir permanentemente o pedido #${order.id}? Esta ação afeta os indicadores financeiros.`
-    )
-  )
-    return;
+  if (saving.value || !(await confirmation.ask({
+    title: "Excluir pedido", message: "Esta exclusão é permanente e afeta os indicadores financeiros do restaurante.",
+    context: `Pedido #${order.id} · Mesa ${order.tableReference}`, confirmLabel: "Excluir pedido", tone: "danger"
+  }))) return;
   saving.value = true;
   error.value = "";
   try {
@@ -165,6 +165,7 @@ onMounted(() => refresh());
 </script>
 
 <template>
+  <ConfirmationDialog :state="confirmation.state" @confirm="confirmation.accept" @cancel="confirmation.cancel" />
   <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 py-8 space-y-6">
     <!-- Header -->
     <div class="flex flex-wrap items-center justify-between gap-4">

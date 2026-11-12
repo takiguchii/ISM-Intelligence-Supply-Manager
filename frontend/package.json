@@ -9,7 +9,8 @@
     "postinstall": "nuxt prepare",
     "test:waiter": "node --test tests/unit/waiter.test.cjs",
     "test:system-alerts": "node --experimental-strip-types --test tests/unit/systemAlerts.test.ts",
-    "test:kitchen": "node --test tests/unit/kitchen.test.cjs"
+    "test:kitchen": "node --test tests/unit/kitchen.test.cjs",
+    "test:confirmation": "node --test tests/unit/confirmation.test.cjs"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",

@@ -65,6 +65,12 @@ ao final pela API administrativa.
   sem transbordamento horizontal. A dimensão temporária foi restaurada.
 
 O pedido `#363` fica identificado como teste no banco local para inspeção.
+Atualização posterior: a confirmação nativa foi substituída por
+`ConfirmationDialog`. No pedido de teste `#367`, Voltar e Escape preservaram
+o pedido, e Confirmar entrega pela interface persistiu Completed com versão 3.
+Esse pedido foi removido após a validação. A limitação de automação do clique
+final descrita acima foi resolvida por essa substituição.
+
 Esta revisão não representa homologação de todos os navegadores, volumes de
 produção ou de todos os módulos que já existiam antes da branch.
 

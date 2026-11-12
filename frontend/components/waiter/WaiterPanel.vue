@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { useConfirmation } from "~/composables/useConfirmation";
 import { computed, ref, watch, onUnmounted } from 'vue'
 import { useWaiter, isActiveOrder, waiterError, type WaiterStatus } from '~/composables/useWaiter'
+
+const confirmation = useConfirmation();
 
 type View = 'home' | 'service' | 'orders' | 'menu'
 
@@ -242,11 +245,17 @@ async function deliverOrder(id: number) {
   const order = orders.value.find(item => item.id === id)
   if (!order || order.status !== 'Pronto') return
 
-  if (process.client && !window.confirm(`Confirmar entrega do pedido #${id}?`)) return
+  if (!(await confirmation.ask({
+    title: 'Confirmar entrega',
+    message: 'Confirme que todos os itens deste pedido já foram entregues à mesa.',
+    context: `Pedido #${id} · Mesa ${order.tableReference}`,
+    detail: `${order.items.map(item => `${item.quantity}× ${item.name}`).join(', ')} · Total: ${money(total(order.items))}`,
+    confirmLabel: 'Confirmar entrega', tone: 'success'
+  }))) return
 
   deliveringOrderId.value = id
   try {
-    const delivered = await confirmDelivery(id)
+    const delivered = await confirmDelivery(id, order.version)
     if (delivered) markStatusChange(id)
     orderFeedback.value = delivered ? `Pedido #${id} marcado como entregue.` : 'Atualize a lista e verifique o status do pedido.'
   } catch (error) { orderFeedback.value = waiterError(error) }
@@ -259,6 +268,7 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <ConfirmationDialog :state="confirmation.state" @confirm="confirmation.accept" @cancel="confirmation.cancel" />
   <main class="waiter-page">
     <header class="flex flex-wrap items-start justify-between gap-4">
       <div>

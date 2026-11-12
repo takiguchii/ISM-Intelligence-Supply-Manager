@@ -70,7 +70,11 @@ permissões e o isolamento entre restaurantes, além das restrições da interfa
   `/funcionarios`, redirecionamento do login autenticado e layout mobile de
   390 × 844 sem transbordamento horizontal.
 
-A confirmação nativa da entrega na interface do garçom mantém a limitação de
-automação registrada na revisão anterior. Esta entrega não a substitui.
+A confirmação da entrega foi posteriormente substituída por um modal próprio
+compartilhado, com suporte a tema claro/escuro e mobile. O fluxo de voltar,
+fechar por Escape e confirmar a entrega foi validado no navegador, incluindo
+a persistência do status no banco. Isso resolve a limitação da confirmação
+nativa registrada na revisão anterior. A mesma apresentação é usada nas
+confirmações de pagamento, cancelamento e exclusão do sistema.
 O polling ainda consulta a listagem completa de pedidos; para grandes volumes,
 convém evoluir para uma consulta incremental ou apenas de pedidos ativos.
