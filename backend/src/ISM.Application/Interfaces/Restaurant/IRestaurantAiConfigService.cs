@@ -16,4 +16,8 @@ public interface IRestaurantAiConfigService
 
     Task<TestRestaurantAiPhotoConfigResultDto> TestMyRestaurantAsync(int currentRestaurantId, TestRestaurantAiPhotoConfigRequestDto? req, CancellationToken ct) =>
         TestByRestaurantIdAsync(currentRestaurantId, req, ct);
+
+    Task<RestaurantAgentConfigDto> GetAgentByRestaurantIdAsync(int restaurantId, CancellationToken ct);
+    Task UpdateAgentByRestaurantIdAsync(int restaurantId, UpdateRestaurantAgentConfigDto dto, CancellationToken ct);
+    Task<TestRestaurantAgentConfigResultDto> TestAgentByRestaurantIdAsync(int restaurantId, TestRestaurantAgentConfigRequestDto? req, CancellationToken ct);
 }

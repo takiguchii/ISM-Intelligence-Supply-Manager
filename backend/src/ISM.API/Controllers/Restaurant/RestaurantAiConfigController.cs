@@ -122,4 +122,45 @@ public sealed class RestaurantAiConfigController : ControllerBase
         var result = await _service.TestByRestaurantIdAsync(restaurantId, req, ct);
         return Ok(result);
     }
+
+    [HttpGet("api/me/restaurant/agent-config")]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
+    public async Task<ActionResult<RestaurantAgentConfigDto>> GetMyAgentConfig(CancellationToken ct)
+        => _currentUser.RestaurantId.HasValue
+            ? Ok(await _service.GetAgentByRestaurantIdAsync(_currentUser.RestaurantId.Value, ct))
+            : BadRequest("Usuário não pertence a um restaurante.");
+
+    [HttpPut("api/me/restaurant/agent-config")]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
+    public async Task<ActionResult> UpdateMyAgentConfig([FromBody] UpdateRestaurantAgentConfigDto dto, CancellationToken ct)
+    {
+        if (!_currentUser.RestaurantId.HasValue) return BadRequest("Usuário não pertence a um restaurante.");
+        try { await _service.UpdateAgentByRestaurantIdAsync(_currentUser.RestaurantId.Value, dto, ct); return NoContent(); }
+        catch (InvalidOperationException ex) { return BadRequest(ex.Message); }
+    }
+
+    [HttpPost("api/me/restaurant/agent-config/test")]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
+    public async Task<ActionResult<TestRestaurantAgentConfigResultDto>> TestMyAgentConfig([FromBody] TestRestaurantAgentConfigRequestDto? req, CancellationToken ct)
+        => _currentUser.RestaurantId.HasValue
+            ? Ok(await _service.TestAgentByRestaurantIdAsync(_currentUser.RestaurantId.Value, req, ct))
+            : BadRequest("Usuário não pertence a um restaurante.");
+
+    [HttpGet("api/restaurants/{restaurantId:int}/agent-config")]
+    [Authorize(Policy = IsmPolicies.SuperAdminOnly)]
+    public async Task<ActionResult<RestaurantAgentConfigDto>> GetAgentConfig(int restaurantId, CancellationToken ct)
+        => Ok(await _service.GetAgentByRestaurantIdAsync(restaurantId, ct));
+
+    [HttpPut("api/restaurants/{restaurantId:int}/agent-config")]
+    [Authorize(Policy = IsmPolicies.SuperAdminOnly)]
+    public async Task<ActionResult> UpdateAgentConfig(int restaurantId, [FromBody] UpdateRestaurantAgentConfigDto dto, CancellationToken ct)
+    {
+        try { await _service.UpdateAgentByRestaurantIdAsync(restaurantId, dto, ct); return NoContent(); }
+        catch (InvalidOperationException ex) { return BadRequest(ex.Message); }
+    }
+
+    [HttpPost("api/restaurants/{restaurantId:int}/agent-config/test")]
+    [Authorize(Policy = IsmPolicies.SuperAdminOnly)]
+    public async Task<ActionResult<TestRestaurantAgentConfigResultDto>> TestAgentConfig(int restaurantId, [FromBody] TestRestaurantAgentConfigRequestDto? req, CancellationToken ct)
+        => Ok(await _service.TestAgentByRestaurantIdAsync(restaurantId, req, ct));
 }

@@ -157,6 +157,16 @@ export interface TestRestaurantAiPhotoConfigRequestDto {
   overrideModel?: string | null;
 }
 
+export interface RestaurantAgentConfigDto {
+  hasApiKey: boolean;
+  keyLast4Digits?: string | null;
+  apiEndpoint?: string | null;
+  model?: string | null;
+}
+
+export interface UpdateRestaurantAgentConfigDto { apiKey?: string | null; apiEndpoint?: string | null; model?: string | null; clearKey?: boolean; }
+export interface TestRestaurantAgentConfigResultDto extends TestRestaurantAiPhotoConfigResultDto {}
+
 export const GEMINI_DEFAULT_ENDPOINT = "https://generativelanguage.googleapis.com/v1";
 
 export const MODEL_PRESETS = [
@@ -247,6 +257,15 @@ export const aiConfigService = {
       req ?? null
     );
   }
+};
+
+export const agentConfigService = {
+  getMyRestaurant: () => jsonAuthRequest<RestaurantAgentConfigDto>("GET", "/api/me/restaurant/agent-config"),
+  updateMyRestaurant: (dto: UpdateRestaurantAgentConfigDto) => jsonAuthRequest<void>("PUT", "/api/me/restaurant/agent-config", dto),
+  testMyRestaurant: (req?: TestRestaurantAiPhotoConfigRequestDto) => jsonAuthRequest<TestRestaurantAgentConfigResultDto>("POST", "/api/me/restaurant/agent-config/test", req ?? null),
+  getByRestaurantId: (id: number) => jsonAuthRequest<RestaurantAgentConfigDto>("GET", `/api/restaurants/${id}/agent-config`),
+  updateByRestaurantId: (id: number, dto: UpdateRestaurantAgentConfigDto) => jsonAuthRequest<void>("PUT", `/api/restaurants/${id}/agent-config`, dto),
+  testByRestaurantId: (id: number, req?: TestRestaurantAiPhotoConfigRequestDto) => jsonAuthRequest<TestRestaurantAgentConfigResultDto>("POST", `/api/restaurants/${id}/agent-config/test`, req ?? null)
 };
 
 

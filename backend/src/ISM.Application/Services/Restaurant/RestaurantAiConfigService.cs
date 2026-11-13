@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -338,6 +339,80 @@ public sealed class RestaurantAiConfigService : IRestaurantAiConfigService
             HttpStatusFromProvider = httpStatus,
             LatencyMs = stopwatch.ElapsedMilliseconds
         };
+    }
+
+    public async Task<RestaurantAgentConfigDto> GetAgentByRestaurantIdAsync(int restaurantId, CancellationToken ct)
+    {
+        var restaurant = await GetRestaurantOrThrowAsync(restaurantId, ct);
+        var hasKey = !string.IsNullOrWhiteSpace(restaurant.AgentApiKey);
+        return new RestaurantAgentConfigDto
+        {
+            HasApiKey = hasKey,
+            KeyLast4Digits = hasKey && restaurant.AgentApiKey!.Length >= 4 ? restaurant.AgentApiKey[^4..] : null,
+            ApiEndpoint = restaurant.AgentApiEndpoint,
+            Model = restaurant.AgentModel ?? "gemma:1b"
+        };
+    }
+
+    public async Task UpdateAgentByRestaurantIdAsync(int restaurantId, UpdateRestaurantAgentConfigDto dto, CancellationToken ct)
+    {
+        var restaurant = await GetRestaurantOrThrowAsync(restaurantId, ct);
+        if (dto.ClearKey) restaurant.AgentApiKey = null;
+        else if (dto.ApiKey is not null) restaurant.AgentApiKey = string.IsNullOrWhiteSpace(dto.ApiKey) ? null : dto.ApiKey.Trim();
+        if (dto.ApiEndpoint is not null) restaurant.AgentApiEndpoint = string.IsNullOrWhiteSpace(dto.ApiEndpoint) ? null : NormalizeAgentEndpoint(dto.ApiEndpoint);
+        if (dto.Model is not null) restaurant.AgentModel = string.IsNullOrWhiteSpace(dto.Model) ? "gemma:1b" : dto.Model.Trim();
+        restaurant.UpdatedAtUtc = DateTime.UtcNow;
+        _restaurantRepository.Update(restaurant);
+        await _restaurantRepository.SaveChangesAsync(ct);
+    }
+
+    public async Task<TestRestaurantAgentConfigResultDto> TestAgentByRestaurantIdAsync(int restaurantId, TestRestaurantAgentConfigRequestDto? req, CancellationToken ct)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var restaurant = await GetRestaurantOrThrowAsync(restaurantId, ct);
+        var endpoint = NormalizeAgentEndpoint(string.IsNullOrWhiteSpace(req?.OverrideEndpoint) ? restaurant.AgentApiEndpoint : req!.OverrideEndpoint);
+        var model = string.IsNullOrWhiteSpace(req?.OverrideModel) ? restaurant.AgentModel ?? "gemma:1b" : req!.OverrideModel!.Trim();
+        var apiKey = string.IsNullOrWhiteSpace(req?.OverrideApiKey) ? restaurant.AgentApiKey?.Trim() : req!.OverrideApiKey!.Trim();
+        var provider = endpoint.Contains("11434", StringComparison.OrdinalIgnoreCase) ? "Ollama" : endpoint.Contains("anthropic.com", StringComparison.OrdinalIgnoreCase) ? "Anthropic Claude" : "API compatível";
+        if (provider != "Ollama" && string.IsNullOrWhiteSpace(apiKey)) return AgentFailure(provider, endpoint, model, "Informe a chave de API para este endpoint.", stopwatch);
+
+        try
+        {
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(RequestTimeoutSeconds) };
+            using var request = new HttpRequestMessage(HttpMethod.Post, provider == "Ollama" ? $"{endpoint}/api/chat" : provider == "Anthropic Claude" ? $"{endpoint}/messages" : $"{endpoint}/chat/completions");
+            if (provider == "Anthropic Claude") { request.Headers.Add("x-api-key", apiKey); request.Headers.Add("anthropic-version", "2023-06-01"); }
+            else if (provider != "Ollama") request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+            object payload = provider == "Ollama"
+                ? new { model, stream = false, messages = new[] { new { role = "user", content = "ping responda somente pong" } } }
+                : provider == "Anthropic Claude"
+                    ? new { model, max_tokens = 8, messages = new[] { new { role = "user", content = "ping responda somente pong" } } }
+                    : new { model, messages = new[] { new { role = "user", content = "ping responda somente pong" } }, max_tokens = 8 };
+            request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+            using var response = await client.SendAsync(request, ct);
+            var body = await response.Content.ReadAsStringAsync(ct);
+            stopwatch.Stop();
+            var valid = response.IsSuccessStatusCode && ((provider == "Ollama" && body.Contains("\"message\"", StringComparison.OrdinalIgnoreCase)) || (provider == "Anthropic Claude" && body.Contains("\"content\"", StringComparison.OrdinalIgnoreCase)) || body.Contains("\"choices\"", StringComparison.OrdinalIgnoreCase));
+            return new TestRestaurantAgentConfigResultDto { Success = valid, Provider = provider, NormalizedEndpoint = endpoint, NormalizedModel = model, ErrorMessage = valid ? null : $"Falha na validação: HTTP {(int)response.StatusCode}.", HttpStatusFromProvider = (int)response.StatusCode, LatencyMs = stopwatch.ElapsedMilliseconds };
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or UriFormatException)
+        {
+            return AgentFailure(provider, endpoint, model, ex is TaskCanceledException ? "Timeout ao conectar ao provedor." : $"Erro de conexão: {ex.Message}", stopwatch);
+        }
+    }
+
+    private static string NormalizeAgentEndpoint(string? endpoint)
+    {
+        if (string.IsNullOrWhiteSpace(endpoint)) return "http://127.0.0.1:11434";
+        var value = endpoint.Trim();
+        if (!value.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && !value.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) value = "https://" + value;
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https")) throw new InvalidOperationException("Endpoint inválido. Use uma URL HTTP ou HTTPS.");
+        return value.TrimEnd('/');
+    }
+
+    private static TestRestaurantAgentConfigResultDto AgentFailure(string provider, string endpoint, string model, string error, Stopwatch stopwatch)
+    {
+        stopwatch.Stop();
+        return new TestRestaurantAgentConfigResultDto { Success = false, Provider = provider, NormalizedEndpoint = endpoint, NormalizedModel = model, ErrorMessage = error, LatencyMs = stopwatch.ElapsedMilliseconds };
     }
 
     private async Task<RestaurantEntity> GetRestaurantOrThrowAsync(int restaurantId, CancellationToken ct)
