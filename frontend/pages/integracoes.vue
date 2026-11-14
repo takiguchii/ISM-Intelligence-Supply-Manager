@@ -6,6 +6,7 @@ import { apiClientWithAuth } from "~/services/api/client";
 import { useAuthStore } from "~/stores/auth";
 import ImportConfirmationStep from "~/components/import/ImportConfirmationStep.vue";
 import ImportHistoryStep from "~/components/import/ImportHistoryStep.vue";
+import { ifoodService, type IFoodConfigDto, type TestIFoodConfigResultDto } from "~/services/modules/integrations/ifoodService";
 
 
 const runtimeConfig = useRuntimeConfig();
@@ -132,6 +133,30 @@ function openImport() {
   document.getElementById("dropzone-card")?.scrollIntoView({ behavior: "smooth" });
 }
 
+// ===== iFood =====
+const ifoodPanelOpen = ref(false);
+const ifoodConfig = ref<IFoodConfigDto | null>(null);
+const ifoodForm = ref({ clientId: "", clientSecret: "", merchantId: "" });
+const ifoodSaving = ref(false);
+const ifoodTesting = ref(false);
+const ifoodTestResult = ref<TestIFoodConfigResultDto | null>(null);
+
+async function loadIFoodConfig() {
+  ifoodConfig.value = await ifoodService.getConfig();
+}
+async function saveIFoodConfig() {
+  ifoodSaving.value = true;
+  try {
+    await ifoodService.updateConfig(ifoodForm.value);
+    await loadIFoodConfig();
+  } finally { ifoodSaving.value = false; }
+}
+async function testIFoodConfig() {
+  ifoodTesting.value = true;
+  try { ifoodTestResult.value = await ifoodService.testConfig(); }
+  finally { ifoodTesting.value = false; }
+}
+
 const handleLogout = () => {
   authStore.logout();
   router.push("/login");
@@ -154,6 +179,7 @@ onMounted(async () => {
   } else {
     targetRestaurantId.value = authStore.currentUser?.restaurantId ?? null;
   }
+  await loadIFoodConfig();
 });
 </script>
 
@@ -373,6 +399,10 @@ onMounted(async () => {
               <button v-if="skill.id === 'planilhas'" type="button" @click="openImport" class="w-full py-2.5 rounded-xl border border-zinc-800 bg-[#18181b] hover:bg-zinc-800 text-xs font-semibold text-zinc-200">
                 Importar arquivo
               </button>
+              <button v-else-if="skill.id === 'ifood'" type="button" @click="ifoodPanelOpen = true"
+                class="w-full py-2.5 rounded-xl border border-zinc-800 bg-[#18181b] hover:bg-zinc-800 text-xs font-semibold text-zinc-200">
+                {{ ifoodConfig?.hasCredentials ? "Conectado — gerenciar" : "Configurar" }}
+              </button>
               <p v-else class="text-xs text-zinc-500">Esta integração ainda não está disponível.</p>
             </div>
           </div>
@@ -411,6 +441,24 @@ onMounted(async () => {
 
         <ImportHistoryStep :restaurant-id="targetRestaurantId" :refresh-token="historyRefreshToken" />
       </section>
+
+      <!-- MODAL: Conectar com o iFood -->
+      <div v-if="ifoodPanelOpen" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50" @click.self="ifoodPanelOpen = false">
+        <div class="bg-[#121214] border border-zinc-800 rounded-2xl p-6 w-full max-w-md space-y-4">
+          <h3 class="text-white font-bold">Conectar com o iFood</h3>
+          <input v-model="ifoodForm.clientId" placeholder="Client ID" class="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white" />
+          <input v-model="ifoodForm.clientSecret" type="password" placeholder="Client Secret" class="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white" />
+          <input v-model="ifoodForm.merchantId" placeholder="Merchant ID" class="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white" />
+          <div class="flex gap-2">
+            <button @click="saveIFoodConfig" :disabled="ifoodSaving" class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-xs font-semibold disabled:opacity-50">Salvar</button>
+            <button @click="testIFoodConfig" :disabled="ifoodTesting" class="px-4 py-2 rounded-lg border border-zinc-700 text-xs font-semibold text-zinc-200 disabled:opacity-50">Testar conexão</button>
+            <button @click="ifoodPanelOpen = false" class="px-4 py-2 rounded-lg text-xs text-zinc-400">Fechar</button>
+          </div>
+          <p v-if="ifoodTestResult" :class="ifoodTestResult.success ? 'text-emerald-400' : 'text-red-400'" class="text-xs">
+            {{ ifoodTestResult.success ? "Conectado com sucesso!" : ifoodTestResult.errorMessage }}
+          </p>
+        </div>
+      </div>
 
 
   </div>
