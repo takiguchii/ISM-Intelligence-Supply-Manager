@@ -219,7 +219,7 @@ watch(tab, value => {
     <form v-if="loaded && !active" class="flex flex-wrap items-end gap-3 rounded-2xl border border-zinc-200 p-4 dark:border-zinc-700" @submit.prevent="run(openShift)">
       <label class="grid gap-1 text-sm font-medium">
         Saldo inicial em dinheiro
-        <el-input-number v-model="openingAmount" :precision="2" :min="0" :controls="false" />
+        <el-input-number v-model="openingAmount" :precision="2" :step="0.01" :min="0" :controls="false" />
       </label>
       <el-button type="primary" native-type="submit" :loading="busy">Abrir turno</el-button>
     </form>
@@ -317,11 +317,11 @@ watch(tab, value => {
               </el-select>
             </label>
             <label class="grid gap-1">Valor da parcela
-              <el-input-number v-model="payment.amount" :precision="2" :min="0" :controls="false" class="!w-full" />
+              <el-input-number v-model="payment.amount" :precision="2" :step="0.01" :min="0" :controls="false" class="!w-full" />
             </label>
             <template v-if="payment.method === PaymentMethod.Cash">
               <label class="grid gap-1">Dinheiro entregue
-                <el-input-number v-model="payment.tendered" :precision="2" :min="0" :controls="false" class="!w-full" />
+                <el-input-number v-model="payment.tendered" :precision="2" :step="0.01" :min="0" :controls="false" class="!w-full" />
               </label>
               <p class="self-end py-2">Troco {{ cashMoney(Math.max(0, (payment.tendered ?? 0) - (payment.amount || 0))) }}</p>
             </template>
@@ -341,7 +341,7 @@ watch(tab, value => {
             </el-select>
           </label>
           <label class="grid gap-1">Valor
-            <el-input-number v-model="movementAmount" :precision="2" :min="0" :controls="false" :disabled="busy" />
+            <el-input-number v-model="movementAmount" :precision="2" :step="0.01" :min="0" :controls="false" :disabled="busy" />
           </label>
           <label class="grid gap-1">Motivo
             <el-input v-model="reason" maxlength="250" :disabled="busy" />
@@ -351,7 +351,7 @@ watch(tab, value => {
         <template v-else-if="dialog === 'close' && active">
           <p>Dinheiro esperado {{ cashMoney(active.expectedCash) }}</p>
           <label class="grid gap-1">Dinheiro contado
-            <el-input-number v-model="countedAmount" :precision="2" :min="0" :controls="false" :disabled="busy" />
+            <el-input-number v-model="countedAmount" :precision="2" :step="0.01" :min="0" :controls="false" :disabled="busy" />
           </label>
           <p v-if="countedAmount != null">Diferença {{ cashMoney(countedAmount - active.expectedCash) }}</p>
         </template>
