@@ -294,69 +294,87 @@ watch(tab, value => {
       </el-tab-pane>
     </el-tabs>
 
-    <el-dialog v-if="dialogOpen" v-model="dialogOpen" :title="dialogTitle" width="min(94vw, 640px)" :close-on-click-modal="false" :close-on-press-escape="!busy" :show-close="!busy">
-      <form class="space-y-4" @submit.prevent="run(dialog === 'payment' ? confirmPayment : confirmShiftAction, true)">
-        <el-alert v-if="dialogError" :title="dialogError" type="error" show-icon :closable="false" />
-        <template v-if="dialog === 'payment' && selected">
-          <div>
-            <h2 class="font-semibold">Pedido #{{ selected.id }} · Comanda {{ selected.tableReference }}</h2>
-            <ul class="my-2 space-y-1">
-              <li v-for="(item, index) in selected.items" :key="index" class="flex justify-between gap-3">
-                <span>{{ item.quantity }}× {{ item.dishName }}</span>
-                <span>{{ cashMoney(item.unitPrice * item.quantity) }}</span>
-              </li>
-            </ul>
-            <p class="text-lg font-semibold">Total {{ cashMoney(orderTotal(selected) / 100) }}</p>
-          </div>
-          <fieldset v-for="(payment, index) in payments" :key="index" :disabled="busy" class="grid gap-2 rounded-xl border border-zinc-200 p-3 sm:grid-cols-2 dark:border-zinc-700">
-            <legend class="px-1 text-sm font-medium">Parcela {{ index + 1 }}</legend>
-            <label class="grid gap-1">Forma de pagamento
-              <el-select v-model="payment.method">
-                <el-option v-for="method in methods" :key="method" :label="paymentLabels[method]" :value="method"
-                  :disabled="payments.some((part, partIndex) => partIndex !== index && part.method === method)" />
+    <el-dialog class="ism-cash-dialog" append-to-body align-center v-if="dialogOpen" v-model="dialogOpen" :title="dialogTitle" :width="dialog === 'payment' ? 'min(94vw, 680px)' : 'min(94vw, 480px)'" :close-on-click-modal="false" :close-on-press-escape="!busy" :show-close="!busy">
+      <form class="cash-dialog-form" @submit.prevent="run(dialog === 'payment' ? confirmPayment : confirmShiftAction, true)">
+        <div class="cash-dialog-body space-y-4">
+          <el-alert v-if="dialogError" :title="dialogError" type="error" show-icon :closable="false" />
+          <template v-if="dialog === 'payment' && selected">
+            <div class="cash-panel cash-panel-accent">
+              <h2 class="text-sm font-semibold">Pedido #{{ selected.id }} · Comanda {{ selected.tableReference }}</h2>
+              <ul class="my-3 max-h-32 space-y-2 overflow-auto text-sm">
+                <li v-for="(item, index) in selected.items" :key="index" class="flex justify-between gap-3">
+                  <span>{{ item.quantity }}× {{ item.dishName }}</span>
+                  <span class="shrink-0 tabular-nums">{{ cashMoney(item.unitPrice * item.quantity) }}</span>
+                </li>
+              </ul>
+              <div class="cash-total"><span>Total do pedido</span><strong>{{ cashMoney(orderTotal(selected) / 100) }}</strong></div>
+            </div>
+            <section v-for="(payment, index) in payments" :key="index" class="cash-panel space-y-3"
+              :aria-label="`Pagamento ${index + 1}`">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <h3 class="font-semibold">Pagamento {{ index + 1 }}</h3>
+                <el-button v-if="payments.length > 1" text type="danger" :disabled="busy" @click="payments.splice(index, 1)">
+                  Remover
+                </el-button>
+              </div>
+              <fieldset :disabled="busy" class="grid min-w-0 gap-3 sm:grid-cols-2">
+                <label class="cash-field">Forma de pagamento
+                  <el-select popper-class="ism-cash-options" v-model="payment.method" :disabled="busy">
+                    <el-option v-for="method in methods" :key="method" :label="paymentLabels[method]" :value="method"
+                      :disabled="payments.some((part, partIndex) => partIndex !== index && part.method === method)" />
+                  </el-select>
+                </label>
+                <label class="cash-field">Valor do pagamento
+                  <el-input-number v-model="payment.amount" :precision="2" :step="0.01" :min="0" :controls="false" :disabled="busy" />
+                </label>
+                <template v-if="payment.method === PaymentMethod.Cash">
+                  <label class="cash-field">Dinheiro entregue
+                    <el-input-number v-model="payment.tendered" :precision="2" :step="0.01" :min="0" :controls="false" :disabled="busy" />
+                  </label>
+                  <div class="cash-result self-end" aria-live="polite">
+                    <span>Troco</span>
+                    <strong>{{ cashMoney(Math.max(0, (payment.tendered ?? 0) - (payment.amount || 0))) }}</strong>
+                  </div>
+                </template>
+              </fieldset>
+            </section>
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <el-button :disabled="busy || payments.length === methods.length" @click="addPayment">Dividir pagamento</el-button>
+              <p class="cash-result" aria-live="polite">
+                <span>{{ allocated > orderTotal(selected) ? 'Valor excedente' : 'Restante' }}</span>
+                <strong>{{ cashMoney(Math.abs(orderTotal(selected) - (allocated || 0)) / 100) }}</strong>
+              </p>
+            </div>
+          </template>
+
+          <template v-else-if="dialog === 'movement'">
+            <label class="cash-field">Tipo de movimentação
+              <el-select popper-class="ism-cash-options" v-model="movementKind" :disabled="busy">
+                <el-option label="Suprimento" :value="CashMovementKind.Deposit" />
+                <el-option label="Sangria" :value="CashMovementKind.Withdrawal" />
               </el-select>
             </label>
-            <label class="grid gap-1">Valor da parcela
-              <el-input-number v-model="payment.amount" :precision="2" :step="0.01" :min="0" :controls="false" class="!w-full" />
+            <label class="cash-field">Valor em dinheiro
+              <el-input-number v-model="movementAmount" :precision="2" :step="0.01" :min="0" :controls="false" :disabled="busy" />
             </label>
-            <template v-if="payment.method === PaymentMethod.Cash">
-              <label class="grid gap-1">Dinheiro entregue
-                <el-input-number v-model="payment.tendered" :precision="2" :step="0.01" :min="0" :controls="false" class="!w-full" />
-              </label>
-              <p class="self-end py-2">Troco {{ cashMoney(Math.max(0, (payment.tendered ?? 0) - (payment.amount || 0))) }}</p>
-            </template>
-            <button v-if="payments.length > 1" type="button" class="justify-self-start text-red-600" @click="payments.splice(index, 1)">Remover parcela</button>
-          </fieldset>
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <el-button :disabled="busy || payments.length === methods.length" @click="addPayment">Dividir pagamento</el-button>
-            <p>Restante {{ cashMoney((orderTotal(selected) - (allocated || 0)) / 100) }}</p>
-          </div>
-        </template>
+            <label class="cash-field">Motivo
+              <el-input v-model="reason" type="textarea" :rows="3" maxlength="250" show-word-limit resize="vertical" :disabled="busy" />
+            </label>
+          </template>
 
-        <template v-else-if="dialog === 'movement'">
-          <label class="grid gap-1">Tipo
-            <el-select v-model="movementKind" :disabled="busy">
-              <el-option label="Suprimento" :value="CashMovementKind.Deposit" />
-              <el-option label="Sangria" :value="CashMovementKind.Withdrawal" />
-            </el-select>
-          </label>
-          <label class="grid gap-1">Valor
-            <el-input-number v-model="movementAmount" :precision="2" :step="0.01" :min="0" :controls="false" :disabled="busy" />
-          </label>
-          <label class="grid gap-1">Motivo
-            <el-input v-model="reason" maxlength="250" :disabled="busy" />
-          </label>
-        </template>
+          <template v-else-if="dialog === 'close' && active">
+            <div class="cash-panel cash-panel-accent cash-total"><span>Dinheiro esperado</span><strong>{{ cashMoney(active.expectedCash) }}</strong></div>
+            <label class="cash-field">Dinheiro contado
+              <el-input-number v-model="countedAmount" :precision="2" :step="0.01" :min="0" :controls="false" :disabled="busy" />
+            </label>
+            <div v-if="countedAmount != null" class="cash-result" aria-live="polite">
+              <span>Diferença no caixa</span>
+              <strong>{{ cashMoney(countedAmount - active.expectedCash) }}</strong>
+            </div>
+          </template>
 
-        <template v-else-if="dialog === 'close' && active">
-          <p>Dinheiro esperado {{ cashMoney(active.expectedCash) }}</p>
-          <label class="grid gap-1">Dinheiro contado
-            <el-input-number v-model="countedAmount" :precision="2" :step="0.01" :min="0" :controls="false" :disabled="busy" />
-          </label>
-          <p v-if="countedAmount != null">Diferença {{ cashMoney(countedAmount - active.expectedCash) }}</p>
-        </template>
-
-        <div class="flex justify-end">
+        </div>
+        <div class="cash-dialog-actions">
           <el-button :disabled="busy" @click="dialog = null">Voltar</el-button>
           <el-button type="primary" native-type="submit" :loading="busy">
             {{ dialog === 'payment' ? 'Confirmar recebimento' : dialog === 'close' ? 'Confirmar fechamento' : 'Registrar' }}
@@ -365,19 +383,177 @@ watch(tab, value => {
       </form>
     </el-dialog>
 
-    <el-dialog v-if="receiptOpen" v-model="receiptOpen" title="Comprovante interno" width="min(94vw, 480px)">
-      <div v-if="receipt" class="space-y-3">
-        <p class="font-semibold">Recebimento #{{ receipt.id }} · Pedido #{{ receipt.orderId }}</p>
-        <p>Turno #{{ receipt.shiftId }} · Operador #{{ receipt.operatorId }}</p>
-        <p>{{ cashDate(receipt.createdAtUtc) }}</p>
-        <ul class="space-y-2">
-          <li v-for="payment in receipt.payments" :key="payment.method">
-            {{ paymentLabels[payment.method] }} · {{ cashMoney(payment.amount) }}
-            <p v-if="payment.tendered !== null" class="text-sm text-zinc-500">Entregue {{ cashMoney(payment.tendered) }} · Troco {{ cashMoney(payment.change) }}</p>
-          </li>
-        </ul>
-        <p class="font-semibold">Total {{ cashMoney(receipt.payments.reduce((sum, part) => sum + part.amount, 0)) }}</p>
+    <el-dialog class="ism-cash-dialog" append-to-body align-center v-if="receiptOpen" v-model="receiptOpen" title="Comprovante interno" width="min(94vw, 480px)">
+      <div v-if="receipt" class="cash-dialog-form">
+        <div class="cash-dialog-body space-y-4">
+          <div class="cash-panel cash-panel-accent">
+            <h2 class="font-semibold">Pedido #{{ receipt.orderId }} · Recebimento #{{ receipt.id }}</h2>
+            <p class="cash-muted mt-1">Turno #{{ receipt.shiftId }} · Operador #{{ receipt.operatorId }}</p>
+            <p class="cash-muted">{{ cashDate(receipt.createdAtUtc) }}</p>
+          </div>
+          <div class="cash-panel">
+            <ul class="space-y-3">
+              <li v-for="payment in receipt.payments" :key="payment.method">
+                <div class="flex justify-between gap-3">
+                  <span>{{ paymentLabels[payment.method] }}</span>
+                  <strong class="tabular-nums">{{ cashMoney(payment.amount) }}</strong>
+                </div>
+                <p v-if="payment.tendered !== null" class="cash-muted mt-1 text-xs">
+                  Entregue {{ cashMoney(payment.tendered) }} · Troco {{ cashMoney(payment.change) }}
+                </p>
+              </li>
+            </ul>
+            <div class="cash-total mt-4 border-t pt-3">
+              <span>Total recebido</span>
+              <strong>{{ cashMoney(receipt.payments.reduce((sum, part) => sum + part.amount, 0)) }}</strong>
+            </div>
+          </div>
+        </div>
+        <div class="cash-dialog-actions">
+          <el-button type="primary" @click="receiptOpen = false">Fechar comprovante</el-button>
+        </div>
       </div>
     </el-dialog>
   </main>
 </template>
+
+<style>
+.ism-cash-dialog.el-dialog {
+  --cash-ink: var(--el-text-color-primary);
+  --cash-muted: var(--el-text-color-secondary);
+  --cash-border: var(--el-border-color-light);
+  --cash-panel: var(--el-fill-color-extra-light);
+  padding: 0;
+  border: 1px solid var(--cash-border);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: var(--el-box-shadow-dark);
+}
+
+html.dark .ism-cash-dialog,
+html.dark .ism-cash-options {
+  --el-bg-color: #18181b;
+  --el-bg-color-overlay: #18181b;
+  --el-text-color-primary: #fafafa;
+  --el-text-color-regular: #e4e4e7;
+  --el-text-color-secondary: #a1a1aa;
+  --el-text-color-placeholder: #a1a1aa;
+  --el-border-color: #52525b;
+  --el-border-color-light: #3f3f46;
+  --el-fill-color-blank: #18181b;
+  --el-fill-color-light: #27272a;
+  --el-fill-color-extra-light: #202024;
+  --el-fill-color: #2c2c31;
+  --el-color-primary-light-7: #284977;
+  --el-color-primary-light-9: #19273b;
+}
+
+.ism-cash-dialog .el-dialog__header {
+  margin: 0;
+  padding: 18px 54px 16px 22px;
+  border-bottom: 1px solid var(--cash-border);
+}
+
+.ism-cash-dialog .el-dialog__title {
+  font-size: 19px;
+  font-weight: 650;
+  color: var(--cash-ink);
+}
+
+.ism-cash-dialog .el-dialog__headerbtn {
+  height: 54px;
+}
+
+.ism-cash-dialog .cash-dialog-form {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(90dvh - 70px);
+  color: var(--cash-ink);
+}
+
+.ism-cash-dialog .cash-dialog-body {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 22px;
+}
+
+.ism-cash-dialog .cash-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 22px;
+  border-top: 1px solid var(--cash-border);
+  background: var(--cash-panel);
+}
+
+.ism-cash-dialog .cash-dialog-actions .el-button {
+  margin: 0;
+}
+
+.ism-cash-dialog .cash-panel {
+  padding: 14px;
+  border: 1px solid var(--cash-border);
+  border-radius: 14px;
+  background: var(--cash-panel);
+}
+
+.ism-cash-dialog .cash-panel-accent {
+  background: var(--el-color-primary-light-9);
+  border-color: var(--el-color-primary-light-7);
+}
+
+.ism-cash-dialog .cash-total,
+.ism-cash-dialog .cash-result {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 12px;
+  border-color: var(--cash-border);
+}
+
+.ism-cash-dialog .cash-total strong {
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ism-cash-dialog .cash-result {
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: var(--el-fill-color);
+}
+
+.ism-cash-dialog .cash-field {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 550;
+}
+
+.ism-cash-dialog .cash-field .el-input-number {
+  width: 100%;
+}
+
+.ism-cash-dialog .cash-field .el-input-number input {
+  text-align: start;
+}
+
+.ism-cash-dialog .cash-muted {
+  color: var(--cash-muted);
+}
+
+@media (max-width: 480px) {
+  .ism-cash-dialog .el-dialog__header,
+  .ism-cash-dialog .cash-dialog-body,
+  .ism-cash-dialog .cash-dialog-actions {
+    padding-left: 14px;
+  }
+
+  .ism-cash-dialog .cash-dialog-body,
+  .ism-cash-dialog .cash-dialog-actions {
+    padding-right: 14px;
+  }
+}
+</style>
