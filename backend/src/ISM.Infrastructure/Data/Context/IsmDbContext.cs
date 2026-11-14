@@ -260,6 +260,9 @@ public sealed class IsmDbContext : DbContext
             builder.Property(r => r.PlanId);
             builder.Property(r => r.TrialEndAtUtc).HasColumnType("datetime(6)");
             builder.Property(r => r.IsPlanActive).IsRequired();
+            builder.Property(r => r.IFoodClientId).HasMaxLength(100); //propriedades do ifood
+            builder.Property(r => r.IFoodClientSecret).HasMaxLength(200);
+            builder.Property(r => r.IFoodMerchantId).HasMaxLength(100);
 
             builder.HasOne(r => r.Plan)
                 .WithMany(p => p.Restaurants)

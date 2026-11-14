@@ -8,6 +8,7 @@ using ISM.Application.Interfaces.Menu;
 using ISM.Application.Interfaces.Orders;
 using ISM.Application.Interfaces.Dashboard;
 using ISM.Application.Interfaces.Finance;
+using ISM.Application.Interfaces.Integrations.IFood;
 using ISM.Application.Services.Finance;
 using ISM.Application.Services.Dashboard;
 using ISM.Application.Services.Orders;
@@ -28,6 +29,7 @@ using ISM.Application.Services.Users;
 using ISM.Application.Services.Tenants;
 using ISM.Application.Services.DataImport;
 using ISM.Application.Services.DataImport.Readers;
+using ISM.Application.Services.Integrations.IFood;
 using ISM.Infrastructure.Data.Options;
 using ISM.Infrastructure.DependencyInjection;
 using ISM.Infrastructure.Services;
@@ -44,6 +46,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddApiServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddHttpContextAccessor();
+        services.AddMemoryCache();
         services.AddHttpClient();
 
         services.AddControllers();
@@ -213,6 +216,11 @@ public static class ServiceCollectionExtensions
         services.Configure<PhotoImportOptions>(configuration.GetSection(PhotoImportOptions.SectionName));
         services.AddHttpClient<IPhotoImportExtractor, LlmVisionPhotoExtractor>();
         services.AddScoped<IPhotoImportService, PhotoImportService>();
+        
+        // Autenticação e configuração do IFood 
+        services.Configure<IFoodOptions>(configuration.GetSection(IFoodOptions.SectionName));
+        services.AddHttpClient<IIFoodAuthClient, IFoodAuthClient>();
+        services.AddScoped<IIFoodConfigService, IFoodConfigService>();
         
         // Criação do valor padrão de margem ideal para o preço de um produto
         services.Configure<PricingOptions>(configuration.GetSection(PricingOptions.SectionName));
