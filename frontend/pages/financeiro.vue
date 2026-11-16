@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { useConfirmation } from "~/composables/useConfirmation";
 import { financeService, FinanceEntryType, type FinanceEntry, type FinanceEntryRequest, type FinanceOverview } from "~/services/modules/finance/financeService";
 import FinanceCashFlowChart from "~/components/finance/FinanceCashFlowChart.vue";
 import FinanceExpenseChart from "~/components/finance/FinanceExpenseChart.vue";
 import FinanceTopSellingChart from "~/components/finance/FinanceTopSellingChart.vue";
+
+const confirmation = useConfirmation();
 
 const overview = ref<FinanceOverview | null>(null);
 const loading = ref(false);
@@ -53,7 +56,7 @@ async function save() {
   finally { saving.value = false; }
 }
 async function remove(entry: FinanceEntry) {
-  if (saving.value || !window.confirm(`Excluir a movimentação “${entry.description}”?`)) return;
+  if (saving.value || !(await confirmation.ask({ title: "Excluir movimentação", message: "A movimentação será excluída e os totais financeiros serão atualizados.", context: entry.description, confirmLabel: "Excluir movimentação", tone: "danger" }))) return;
   saving.value = true; error.value = ""; success.value = "";
   try { await financeService.delete(entry.id); success.value = "Movimentação excluída."; await refresh(); }
   catch (err: any) { error.value = err?.data?.detail || "Não foi possível excluir a movimentação."; }
@@ -63,6 +66,7 @@ onMounted(refresh);
 </script>
 
 <template>
+  <ConfirmationDialog :state="confirmation.state" @confirm="confirmation.accept" @cancel="confirmation.cancel" />
   <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div><h1 class="text-2xl font-bold dark:text-white">Financeiro</h1><p class="text-sm text-zinc-500">Receitas e despesas do mês atual; contas pendentes de todos os períodos.</p></div>

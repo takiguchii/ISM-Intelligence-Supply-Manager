@@ -3,8 +3,11 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FluentAssertions;
 using ISM.Application.DTOs;
+using ISM.Application.DTOs.Orders;
 using ISM.Application.Security;
 using ISM.Domain.Entities;
+using ISM.Domain.Modules.Menu.Entities;
+using ISM.Domain.Modules.Orders;
 using ISM.Infrastructure.Data.Context;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -103,6 +106,62 @@ public sealed class EmployeeLifecycleTests : IClassFixture<FoundationWebApplicat
             RestaurantId = TenantId
         });
         unauthorizedRegistration.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task NewlyCreatedChef_ReceivesWaiterOrders_Dispatches_AndCannotDeliverOrManageMenu()
+    {
+        await EnsureTenantAsync();
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IsmDbContext>();
+        db.Dishes.Add(new Dish { Id = 97040, RestaurantId = TenantId, CategoryId = 1, Name = "Prato da cozinha", Price = 40, Cost = 10, IsActive = true });
+        await db.SaveChangesAsync();
+        using var manager = _factory.CreateClient();
+        manager.DefaultRequestHeaders.Authorization = Bearer(IsmRoles.Manager, TenantId);
+        const string password = "TesteCozinha123!";
+        var email = $"kitchen-{Guid.NewGuid():N}@ism.test";
+        var registeredChef = await RegisterAsync(manager, "Chef Cozinha", email, password, IsmRoles.Chef);
+        var registeredWaiter = await RegisterAsync(manager, "Garçom Salão", $"service-{Guid.NewGuid():N}@ism.test", password, IsmRoles.Waiter);
+
+        using var chef = _factory.CreateClient();
+        var login = await chef.PostAsJsonAsync("/api/auth/login", new LoginRequest { Email = email, Password = password });
+        login.StatusCode.Should().Be(HttpStatusCode.OK);
+        var access = (await login.Content.ReadFromJsonAsync<AuthResponse>())!;
+        access.User.Role.Should().Be(IsmRoles.Chef);
+        access.User.RestaurantId.Should().Be(TenantId);
+        chef.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", access.Token);
+        (await chef.GetAsync("/api/menu/dishes")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await chef.GetAsync("/api/menu/categories")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await chef.GetAsync("/api/users")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await chef.GetAsync("/api/finance")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await chef.DeleteAsync("/api/menu/dishes/97040")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        using var waiter = _factory.CreateClient();
+        waiter.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", registeredWaiter.Token);
+        var request = new CreateOrderRequest { RequestId = Guid.NewGuid(), TableReference = "Cozinha integrada", Items = [new() { DishId = 97040, Quantity = 2, Observation = "Sem sal" }] };
+        (await chef.PostAsJsonAsync("/api/orders", request)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        var response = await waiter.PostAsJsonAsync("/api/orders", request);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = (await response.Content.ReadFromJsonAsync<OrderResponse>())!;
+        var received = await chef.GetFromJsonAsync<List<OrderResponse>>("/api/orders");
+        received.Should().Contain(order => order.Id == created.Id && order.Status == OrderStatus.Submitted);
+        created.Items.Single().Observation.Should().Be("Sem sal");
+        (await waiter.PutAsJsonAsync($"/api/orders/{created.Id}/status", new UpdateOrderStatusRequest(OrderStatus.Preparing, 0))).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await chef.PutAsJsonAsync($"/api/orders/{created.Id}/status", new UpdateOrderStatusRequest(OrderStatus.Preparing, 0))).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await chef.PutAsJsonAsync($"/api/orders/{created.Id}/status", new UpdateOrderStatusRequest(OrderStatus.Ready, 0))).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await chef.PutAsJsonAsync($"/api/orders/{created.Id}/status", new UpdateOrderStatusRequest(OrderStatus.Ready, 1))).StatusCode.Should().Be(HttpStatusCode.OK);
+        var ready = await waiter.GetFromJsonAsync<OrderResponse>($"/api/orders/{created.Id}");
+        ready!.Status.Should().Be(OrderStatus.Ready);
+        (await chef.PutAsJsonAsync($"/api/orders/{created.Id}/status", new UpdateOrderStatusRequest(OrderStatus.Completed, 2))).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await waiter.PutAsJsonAsync($"/api/orders/{created.Id}/status", new UpdateOrderStatusRequest(OrderStatus.Completed, 2))).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var foreignChef = _factory.CreateClient();
+        foreignChef.DefaultRequestHeaders.Authorization = Bearer(IsmRoles.Chef, TenantId + 1);
+        (await foreignChef.GetAsync($"/api/orders/{created.Id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await foreignChef.PutAsJsonAsync($"/api/orders/{created.Id}/status", new UpdateOrderStatusRequest(OrderStatus.Preparing, 3))).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await manager.PatchAsJsonAsync($"/api/users/{registeredChef.User.Id}/toggle-active", new ToggleUserActiveRequest { IsActive = false })).StatusCode.Should().Be(HttpStatusCode.OK);
+        using var loggedOut = _factory.CreateClient();
+        (await loggedOut.PostAsJsonAsync("/api/auth/login", new LoginRequest { Email = email, Password = password })).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     private async Task<AuthResponse> RegisterAsync(HttpClient client, string name, string email, string password, string role)

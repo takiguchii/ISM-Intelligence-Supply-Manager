@@ -1,8 +1,9 @@
 <script setup lang="ts">
-const authReady = inject<Ref<boolean>>("authReady", ref(true));
+// A identidade vem do armazenamento local; servidor e cliente começam na mesma tela.
+const authReady = ref(false);
+onMounted(() => { authReady.value = true; });
 const route = useRoute();
 const isLoginPage = computed(() => route.path === "/login");
-const showContent = computed(() => isLoginPage.value || authReady.value);
 
 const themeStore = useThemeStore();
 const isSidebarOpen = ref(false);
@@ -26,7 +27,7 @@ provide("toggleSidebar", toggleSidebar);
         : 'bg-white text-[#2B2B2B] selection:bg-[#D4D4D4] selection:text-[#2B2B2B]'
     ]"
   >
-    <template v-if="showContent">
+    <template v-if="authReady">
       <template v-if="isLoginPage">
         <slot />
       </template>
