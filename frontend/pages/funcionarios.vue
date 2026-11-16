@@ -9,7 +9,7 @@ const PAGE_SIZE = 10;
 const ROLE_LABELS: Record<string, string> = {
   Admin: "Administrador",
   Manager: "Gerente",
-  Chef: "Chef",
+  Chef: "Chef / Cozinha",
   Waiter: "Garçom"
 };
 
@@ -627,6 +627,9 @@ onMounted(async () => {
             </div>
           </div>
 
+          <p v-if="form.role === 'Chef'" class="rounded-xl border border-indigo-800 bg-indigo-950/40 p-3 text-sm text-indigo-200">
+            Este acesso abre o painel da cozinha: receber pedidos do garçom, iniciar preparo, despachar para o salão e consultar o cardápio do mesmo restaurante. O chef entra com o e-mail e a senha cadastrados aqui.
+          </p>
           <p v-if="formError" class="px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-300">
             {{ formError }}
           </p>

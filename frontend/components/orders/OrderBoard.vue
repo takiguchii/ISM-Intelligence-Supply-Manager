@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { useConfirmation } from "~/composables/useConfirmation";
 import { orderService, OrderStatus, type Order } from "~/services/modules/orders/orderService";
+
+const confirmation = useConfirmation();
 
 const props = withDefaults(defineProps<{ kitchen?: boolean }>(), { kitchen: false });
 const authStore = useAuthStore();
@@ -41,8 +44,8 @@ function actions(order: Order): { status: OrderStatus; label: string }[] {
 
 async function update(order: Order, status: OrderStatus) {
   if (updatingId.value !== null) return;
-  if (status === OrderStatus.Cancelled && !window.confirm(`Cancelar o pedido #${order.id}?`)) return;
-  if (status === OrderStatus.Paid && !window.confirm(`Confirmar recebimento de ${money(total(order))} para o pedido #${order.id}?`)) return;
+  if (status === OrderStatus.Cancelled && !(await confirmation.ask({ title: "Cancelar pedido", message: "O pedido será encerrado como cancelado. Confira a comanda antes de continuar.", context: `Pedido #${order.id} · Mesa ${order.tableReference}`, confirmLabel: "Cancelar pedido", tone: "danger" }))) return;
+  if (status === OrderStatus.Paid && !(await confirmation.ask({ title: "Registrar pagamento", message: "Confirme apenas se o pagamento desta comanda já foi recebido.", context: `Pedido #${order.id} · Mesa ${order.tableReference}`, detail: `Valor recebido: ${money(total(order))}`, confirmLabel: "Confirmar recebimento", tone: "success" }))) return;
   updatingId.value = order.id;
   error.value = "";
   try {
@@ -56,6 +59,7 @@ onMounted(refresh);
 </script>
 
 <template>
+  <ConfirmationDialog :state="confirmation.state" @confirm="confirmation.accept" @cancel="confirmation.cancel" />
   <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 py-8 space-y-6">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>

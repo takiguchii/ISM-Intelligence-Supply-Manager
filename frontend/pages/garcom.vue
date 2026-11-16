@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import WaiterMock from '~/components/waiter/WaiterMock.vue'
+import WaiterPanel from '~/components/waiter/WaiterPanel.vue'
 
 definePageMeta({
   layout: 'default'
@@ -7,5 +7,5 @@ definePageMeta({
 </script>
 
 <template>
-  <WaiterMock view="home" />
+  <WaiterPanel view="home" />
 </template>

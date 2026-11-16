@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { useConfirmation } from "~/composables/useConfirmation";
 import { ref, computed, watch, onMounted } from 'vue'
 import { productService } from '~/services/modules/stock/productService'
+
+const confirmation = useConfirmation();
 
 // ==================== CONFIGURAÇÃO ====================
 const PAGE_SIZE = 8
@@ -203,7 +206,7 @@ const salvarItem = async () => {
 }
 
 const deletarItem = async (id: number) => {
-  if (!confirm('Deseja mesmo remover este item?')) return
+  if (!(await confirmation.ask({ title: 'Excluir item do estoque', message: 'O item será removido do estoque. Confira a seleção antes de continuar.', confirmLabel: 'Excluir item', tone: 'danger' }))) return
   errorMessage.value = ''
   try {
     await productService.delete(id)
@@ -249,6 +252,7 @@ onMounted(() => {
 </script>
 
 <template>
+  <ConfirmationDialog :state="confirmation.state" @confirm="confirmation.accept" @cancel="confirmation.cancel" />
   <div class="light-page max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
 
     <!-- ==================== HEADER ==================== -->

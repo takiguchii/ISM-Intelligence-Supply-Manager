@@ -1,7 +1,10 @@
 <script setup lang="ts">
+import { useConfirmation } from "~/composables/useConfirmation";
 import { computed, onMounted, ref } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { menuService } from '~/services/modules/menu/menuService'
+
+const confirmation = useConfirmation();
 
 interface Category {
   id: number
@@ -372,9 +375,7 @@ const updateCategory = async () => {
 }
 
 const deleteCategory = async (category: Category) => {
-  const confirmed = window.confirm(
-    `Deseja realmente excluir a categoria "${category.name}"?`
-  )
+  const confirmed = await confirmation.ask({ title: 'Excluir categoria', message: 'A categoria será removida do cardápio. Esta ação não pode ser desfeita.', context: category.name, confirmLabel: 'Excluir categoria', tone: 'danger' })
 
   if (!confirmed) {
     return
@@ -516,9 +517,7 @@ const updateDish = async () => {
 }
 
 const deleteDish = async (dish: Dish) => {
-  const confirmed = window.confirm(
-    `Deseja realmente excluir o prato "${dish.name}"?`
-  )
+  const confirmed = await confirmation.ask({ title: 'Excluir prato', message: 'O prato será removido do cardápio. Esta ação não pode ser desfeita.', context: dish.name, confirmLabel: 'Excluir prato', tone: 'danger' })
 
   if (!confirmed) {
     return
@@ -912,6 +911,7 @@ onMounted(loadPage)
 </script>
 
 <template>
+  <ConfirmationDialog :state="confirmation.state" @confirm="confirmation.accept" @cancel="confirmation.cancel" />
   <main v-if="isOperationalUser" class="min-h-[calc(100vh-8rem)] flex items-center justify-center px-6">
     <section class="max-w-xl w-full rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
       <p class="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-400">Cardápio operacional</p>
