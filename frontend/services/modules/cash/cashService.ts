@@ -1,4 +1,32 @@
-import type { Order } from '~/services/modules/orders/orderService'
+import { OrderStatus, orderService, type Order } from '~/services/modules/orders/orderService'
+
+export class CashOrderUnavailableError extends Error {}
+
+async function validateCurrentOrder(order: Order): Promise<Order> {
+  let current: Order
+  try {
+    current = await orderService.getById(order.id)
+  } catch (cause) {
+    const failure = cause as { statusCode?: number; status?: number; response?: { status?: number } }
+    if ((failure?.statusCode ?? failure?.status ?? failure?.response?.status) === 404) {
+      throw new CashOrderUnavailableError('O pedido não foi encontrado. A fila de recebimento será atualizada.')
+    }
+    throw new Error('Não foi possível conferir o pedido no servidor. Nenhum recebimento foi registrado. Tente novamente.', { cause })
+  }
+  if (current.status === OrderStatus.Cancelled) {
+    throw new CashOrderUnavailableError('O pedido foi cancelado. Nenhum recebimento foi registrado.')
+  }
+  if (current.status === OrderStatus.Paid) {
+    throw new CashOrderUnavailableError('O pedido já está pago no sistema. Nenhum novo recebimento foi registrado.')
+  }
+  if (current.status !== OrderStatus.Completed || order.status !== OrderStatus.Completed) {
+    throw new CashOrderUnavailableError('Somente pedidos entregues podem ser recebidos. Confira a fila atualizada.')
+  }
+  if (current.version !== order.version) {
+    throw new CashOrderUnavailableError('O pedido foi alterado. Confira os itens e valores atualizados antes de receber novamente.')
+  }
+  return current
+}
 
 export enum PaymentMethod { Cash, Pix, Debit, Credit }
 export enum CashMovementKind { Deposit, Withdrawal }
@@ -178,38 +206,42 @@ export function createCashService(restaurantId: number, operatorId: number) {
       recalculate(details)
       return details
     }),
-    receive: (shiftId: number, order: Order, requestId: string, payments: Payment[]) => write(state => {
-      const previous = state.shifts.flatMap(details => details.receipts as LocalReceipt[])
-        .find(receipt => receipt.orderId === order.id)
-      if (previous) {
-        if (previous.requestId === requestId && previous.shiftId === shiftId) return previous
-        throw new Error('Este pedido já tem um recebimento registrado neste navegador.')
-      }
+    receive: async (shiftId: number, order: Order, requestId: string, payments: Payment[]) => {
+      // Uma falha na consulta deve impedir a gravação e a emissão do comprovante.
+      const current = await validateCurrentOrder(order)
+      return write(state => {
+        const previous = state.shifts.flatMap(details => details.receipts as LocalReceipt[])
+          .find(receipt => receipt.orderId === order.id)
+        if (previous) {
+          if (previous.requestId === requestId && previous.shiftId === shiftId) return previous
+          throw new Error('Este pedido já tem um recebimento registrado neste navegador.')
+        }
 
-      const details = openShift(state, shiftId)
-      const total = cashOrderTotal(order)
-      if (!payments.length || payments.length > 4 || new Set(payments.map(part => part.method)).size !== payments.length ||
-          (total === 0 && payments.length !== 1) || payments.reduce((sum, part) => sum + validateAmount(part.amount), 0) !== total) {
-        throw new Error('A soma dos pagamentos precisa ser igual ao total do pedido.')
-      }
-      const parts = payments.map(part => {
-        if (!(part.method in paymentLabels) || (total > 0 && part.amount === 0)) {
-          throw new Error('Informe uma forma válida e um valor positivo para cada parcela.')
+        const details = openShift(state, shiftId)
+        const total = cashOrderTotal(current)
+        if (!payments.length || payments.length > 4 || new Set(payments.map(part => part.method)).size !== payments.length ||
+            (total === 0 && payments.length !== 1) || payments.reduce((sum, part) => sum + validateAmount(part.amount), 0) !== total) {
+          throw new Error('A soma dos pagamentos precisa ser igual ao total do pedido.')
         }
-        if (part.method !== PaymentMethod.Cash) return { ...part, tendered: null, change: 0 }
-        if (part.tendered === null || validateAmount(part.tendered) < cashCents(part.amount)) {
-          throw new Error('O dinheiro entregue precisa cobrir a parcela em dinheiro.')
+        const parts = payments.map(part => {
+          if (!(part.method in paymentLabels) || (total > 0 && part.amount === 0)) {
+            throw new Error('Informe uma forma válida e um valor positivo para cada parcela.')
+          }
+          if (part.method !== PaymentMethod.Cash) return { ...part, tendered: null, change: 0 }
+          if (part.tendered === null || validateAmount(part.tendered) < cashCents(part.amount)) {
+            throw new Error('O dinheiro entregue precisa cobrir a parcela em dinheiro.')
+          }
+          return { ...part, change: (cashCents(part.tendered) - cashCents(part.amount)) / 100 }
+        })
+        const receipt: LocalReceipt = {
+          id: state.nextId++, requestId, orderId: order.id, shiftId, operatorId, createdAtUtc: today(), payments: parts
         }
-        return { ...part, change: (cashCents(part.tendered) - cashCents(part.amount)) / 100 }
+        details.receipts.unshift(receipt)
+        details.version++
+        recalculate(details)
+        return receipt
       })
-      const receipt: LocalReceipt = {
-        id: state.nextId++, requestId, orderId: order.id, shiftId, operatorId, createdAtUtc: today(), payments: parts
-      }
-      details.receipts.unshift(receipt)
-      details.version++
-      recalculate(details)
-      return receipt
-    })
+    }
   }
 }
 

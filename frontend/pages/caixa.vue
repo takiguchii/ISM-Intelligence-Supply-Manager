@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import CashShiftDetails from '~/components/cash/CashShiftDetails.vue'
-import { cashDate, cashMoney, cashCents, cashOrderTotal, createCashService, CashMovementKind, PaymentMethod, paymentLabels, type LegacyPayment, type Payment, type Receipt, type Shift, type ShiftSummary } from '~/services/modules/cash/cashService'
+import { cashDate, cashMoney, cashCents, cashOrderTotal, createCashService, CashOrderUnavailableError, CashMovementKind, PaymentMethod, paymentLabels, type LegacyPayment, type Payment, type Receipt, type Shift, type ShiftSummary } from '~/services/modules/cash/cashService'
 import { OrderStatus, orderService, type Order } from '~/services/modules/orders/orderService'
 
 const route = useRoute()
@@ -125,7 +125,20 @@ async function confirmPayment() {
   }
   const payload = JSON.stringify({ shift, order: order.id, parts })
   if (retry.value?.payload !== payload) retry.value = { payload, id: crypto.randomUUID() }
-  const saved = await cashService().receive(shift, order, retry.value.id, parts)
+  let saved: Receipt
+  try {
+    saved = await cashService().receive(shift, order, retry.value.id, parts)
+  } catch (cause) {
+    if (!(cause instanceof CashOrderUnavailableError)) throw cause
+    dialog.value = null
+    selected.value = null
+    selectedShift.value = null
+    retry.value = null
+    error.value = cause.message
+    try { await load() }
+    catch { error.value += ' Não foi possível atualizar a fila. Use Atualizar para tentar novamente.' }
+    return
+  }
   receivedOrderIds.value = [...receivedOrderIds.value, order.id]
   retry.value = null
   dialog.value = null

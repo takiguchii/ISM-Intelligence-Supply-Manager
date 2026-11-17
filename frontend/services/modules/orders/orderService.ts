@@ -50,6 +50,7 @@ export interface UpdateOrder {
 
 export const orderService = {
   list: () => apiClientWithAuth<Order[]>("/api/orders"),
+  getById: (id: number) => apiClientWithAuth<Order>(`/api/orders/${id}`),
   adminList: (pageNumber = 1, pageSize = 10, search?: string) => apiClientWithAuth<OrderPage>("/api/orders/admin", { query: { pageNumber, pageSize, search: search || undefined } }),
   create: (order: CreateOrder) => apiClientWithAuth<Order>("/api/orders", { method: "POST", body: order }),
   updateStatus: (order: Order, status: OrderStatus) => apiClientWithAuth<Order>(`/api/orders/${order.id}/status`, { method: "PUT", body: { status, version: order.version } }),
