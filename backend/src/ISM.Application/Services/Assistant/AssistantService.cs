@@ -2,13 +2,12 @@ using System.Globalization;
 using System.Text.Json;
 using ISM.Application.DTOs.Assistant;
 using ISM.Application.Interfaces.Assistant;
-using ISM.Application.Options;
+using ISM.Application.Interfaces.Finance;
 using ISM.Application.Security;
 using ISM.Domain.Interfaces;
 using ISM.Domain.Modules.Assistant.Entities;
 using ISM.Domain.Modules.Assistant.Enums;
 using ISM.Domain.Modules.System.Enums;
-using Microsoft.Extensions.Options;
 
 namespace ISM.Application.Services.Assistant;
 
@@ -18,18 +17,16 @@ public sealed class AssistantService(
     ISystemAlertRepository alerts,
     IProductRepository products,
     IDishRepository dishes,
+    IFinanceService finance,
     ILlmTextProvider llm,
-    ICurrentUser currentUser,
-    IOptions<AssistantAiOptions> options) : IAssistantService
+    ICurrentUser currentUser) : IAssistantService
 {
-    private readonly AssistantAiOptions _options = options.Value;
-
     public async Task<AssistantStatusResponse> GetStatusAsync(CancellationToken cancellationToken = default)
     {
-        var available = await llm.IsAvailableAsync(cancellationToken);
-        return new(_options.Enabled, available, _options.Model,
-            !_options.Enabled ? "IA local desabilitada; dados determinísticos continuam disponíveis."
-            : available ? "Modelo local disponível" : "Conversação local indisponível; dados determinísticos continuam disponíveis.");
+        var status = await llm.GetStatusAsync(cancellationToken);
+        return new(status.Enabled, status.Reachable, status.Model,
+            !status.Enabled ? "IA desabilitada; dados determinísticos continuam disponíveis."
+            : status.Reachable ? $"{status.Provider} disponível" : $"{status.Provider} indisponível; dados determinísticos continuam disponíveis.");
     }
 
     public async Task<AssistantOverviewResponse> GetOverviewAsync(int page, int limit, CancellationToken cancellationToken = default)
@@ -72,6 +69,7 @@ public sealed class AssistantService(
 
     public async Task<AssistantChatResponse> ChatAsync(string message, CancellationToken cancellationToken = default)
     {
+        if (IsFinancialQuestion(message)) return await BuildFinancialResponseAsync(cancellationToken);
         var restaurantId = RequireRestaurant();
         var context = await BuildContextAsync(restaurantId, cancellationToken);
         var result = await llm.CompleteAsync(
@@ -159,6 +157,19 @@ public sealed class AssistantService(
         }, cancellationToken);
 
         var context = DeserializeContext(thread.ContextSnapshotJson);
+        if (IsFinancialQuestion(cleanMessage))
+        {
+            var financial = await BuildFinancialResponseAsync(cancellationToken);
+            await conversations.AddMessageAsync(new AssistantMessage
+            {
+                RestaurantId = restaurantId, ThreadId = thread.Id, Role = "assistant", Content = financial.Message,
+                Mode = financial.Mode, Source = financial.Source, CreatedAtUtc = DateTime.UtcNow
+            }, cancellationToken);
+            thread.LastMessageAtUtc = DateTime.UtcNow;
+            thread.UpdatedAtUtc = thread.LastMessageAtUtc;
+            await conversations.SaveThreadAsync(thread, cancellationToken);
+            return await BuildConversationAsync(thread, context, cancellationToken);
+        }
         var deterministic = BuildDeterministicResponse(cleanMessage, context);
         AssistantChatResponse response;
         if (deterministic is not null)
@@ -281,6 +292,25 @@ public sealed class AssistantService(
         if (lower.Contains("histórico") || lower.Contains("historico")) return "Não tenho histórico suficiente vinculado a este alerta para concluir uma tendência. O alerta atual e seus números permanecem disponíveis; consulte o histórico de movimentações no módulo correspondente.";
         if (lower.Contains("alerta") || lower.Contains("detalhe")) return $"O alerta é “{context.Title}”, classificado como {context.Severity}. {context.Message}";
         return null;
+    }
+
+    private async Task<AssistantChatResponse> BuildFinancialResponseAsync(CancellationToken cancellationToken)
+    {
+        var overview = await finance.GetAsync(1, 1, cancellationToken);
+        var summary = overview.Summary;
+        var message = $"Faturamento do mês, baseado em pedidos pagos: R$ {summary.SalesRevenue:N2}. " +
+                      $"Outras receitas liquidadas: R$ {summary.OtherIncome:N2}. " +
+                      $"Despesas liquidadas: R$ {summary.Expenses:N2}. " +
+                      $"Contas a receber: R$ {summary.AccountsReceivable:N2}. " +
+                      $"Contas a pagar: R$ {summary.AccountsPayable:N2}.";
+        return new("deterministic", message, "Dados financeiros do ISM", null);
+    }
+
+    private static bool IsFinancialQuestion(string message)
+    {
+        var lower = message.ToLowerInvariant();
+        return lower.Contains("faturamento") || lower.Contains("receita") || lower.Contains("despesa") ||
+               lower.Contains("conta a pagar") || lower.Contains("contas a pagar") || lower.Contains("fluxo de caixa");
     }
 
     private async Task<AssistantConversationResponse> BuildConversationAsync(AssistantThread thread, AssistantContextResponse? context, CancellationToken cancellationToken)

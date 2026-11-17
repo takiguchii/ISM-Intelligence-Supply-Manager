@@ -296,6 +296,18 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.Property<string>("PhotoImportModel")
                         .HasColumnType("longtext");
 
+                    b.Property<string>("AgentApiKey")
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
+                    b.Property<string>("AgentApiEndpoint")
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
+                    b.Property<string>("AgentModel")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
                     b.Property<int?>("PlanId")
                         .HasColumnType("int");
 

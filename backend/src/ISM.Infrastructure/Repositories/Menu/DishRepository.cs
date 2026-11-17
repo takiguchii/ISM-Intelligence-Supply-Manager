@@ -19,6 +19,7 @@ public sealed class DishRepository : IDishRepository
         => await _dbContext.Dishes 
             .AsNoTracking()
             .Include(dish => dish.Ingredients)
+            .ThenInclude(ingredient => ingredient.Product)
             .FirstOrDefaultAsync(dish => dish.Id == id, cancellationToken);
 
     public async Task<IReadOnlyCollection<Dish>> GetAllDishesAsync(int? restaurantId = null, int? categoryId = null, CancellationToken cancellationToken = default)

@@ -3,7 +3,9 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
+using ISM.Application.Agents;
 using ISM.Application.DTOs.Assistant;
+using ISM.Application.DTOs.Restaurant;
 using ISM.Application.Security;
 using ISM.Domain.Entities;
 using ISM.Domain.Modules.Assistant.Enums;
@@ -102,6 +104,114 @@ public sealed class AssistantApprovalTests : IClassFixture<FoundationWebApplicat
     }
 
     [Fact]
+    public async Task Assistant_AgentConfig_IsTenantScoped_AndStatusUsesSavedModel()
+    {
+        const int restaurantId = 997;
+        await SeedRestaurantAsync(restaurantId);
+        using var client = CreateClient(IsmRoles.Manager, restaurantId);
+
+        var initial = await client.GetAsync("/api/me/restaurant/agent-config");
+        initial.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await initial.Content.ReadFromJsonAsync<RestaurantAgentConfigDto>())!.Model.Should().Be("gemma3:270m");
+
+        var update = await client.PutAsJsonAsync("/api/me/restaurant/agent-config", new
+        {
+            apiEndpoint = "http://127.0.0.1:11434",
+            model = "integration-model"
+        });
+        update.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var status = await client.GetFromJsonAsync<AssistantStatusResponse>("/api/assistant/status");
+        status!.Model.Should().Be("integration-model");
+    }
+
+    [Fact]
+    public async Task Assistant_FinancialQuestion_UsesAuthorizedFinanceSourceWithoutLlm()
+    {
+        using var client = CreateClient(IsmRoles.Manager, 9980);
+
+        var response = await client.PostAsJsonAsync("/api/assistant/chat", new { message = "Qual foi meu faturamento este mês?" });
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var chat = await response.Content.ReadFromJsonAsync<AssistantChatResponse>();
+        chat!.Mode.Should().Be("deterministic");
+        chat.Source.Should().Be("Dados financeiros do ISM");
+        chat.Message.Should().Contain("pedidos pagos");
+    }
+
+    [Fact]
+    public async Task Assistant_ToolRegistry_ListsReadOnlyAllowlistedTools()
+    {
+        using var client = CreateClient(IsmRoles.Manager, 9981);
+
+        var response = await client.GetAsync("/api/assistant/tools");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var tools = await response.Content.ReadFromJsonAsync<List<AgentToolDescriptor>>();
+        tools.Should().NotBeNullOrEmpty();
+        tools!.Should().OnlyContain(tool => tool.Operation == AgentToolOperation.Read && !tool.RequiresApproval);
+        tools!.Select(tool => tool.ToolName).Should().Contain(["stock.getProduct", "finance.getRevenueSummary", "pricing.getDishCost", "assistant.getAlertContext"]);
+    }
+
+    [Fact]
+    public async Task Assistant_ToolExecution_UsesTenantFromTokenAndRejectsPromptTenant()
+    {
+        const int restaurantA = 9982;
+        const int restaurantB = 9983;
+        var alertId = await SeedStockAlertAsync(restaurantA, 1m, 4m);
+        int productId;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<IsmDbContext>();
+            productId = (await db.SystemAlerts.IgnoreQueryFilters().SingleAsync(alert => alert.Id == alertId)).ReferenceEntityId!.Value;
+        }
+
+        using var client = CreateClient(IsmRoles.Manager, restaurantB);
+        var crossTenant = await client.PostAsJsonAsync("/api/assistant/tools/execute", new
+        {
+            toolName = "stock.getProduct",
+            input = new { productId }
+        });
+        var denied = await crossTenant.Content.ReadFromJsonAsync<AgentToolResult>();
+        denied!.Code.Should().Be(AgentDecisionCode.InsufficientData);
+        denied.Data.Should().BeNull();
+
+        var promptTenant = await client.PostAsJsonAsync("/api/assistant/tools/execute", new
+        {
+            toolName = "stock.getProduct",
+            input = new { productId, restaurantId = restaurantA }
+        });
+        var promptDenied = await promptTenant.Content.ReadFromJsonAsync<AgentToolResult>();
+        promptDenied!.Code.Should().Be(AgentDecisionCode.Denied);
+        promptDenied.Message.Should().Contain("tenant");
+    }
+
+    [Fact]
+    public async Task Assistant_ToolExecution_ReturnsEvidenceAndCorrelationForAuthorizedRead()
+    {
+        const int restaurantId = 9984;
+        var alertId = await SeedStockAlertAsync(restaurantId, 1m, 4m);
+        int productId;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<IsmDbContext>();
+            productId = (await db.SystemAlerts.IgnoreQueryFilters().SingleAsync(alert => alert.Id == alertId)).ReferenceEntityId!.Value;
+        }
+
+        using var client = CreateClient(IsmRoles.Manager, restaurantId);
+        var response = await client.PostAsJsonAsync("/api/assistant/tools/execute", new
+        {
+            toolName = "stock.getProduct",
+            correlationId = "p1-test-correlation",
+            input = new { productId }
+        });
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = await response.Content.ReadFromJsonAsync<AgentToolResult>();
+        result!.Code.Should().Be(AgentDecisionCode.CanAct);
+        result.CorrelationId.Should().Be("p1-test-correlation");
+        result.Evidence.Should().ContainSingle().Which.SourceType.Should().Be("Product");
+        result.DurationMilliseconds.Should().BeGreaterThanOrEqualTo(0);
+    }
+
+    [Fact]
     public async Task Assistant_Actions_DoNotLeakAcrossTenants()
     {
         await SeedPriceAlertAsync(994, 80m, 120m);
@@ -169,6 +279,17 @@ public sealed class AssistantApprovalTests : IClassFixture<FoundationWebApplicat
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", FoundationWebApplicationFactory.Token(role, restaurantId));
         return client;
+    }
+
+    private async Task SeedRestaurantAsync(int restaurantId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IsmDbContext>();
+        if (await db.Restaurants.FindAsync(restaurantId) is null)
+        {
+            db.Restaurants.Add(new Restaurant { Id = restaurantId, Name = $"Assist {restaurantId}", CNPJ = $"{restaurantId:00000000000000}", IsPlanActive = true, Created = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        }
     }
 
     private async Task<int> SeedPriceAlertAsync(int restaurantId, decimal currentPrice, decimal suggestedPrice)

@@ -350,7 +350,7 @@ public sealed class RestaurantAiConfigService : IRestaurantAiConfigService
             HasApiKey = hasKey,
             KeyLast4Digits = hasKey && restaurant.AgentApiKey!.Length >= 4 ? restaurant.AgentApiKey[^4..] : null,
             ApiEndpoint = restaurant.AgentApiEndpoint,
-            Model = restaurant.AgentModel ?? "gemma:1b"
+            Model = restaurant.AgentModel ?? "gemma3:270m"
         };
     }
 
@@ -360,7 +360,7 @@ public sealed class RestaurantAiConfigService : IRestaurantAiConfigService
         if (dto.ClearKey) restaurant.AgentApiKey = null;
         else if (dto.ApiKey is not null) restaurant.AgentApiKey = string.IsNullOrWhiteSpace(dto.ApiKey) ? null : dto.ApiKey.Trim();
         if (dto.ApiEndpoint is not null) restaurant.AgentApiEndpoint = string.IsNullOrWhiteSpace(dto.ApiEndpoint) ? null : NormalizeAgentEndpoint(dto.ApiEndpoint);
-        if (dto.Model is not null) restaurant.AgentModel = string.IsNullOrWhiteSpace(dto.Model) ? "gemma:1b" : dto.Model.Trim();
+        if (dto.Model is not null) restaurant.AgentModel = string.IsNullOrWhiteSpace(dto.Model) ? "gemma3:270m" : dto.Model.Trim();
         restaurant.UpdatedAtUtc = DateTime.UtcNow;
         _restaurantRepository.Update(restaurant);
         await _restaurantRepository.SaveChangesAsync(ct);
@@ -371,7 +371,7 @@ public sealed class RestaurantAiConfigService : IRestaurantAiConfigService
         var stopwatch = Stopwatch.StartNew();
         var restaurant = await GetRestaurantOrThrowAsync(restaurantId, ct);
         var endpoint = NormalizeAgentEndpoint(string.IsNullOrWhiteSpace(req?.OverrideEndpoint) ? restaurant.AgentApiEndpoint : req!.OverrideEndpoint);
-        var model = string.IsNullOrWhiteSpace(req?.OverrideModel) ? restaurant.AgentModel ?? "gemma:1b" : req!.OverrideModel!.Trim();
+        var model = string.IsNullOrWhiteSpace(req?.OverrideModel) ? restaurant.AgentModel ?? "gemma3:270m" : req!.OverrideModel!.Trim();
         var apiKey = string.IsNullOrWhiteSpace(req?.OverrideApiKey) ? restaurant.AgentApiKey?.Trim() : req!.OverrideApiKey!.Trim();
         var provider = endpoint.Contains("11434", StringComparison.OrdinalIgnoreCase) ? "Ollama" : endpoint.Contains("anthropic.com", StringComparison.OrdinalIgnoreCase) ? "Anthropic Claude" : "API compatível";
         if (provider != "Ollama" && string.IsNullOrWhiteSpace(apiKey)) return AgentFailure(provider, endpoint, model, "Informe a chave de API para este endpoint.", stopwatch);

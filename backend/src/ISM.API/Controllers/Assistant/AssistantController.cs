@@ -1,3 +1,4 @@
+using ISM.Application.Agents;
 using ISM.Application.DTOs.Assistant;
 using ISM.Application.Interfaces.Assistant;
 using ISM.Application.Security;
@@ -9,7 +10,7 @@ namespace ISM.API.Controllers.Assistant;
 [ApiController]
 [Route("api/assistant")]
 [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
-public sealed class AssistantController(IAssistantService service) : ControllerBase
+public sealed class AssistantController(IAssistantService service, IAgentToolRegistry tools) : ControllerBase
 {
     [HttpGet("status")]
     public Task<AssistantStatusResponse> Status(CancellationToken cancellationToken) => service.GetStatusAsync(cancellationToken);
@@ -47,6 +48,13 @@ public sealed class AssistantController(IAssistantService service) : ControllerB
         if (!ModelState.IsValid) return ValidationProblem(ModelState);
         return Ok(await service.ChatAsync(request.Message, cancellationToken));
     }
+
+    [HttpGet("tools")]
+    public ActionResult<IReadOnlyCollection<AgentToolDescriptor>> Tools() => Ok(tools.List());
+
+    [HttpPost("tools/execute")]
+    public async Task<ActionResult<AgentToolResult>> ExecuteTool([FromBody] AgentToolExecuteRequest request, CancellationToken cancellationToken)
+        => Ok(await tools.ExecuteAsync(request, cancellationToken));
 
     [HttpGet("threads")]
     public Task<IReadOnlyList<AssistantThreadResponse>> Threads([FromQuery] int page = 1, [FromQuery] int limit = 20, CancellationToken cancellationToken = default)
