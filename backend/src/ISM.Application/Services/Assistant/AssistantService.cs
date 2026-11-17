@@ -22,7 +22,8 @@ public sealed class AssistantService(
     ILlmTextProvider llm,
     ICurrentUser currentUser,
     IAgentToolRegistry tools,
-    AssistantIntentCoordinator intentCoordinator) : IAssistantService
+    AssistantIntentCoordinator intentCoordinator,
+    IAutomationService automations) : IAssistantService
 {
     public async Task<AssistantStatusResponse> GetStatusAsync(CancellationToken cancellationToken = default)
     {
@@ -75,6 +76,8 @@ public sealed class AssistantService(
     {
         var restaurantId = RequireRestaurant();
         var context = await BuildContextAsync(restaurantId, cancellationToken);
+        if (await TryCreateAutomationDraftAsync(message, cancellationToken) is { } automationDraft)
+            return automationDraft;
         var intent = intentCoordinator.Resolve(message, null);
         if (intent is not null && await ExecuteIntentAsync(intent, cancellationToken) is { } routed)
             return routed;
@@ -163,6 +166,18 @@ public sealed class AssistantService(
         }, cancellationToken);
 
         var context = DeserializeContext(thread.ContextSnapshotJson);
+        if (await TryCreateAutomationDraftAsync(cleanMessage, cancellationToken) is { } automationDraft)
+        {
+            await conversations.AddMessageAsync(new AssistantMessage
+            {
+                RestaurantId = restaurantId, ThreadId = thread.Id, Role = "assistant", Content = automationDraft.Message,
+                Mode = automationDraft.Mode, Source = automationDraft.Source, CreatedAtUtc = DateTime.UtcNow
+            }, cancellationToken);
+            thread.LastMessageAtUtc = DateTime.UtcNow;
+            thread.UpdatedAtUtc = thread.LastMessageAtUtc;
+            await conversations.SaveThreadAsync(thread, cancellationToken);
+            return await BuildConversationAsync(thread, context, cancellationToken);
+        }
         var intent = intentCoordinator.Resolve(cleanMessage, context);
         if (intent is not null && await ExecuteIntentAsync(intent, cancellationToken) is { } routed)
         {
@@ -220,6 +235,43 @@ public sealed class AssistantService(
     }
 
     private int RequireRestaurant() => currentUser is { IsManagerOrAbove: true, RestaurantId: > 0 } ? currentUser.RestaurantId.Value : throw new UnauthorizedAccessException("Restaurante gerencial não identificado.");
+
+    private async Task<AssistantChatResponse?> TryCreateAutomationDraftAsync(string message, CancellationToken cancellationToken)
+    {
+        var lower = message.Trim().ToLowerInvariant();
+        var asksForPolicy = lower.Contains("automação") || lower.Contains("automacao") || lower.Contains("todo dia") || lower.Contains("diariamente") || lower.Contains("política") || lower.Contains("politica");
+        if (!asksForPolicy) return null;
+        if ((lower.Contains("confirm") || lower.Contains("ativar") || lower.Contains("ative")) && (lower.Contains("autom") || lower.Contains("política") || lower.Contains("politica")))
+        {
+            var draft = (await automations.ListAsync(cancellationToken)).LastOrDefault(policy => policy.Status == AutomationPolicyStatus.Draft);
+            if (draft is null) return new("deterministic", "Não encontrei um rascunho de automação pendente para confirmar.", "Política de automação do ISM", "Nenhuma ação foi executada.");
+            var confirmed = await automations.ConfirmAsync(draft.Id, new ConfirmAutomationRequest(true), cancellationToken);
+            if (confirmed.Policy is null) return new("deterministic", "Não foi possível confirmar o rascunho; ele pode ter sido alterado ou expirado.", "Política de automação do ISM", "Nenhuma ação foi executada.");
+            return new("deterministic", $"Política “{confirmed.Policy.Name}” confirmada em dry-run. Ela está ativa para análise, mas não altera estoque, preços, financeiro ou fornecedores.", "Política de automação do ISM", "Execuções serão simuladas e registradas no histórico.")
+            {
+                Specialist = "assistant", ToolName = "assistant.confirmAutomation", DecisionCode = confirmed.StatusCode == 200 ? AgentDecisionCode.CanAct : AgentDecisionCode.NeedsApproval
+            };
+        }
+        if (lower.Contains("compr") || lower.Contains("pag") || lower.Contains("enviar") || lower.Contains("alter") || lower.Contains("mudar") || lower.Contains("mude") || lower.Contains("execut") || lower.Contains("fornecedor sem limite"))
+            return new("deterministic", "Não vou ativar uma automação de compra, pagamento ou envio externo. Essa operação exige política específica, teto, validade e aprovação individual; nenhum rascunho executável foi criado.", "Política de automação do ISM", "Nenhuma ação foi executada.");
+
+        var (specialist, action, label) = lower.Contains("preço") || lower.Contains("preco") || lower.Contains("cmv")
+            ? ("pricing", "scanCmv", "revisão periódica de CMV")
+            : lower.Contains("fornecedor") || lower.Contains("cotação") || lower.Contains("cotacao")
+                ? ("suppliers", "scanOffers", "revisão periódica de ofertas")
+                : lower.Contains("finance") || lower.Contains("faturamento") || lower.Contains("receita")
+                    ? ("finance", "summary", "resumo financeiro periódico")
+                    : ("stock", "scanAlerts", "verificação periódica de alertas de estoque");
+        var policy = await automations.CreateAsync(new CreateAutomationPolicyRequest(
+            $"Automação: {label}", specialist, action, "Restaurante atual", "America/Sao_Paulo", 1440, DateTime.UtcNow, null, 31), cancellationToken);
+        if (policy is null) return null;
+        return new("deterministic", $"Criei o rascunho da política “{policy.Name}”. Ela está DESATIVADA e em dry-run, com execução diária no fuso {policy.TimeZone}. Revise o alvo, horário e limite; só será ativada após confirmação explícita do gestor.", "Política de automação do ISM", "Rascunho criado; nenhuma execução ou alteração foi realizada.")
+        {
+            Specialist = "assistant",
+            ToolName = "assistant.proposeAutomation",
+            DecisionCode = AgentDecisionCode.NeedsApproval
+        };
+    }
 
     private async Task<AssistantProposal?> BuildProposalAsync(ISM.Domain.Modules.System.Entities.SystemAlert alert, int restaurantId, CancellationToken cancellationToken)
     {

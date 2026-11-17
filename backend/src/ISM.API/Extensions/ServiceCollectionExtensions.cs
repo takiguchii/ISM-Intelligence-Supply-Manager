@@ -65,6 +65,7 @@ public static class ServiceCollectionExtensions
         });
         services.AddHttpContextAccessor();
         services.AddHttpClient();
+        services.AddSingleton(TimeProvider.System);
         services.Configure<AssistantAiOptions>(configuration.GetSection(AssistantAiOptions.SectionName));
         services.AddHttpClient<ILlmTextProvider, OllamaTextProvider>((sp, client) =>
         {
@@ -282,6 +283,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAgentToolRegistry, AgentToolRegistry>();
         services.AddScoped<IAgentIntentRouter, AgentIntentRouter>();
         services.AddScoped<AssistantIntentCoordinator>();
+        services.AddScoped<IAutomationService, AutomationService>();
+        services.AddScoped<IAutomationRunner, AutomationRunner>();
         services.AddScoped<IAgentTool, StockProductTool>();
         services.AddScoped<IAgentTool, FinanceSummaryTool>();
         services.AddScoped<IAgentTool, DishCostTool>();

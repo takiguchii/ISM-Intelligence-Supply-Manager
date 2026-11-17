@@ -46,6 +46,8 @@ public sealed class IsmDbContext : DbContext
     public DbSet<AssistantActionAudit> AssistantActionAudits => Set<AssistantActionAudit>();
     public DbSet<AssistantThread> AssistantThreads => Set<AssistantThread>();
     public DbSet<AssistantMessage> AssistantMessages => Set<AssistantMessage>();
+    public DbSet<AutomationPolicy> AutomationPolicies => Set<AutomationPolicy>();
+    public DbSet<AutomationRun> AutomationRuns => Set<AutomationRun>();
 
     internal int? CurrentUserRestaurantId =>
         _currentUser != null && !_currentUser.IsSuperAdmin
@@ -400,6 +402,39 @@ public sealed class IsmDbContext : DbContext
             builder.Property(a => a.DetailsJson).HasMaxLength(8000);
             builder.HasIndex(a => new { a.RestaurantId, a.ProposalId, a.OccurredAtUtc });
             builder.HasOne<AssistantProposal>().WithMany().HasForeignKey(a => a.ProposalId).OnDelete(DeleteBehavior.Cascade);
+            builder.ApplyTenantQueryFilter(this);
+        });
+
+        modelBuilder.Entity<AutomationPolicy>(builder =>
+        {
+            builder.ToTable("assistant_automation_policies");
+            builder.HasKey(p => p.Id);
+            builder.Property(p => p.Name).HasMaxLength(120).IsRequired();
+            builder.Property(p => p.Specialist).HasMaxLength(40).IsRequired();
+            builder.Property(p => p.ActionType).HasMaxLength(80).IsRequired();
+            builder.Property(p => p.Target).HasMaxLength(120).IsRequired();
+            builder.Property(p => p.TimeZone).HasMaxLength(80).IsRequired();
+            builder.Property(p => p.Status).HasConversion<int>().IsRequired();
+            builder.Property(p => p.Mode).HasConversion<int>().IsRequired();
+            builder.Property(p => p.Version).IsConcurrencyToken();
+            builder.HasIndex(p => new { p.RestaurantId, p.Status, p.NextRunAtUtc });
+            builder.HasIndex(p => new { p.RestaurantId, p.Name }).IsUnique();
+            builder.HasOne<User>().WithMany().HasForeignKey(p => p.OwnerUserId).OnDelete(DeleteBehavior.Restrict);
+            builder.ApplyTenantQueryFilter(this);
+        });
+
+        modelBuilder.Entity<AutomationRun>(builder =>
+        {
+            builder.ToTable("assistant_automation_runs");
+            builder.HasKey(r => r.Id);
+            builder.Property(r => r.IdempotencyKey).HasMaxLength(160).IsRequired();
+            builder.Property(r => r.Reason).HasMaxLength(500).IsRequired();
+            builder.Property(r => r.EvidenceJson).HasMaxLength(8000).IsRequired();
+            builder.Property(r => r.CorrelationId).HasMaxLength(80);
+            builder.Property(r => r.Status).HasConversion<int>().IsRequired();
+            builder.HasIndex(r => new { r.PolicyId, r.IdempotencyKey }).IsUnique();
+            builder.HasIndex(r => new { r.RestaurantId, r.StartedAtUtc });
+            builder.HasOne<AutomationPolicy>().WithMany().HasForeignKey(r => r.PolicyId).OnDelete(DeleteBehavior.Cascade);
             builder.ApplyTenantQueryFilter(this);
         });
 

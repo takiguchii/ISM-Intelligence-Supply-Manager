@@ -10,7 +10,7 @@ namespace ISM.API.Controllers.Assistant;
 [ApiController]
 [Route("api/assistant")]
 [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
-public sealed class AssistantController(IAssistantService service, IAgentToolRegistry tools) : ControllerBase
+public sealed class AssistantController(IAssistantService service, IAgentToolRegistry tools, IAutomationService automations) : ControllerBase
 {
     [HttpGet("status")]
     public Task<AssistantStatusResponse> Status(CancellationToken cancellationToken) => service.GetStatusAsync(cancellationToken);
@@ -41,6 +41,37 @@ public sealed class AssistantController(IAssistantService service, IAgentToolReg
     [HttpPost("actions/{id:int}/review")]
     public async Task<ActionResult<AssistantActionResponse>> Review(int id, CancellationToken cancellationToken)
         => (await service.ReviewAsync(id, cancellationToken)) is { } action ? Ok(action) : NotFound();
+
+    [HttpGet("automations")]
+    public async Task<ActionResult<IReadOnlyList<AutomationPolicyResponse>>> Automations(CancellationToken cancellationToken)
+        => Ok(await automations.ListAsync(cancellationToken));
+
+    [HttpPost("automations")]
+    public async Task<ActionResult<AutomationPolicyResponse>> CreateAutomation([FromBody] CreateAutomationPolicyRequest request, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid) return ValidationProblem(ModelState);
+        var policy = await automations.CreateAsync(request, cancellationToken);
+        return policy is null ? BadRequest(new { message = "Especialista ou ação não permitida para automação." }) : CreatedAtAction(nameof(Automations), policy);
+    }
+
+    [HttpPost("automations/{id:int}/confirm")]
+    public async Task<ActionResult<AutomationPolicyResponse>> ConfirmAutomation(int id, [FromBody] ConfirmAutomationRequest request, CancellationToken cancellationToken)
+    {
+        var result = await automations.ConfirmAsync(id, request, cancellationToken);
+        return result.StatusCode switch { 200 => Ok(result.Policy), 400 => BadRequest(), 404 => NotFound(), 409 => Conflict(result.Policy), _ => StatusCode(result.StatusCode) };
+    }
+
+    [HttpPost("automations/{id:int}/pause")]
+    public async Task<ActionResult<AutomationPolicyResponse>> PauseAutomation(int id, CancellationToken cancellationToken)
+        => (await automations.PauseAsync(id, cancellationToken)) is { } policy ? Ok(policy) : NotFound();
+
+    [HttpPost("automations/{id:int}/revoke")]
+    public async Task<ActionResult<AutomationPolicyResponse>> RevokeAutomation(int id, CancellationToken cancellationToken)
+        => (await automations.RevokeAsync(id, cancellationToken)) is { } policy ? Ok(policy) : NotFound();
+
+    [HttpGet("automations/{id:int}/runs")]
+    public async Task<ActionResult<IReadOnlyList<AutomationRunResponse>>> AutomationRuns(int id, CancellationToken cancellationToken)
+        => Ok(await automations.RunsAsync(id, cancellationToken));
 
     [HttpPost("chat")]
     public async Task<ActionResult<AssistantChatResponse>> Chat([FromBody] AssistantChatRequest request, CancellationToken cancellationToken)

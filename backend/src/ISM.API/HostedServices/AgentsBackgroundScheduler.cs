@@ -1,6 +1,7 @@
 using ISM.Application.Interfaces.Menu;
 using ISM.Application.Interfaces.Stock;
 using ISM.Application.Interfaces.Suppliers;
+using ISM.Application.Interfaces.Assistant;
 using ISM.Application.Security;
 using ISM.Domain.Interfaces;
 
@@ -85,6 +86,7 @@ public sealed class AgentsBackgroundScheduler : BackgroundService
                 await scope.ServiceProvider.GetRequiredService<IStockAgent>().RunAsync(restaurant.Id, ct);
                 await scope.ServiceProvider.GetRequiredService<ISupplierAgent>().RunAsync(restaurant.Id, ct);
                 await scope.ServiceProvider.GetRequiredService<IPricingAgent>().RunAsync(restaurant.Id, ct);
+                await scope.ServiceProvider.GetRequiredService<IAutomationRunner>().RunDueAsync(restaurant.Id, ct);
             }
             catch (Exception ex)
             {

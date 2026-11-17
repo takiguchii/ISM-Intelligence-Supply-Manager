@@ -51,6 +51,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<ISystemAlertRepository, SystemAlertRepository>();
         services.AddScoped<IAssistantRepository, AssistantRepository>();
         services.AddScoped<IAssistantConversationRepository, AssistantConversationRepository>();
+        services.AddScoped<IAutomationRepository, AutomationRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IDishRepository, DishRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();

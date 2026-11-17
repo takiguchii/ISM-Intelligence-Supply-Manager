@@ -40,6 +40,10 @@ const resetForScope = (nextScope: string) => {
   announcedAt.clear();
 };
 
+const alertsSignature = (items: SystemAlertResponse[]) => items
+  .map(item => `${item.id}:${item.isRead ? 1 : 0}:${item.isDismissed ? 1 : 0}:${item.updatedAtUtc ?? item.generatedAtUtc}`)
+  .join("|");
+
 const isVisibleByPreference = (alert: SystemAlertResponse) => {
   const type = String(alert.alertType);
   if (type.includes("Stock")) return preferences.value.stock;
@@ -80,7 +84,7 @@ const refresh = async (announce = false) => {
         groupedNewCount.value = eligible.length;
       }
     }
-    alerts.value = nextAlerts;
+    if (alertsSignature(alerts.value) !== alertsSignature(nextAlerts)) alerts.value = nextAlerts;
     initialized.value = true;
     baselineComplete.value = true;
   } catch (cause: any) {

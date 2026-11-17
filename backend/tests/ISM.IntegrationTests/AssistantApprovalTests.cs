@@ -5,6 +5,7 @@ using System.Text.Json;
 using FluentAssertions;
 using ISM.Application.Agents;
 using ISM.Application.DTOs.Assistant;
+using ISM.Application.Interfaces.Assistant;
 using ISM.Application.DTOs.Restaurant;
 using ISM.Application.Security;
 using ISM.Domain.Entities;
@@ -192,6 +193,108 @@ public sealed class AssistantApprovalTests : IClassFixture<FoundationWebApplicat
         chat.ToolName.Should().Be("finance.getRevenueSummary");
         chat.Specialist.Should().Be("finance");
         chat.DecisionCode.Should().Be(AgentDecisionCode.CanAct);
+    }
+
+    [Fact]
+    public async Task AutomationPolicy_FromConversation_IsDraftUntilExplicitConfirmation_AndRunsDryRun()
+    {
+        const int restaurantId = 9986;
+        using var client = CreateClient(IsmRoles.Manager, restaurantId);
+        var draftResponse = await client.PostAsJsonAsync("/api/assistant/chat", new { message = "Crie uma automação diária para verificar meu estoque" });
+        draftResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var draftChat = await draftResponse.Content.ReadFromJsonAsync<AssistantChatResponse>();
+        draftChat!.ToolName.Should().Be("assistant.proposeAutomation");
+        draftChat.DecisionCode.Should().Be(AgentDecisionCode.NeedsApproval);
+
+        var policies = await client.GetFromJsonAsync<List<AutomationPolicyResponse>>("/api/assistant/automations");
+        var policy = policies.Should().ContainSingle().Subject;
+        policy.Status.Should().Be(AutomationPolicyStatus.Draft);
+        policy.Mode.Should().Be(AutomationMode.DryRun);
+
+        (await client.PostAsJsonAsync($"/api/assistant/automations/{policy.Id}/confirm", new { confirm = false })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var confirmed = await client.PostAsJsonAsync($"/api/assistant/automations/{policy.Id}/confirm", new { confirm = true });
+        confirmed.StatusCode.Should().Be(HttpStatusCode.OK);
+        var active = await confirmed.Content.ReadFromJsonAsync<AutomationPolicyResponse>();
+        active!.Status.Should().Be(AutomationPolicyStatus.Active);
+        active.Mode.Should().Be(AutomationMode.DryRun);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            scope.ServiceProvider.GetRequiredService<IBackgroundTenantContext>().SetRestaurant(restaurantId);
+            var runner = scope.ServiceProvider.GetRequiredService<IAutomationRunner>();
+            (await runner.RunDueAsync(restaurantId)).Should().Be(1);
+            (await runner.RunDueAsync(restaurantId)).Should().Be(0);
+        }
+
+        var runs = await client.GetFromJsonAsync<List<AutomationRunResponse>>($"/api/assistant/automations/{policy.Id}/runs");
+        var run = runs.Should().NotBeNull().And.ContainSingle().Subject;
+        run.Status.Should().Be(AutomationRunStatus.Simulated);
+        run.Reason.Should().Contain("dry-run");
+
+        (await client.PostAsync($"/api/assistant/automations/{policy.Id}/pause", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+        using (var scope = _factory.Services.CreateScope())
+        {
+            scope.ServiceProvider.GetRequiredService<IBackgroundTenantContext>().SetRestaurant(restaurantId);
+            (await scope.ServiceProvider.GetRequiredService<IAutomationRunner>().RunDueAsync(restaurantId)).Should().Be(0);
+        }
+        (await client.PostAsync($"/api/assistant/automations/{policy.Id}/revoke", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task AutomationPolicy_RejectsUnsafeActions_AndIsolatesTenants()
+    {
+        using var client = CreateClient(IsmRoles.Manager, 9987);
+        var unsafeResponse = await client.PostAsJsonAsync("/api/assistant/automations", new
+        {
+            name = "Comprar sem limite", specialist = "stock", actionType = "purchase", target = "todos", intervalMinutes = 60
+        });
+        unsafeResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var invalidZone = await client.PostAsJsonAsync("/api/assistant/automations", new
+        {
+            name = "Fuso inválido", specialist = "stock", actionType = "scanAlerts", target = "restaurante",
+            intervalMinutes = 60, timeZone = "Invalid/Zone"
+        });
+        invalidZone.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var response = await client.PostAsJsonAsync("/api/assistant/automations", new
+        {
+            name = "Estoque isolado", specialist = "stock", actionType = "scanAlerts", target = "restaurante", intervalMinutes = 60
+        });
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var policy = await response.Content.ReadFromJsonAsync<AutomationPolicyResponse>();
+        using var otherClient = CreateClient(IsmRoles.Manager, 9988);
+        (await otherClient.GetAsync($"/api/assistant/automations/{policy!.Id}/runs")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await otherClient.GetFromJsonAsync<List<AutomationPolicyResponse>>("/api/assistant/automations"))!.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task AutomationPolicy_ExpiresBeforeRun_AndIsNotScheduled()
+    {
+        const int restaurantId = 9989;
+        using var client = CreateClient(IsmRoles.Manager, restaurantId);
+        var response = await client.PostAsJsonAsync("/api/assistant/automations", new
+        {
+            name = "Expiração controlada", specialist = "stock", actionType = "scanAlerts", target = "restaurante",
+            intervalMinutes = 60, expiresAtUtc = DateTime.UtcNow.AddHours(1)
+        });
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var policy = await response.Content.ReadFromJsonAsync<AutomationPolicyResponse>();
+        (await client.PostAsJsonAsync($"/api/assistant/automations/{policy!.Id}/confirm", new { confirm = true })).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<IsmDbContext>();
+            var stored = await db.AutomationPolicies.SingleAsync(item => item.Id == policy.Id);
+            stored.ExpiresAtUtc = DateTime.UtcNow.AddMinutes(-1);
+            await db.SaveChangesAsync();
+            scope.ServiceProvider.GetRequiredService<IBackgroundTenantContext>().SetRestaurant(restaurantId);
+            (await scope.ServiceProvider.GetRequiredService<IAutomationRunner>().RunDueAsync(restaurantId)).Should().Be(0);
+        }
+
+        var listed = (await client.GetFromJsonAsync<List<AutomationPolicyResponse>>("/api/assistant/automations"))!.Single(item => item.Id == policy.Id);
+        listed.Status.Should().Be(AutomationPolicyStatus.Expired);
+        (await client.GetFromJsonAsync<List<AutomationRunResponse>>($"/api/assistant/automations/{policy.Id}/runs"))!.Should().BeEmpty();
     }
 
     [Fact]

@@ -29,7 +29,8 @@ export const useDashboardMetrics = (restaurantId: Ref<number | null>, requiresSe
 
   const refresh = async () => {
     const requestGeneration = ++generation;
-    available.value = false;
+    const hadData = available.value;
+    if (!hadData) available.value = false;
     if (requiresSelection.value && !restaurantId.value) {
       pending.value = false;
       error.value = "Selecione um restaurante para consultar os indicadores.";
