@@ -18,6 +18,8 @@ export interface AssistantAction {
   generatedAtUtc: string;
   decidedByUserId: number | null;
   decidedAtUtc: string | null;
+  expiresAtUtc: string;
+  version: number;
 }
 
 export interface AssistantStatus {

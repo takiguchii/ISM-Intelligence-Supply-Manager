@@ -33,6 +33,28 @@ public sealed class AssistantRepository(IsmDbContext db) : IAssistantRepository
         }
     }
 
+    public async Task ExpirePendingAsync(int restaurantId, DateTime nowUtc, CancellationToken cancellationToken = default)
+    {
+        var proposals = await db.Set<AssistantProposal>()
+            .Where(p => p.RestaurantId == restaurantId && p.Status == AssistantProposalStatus.Pending && p.ExpiresAtUtc <= nowUtc)
+            .ToListAsync(cancellationToken);
+        if (proposals.Count == 0) return;
+
+        foreach (var proposal in proposals)
+        {
+            proposal.Status = AssistantProposalStatus.Expired;
+            proposal.UpdatedAtUtc = nowUtc;
+            db.Set<AssistantActionAudit>().Add(new AssistantActionAudit
+            {
+                RestaurantId = restaurantId, ProposalId = proposal.Id, ActorUserId = 0,
+                Action = "Expired", EntityType = proposal.EntityType, EntityId = proposal.EntityId,
+                ValueBefore = proposal.OriginalValue, ValueAfter = proposal.OriginalValue,
+                DetailsJson = proposal.EvidenceJson, OccurredAtUtc = nowUtc
+            });
+        }
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<AssistantApprovalResult> ApprovePriceAsync(int proposalId, int restaurantId, int userId, CancellationToken cancellationToken = default)
     {
         await using var transaction = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(cancellationToken) : null;
@@ -40,10 +62,25 @@ public sealed class AssistantRepository(IsmDbContext db) : IAssistantRepository
         if (proposal is null) return new(null, false, false, null);
         if (proposal.Status != AssistantProposalStatus.Pending)
             return new(proposal, false, true, null);
+        if (proposal.ExpiresAtUtc <= DateTime.UtcNow)
+        {
+            proposal.Status = AssistantProposalStatus.Expired;
+            proposal.UpdatedAtUtc = DateTime.UtcNow;
+            db.Set<AssistantActionAudit>().Add(new AssistantActionAudit
+            {
+                RestaurantId = restaurantId, ProposalId = proposal.Id, ActorUserId = 0,
+                Action = "Expired", EntityType = proposal.EntityType, EntityId = proposal.EntityId,
+                ValueBefore = proposal.OriginalValue, ValueAfter = proposal.OriginalValue,
+                DetailsJson = proposal.EvidenceJson, OccurredAtUtc = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync(cancellationToken);
+            if (transaction is not null) await transaction.CommitAsync(cancellationToken);
+            return new(proposal, false, true, null);
+        }
 
         var dish = await db.Dishes.FirstOrDefaultAsync(d => d.Id == proposal.EntityId && d.RestaurantId == restaurantId, cancellationToken);
         if (dish is null) return new(proposal, true, false, null);
-        if (dish.Price != proposal.OriginalValue)
+        if (dish.Price != proposal.OriginalValue || dish.PriceRevision != proposal.Version)
         {
             proposal.Status = AssistantProposalStatus.Stale;
             proposal.UpdatedAtUtc = DateTime.UtcNow;
@@ -56,6 +93,7 @@ public sealed class AssistantRepository(IsmDbContext db) : IAssistantRepository
         dish.PriceRevision++;
         dish.UpdatedAtUtc = DateTime.UtcNow;
         proposal.Status = AssistantProposalStatus.Approved;
+        proposal.Version++;
         proposal.DecidedByUserId = userId;
         proposal.DecidedAtUtc = DateTime.UtcNow;
         proposal.UpdatedAtUtc = DateTime.UtcNow;
@@ -83,6 +121,20 @@ public sealed class AssistantRepository(IsmDbContext db) : IAssistantRepository
     {
         var proposal = await db.Set<AssistantProposal>().FirstOrDefaultAsync(p => p.Id == proposalId && p.RestaurantId == restaurantId, cancellationToken);
         if (proposal is null || proposal.Status != AssistantProposalStatus.Pending) return proposal;
+        if (proposal.ExpiresAtUtc <= DateTime.UtcNow)
+        {
+            proposal.Status = AssistantProposalStatus.Expired;
+            proposal.UpdatedAtUtc = DateTime.UtcNow;
+            db.Set<AssistantActionAudit>().Add(new AssistantActionAudit
+            {
+                RestaurantId = restaurantId, ProposalId = proposal.Id, ActorUserId = 0,
+                Action = "Expired", EntityType = proposal.EntityType, EntityId = proposal.EntityId,
+                ValueBefore = proposal.OriginalValue, ValueAfter = proposal.OriginalValue,
+                DetailsJson = proposal.EvidenceJson, OccurredAtUtc = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync(cancellationToken);
+            return proposal;
+        }
         proposal.Status = AssistantProposalStatus.Rejected;
         proposal.DecidedByUserId = userId;
         proposal.DecidedAtUtc = DateTime.UtcNow;

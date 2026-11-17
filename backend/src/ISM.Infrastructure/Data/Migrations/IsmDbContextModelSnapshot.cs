@@ -236,6 +236,18 @@ namespace ISM.Infrastructure.Data.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("varchar(300)");
 
+                    b.Property<string>("AgentApiEndpoint")
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
+                    b.Property<string>("AgentApiKey")
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
+                    b.Property<string>("AgentModel")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
                     b.Property<string>("CNPJ")
                         .IsRequired()
                         .HasMaxLength(14)
@@ -295,18 +307,6 @@ namespace ISM.Infrastructure.Data.Migrations
 
                     b.Property<string>("PhotoImportModel")
                         .HasColumnType("longtext");
-
-                    b.Property<string>("AgentApiKey")
-                        .HasMaxLength(512)
-                        .HasColumnType("varchar(512)");
-
-                    b.Property<string>("AgentApiEndpoint")
-                        .HasMaxLength(512)
-                        .HasColumnType("varchar(512)");
-
-                    b.Property<string>("AgentModel")
-                        .HasMaxLength(128)
-                        .HasColumnType("varchar(128)");
 
                     b.Property<int?>("PlanId")
                         .HasColumnType("int");
@@ -711,8 +711,16 @@ namespace ISM.Infrastructure.Data.Migrations
                         .HasMaxLength(8000)
                         .HasColumnType("varchar(8000)");
 
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<DateTime>("GeneratedAtUtc")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
 
                     b.Property<decimal>("OriginalValue")
                         .HasColumnType("decimal(10,2)");
@@ -741,6 +749,7 @@ namespace ISM.Infrastructure.Data.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<int>("Version")
+                        .IsConcurrencyToken()
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -748,6 +757,9 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.HasIndex("AlertId");
 
                     b.HasIndex("RestaurantId", "AlertId")
+                        .IsUnique();
+
+                    b.HasIndex("RestaurantId", "IdempotencyKey")
                         .IsUnique();
 
                     b.HasIndex("RestaurantId", "Status", "GeneratedAtUtc");

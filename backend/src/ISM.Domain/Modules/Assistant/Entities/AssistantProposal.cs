@@ -19,6 +19,8 @@ public sealed class AssistantProposal : BaseEntity
     public decimal? SnapshotTargetMarginPercent { get; set; }
     public string EvidenceJson { get; set; } = "{}";
     public DateTime GeneratedAtUtc { get; set; }
+    public DateTime ExpiresAtUtc { get; set; }
+    public string IdempotencyKey { get; set; } = string.Empty;
     public int? DecidedByUserId { get; set; }
     public DateTime? DecidedAtUtc { get; set; }
     public int Version { get; set; }

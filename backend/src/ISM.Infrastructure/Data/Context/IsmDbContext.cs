@@ -380,7 +380,10 @@ public sealed class IsmDbContext : DbContext
             builder.Property(p => p.SnapshotCost).HasColumnType("decimal(10,2)");
             builder.Property(p => p.SnapshotTargetMarginPercent).HasColumnType("decimal(5,2)");
             builder.Property(p => p.EvidenceJson).HasMaxLength(8000).IsRequired();
+            builder.Property(p => p.IdempotencyKey).HasMaxLength(120).IsRequired();
+            builder.Property(p => p.Version).IsConcurrencyToken();
             builder.HasIndex(p => new { p.RestaurantId, p.AlertId }).IsUnique();
+            builder.HasIndex(p => new { p.RestaurantId, p.IdempotencyKey }).IsUnique();
             builder.HasIndex(p => new { p.RestaurantId, p.Status, p.GeneratedAtUtc });
             builder.HasOne<SystemAlert>().WithMany().HasForeignKey(p => p.AlertId).OnDelete(DeleteBehavior.Cascade);
             builder.ApplyTenantQueryFilter(this);

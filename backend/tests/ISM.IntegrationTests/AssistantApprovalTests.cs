@@ -78,6 +78,59 @@ public sealed class AssistantApprovalTests : IClassFixture<FoundationWebApplicat
         (await ReadDishPriceAsync(staleDishId)).Should().Be(90m);
     }
 
+    [Fact]
+    public async Task PriceProposal_Expires_IsAudited_AndCannotBeApproved()
+    {
+        const int restaurantId = 9911;
+        var dishId = await SeedPriceAlertAsync(restaurantId, 80m, 120m);
+        using var client = CreateClient(IsmRoles.Manager, restaurantId);
+        var action = (await (await client.GetAsync("/api/assistant/actions?limit=10")).Content.ReadFromJsonAsync<List<AssistantActionResponse>>())!
+            .Single(a => a.EntityId == dishId);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<IsmDbContext>();
+            var proposal = await db.AssistantProposals.SingleAsync(p => p.Id == action.Id);
+            proposal.ExpiresAtUtc = DateTime.UtcNow.AddMinutes(-1);
+            await db.SaveChangesAsync();
+        }
+
+        var refreshed = await client.GetAsync("/api/assistant/actions?limit=10");
+        refreshed.StatusCode.Should().Be(HttpStatusCode.OK);
+        var expired = (await refreshed.Content.ReadFromJsonAsync<List<AssistantActionResponse>>())!.Single(a => a.Id == action.Id);
+        expired.Status.Should().Be(AssistantProposalStatus.Expired);
+        (await client.PostAsync($"/api/assistant/actions/{action.Id}/approve", null)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await ReadDishPriceAsync(dishId)).Should().Be(80m);
+
+        using var auditScope = _factory.Services.CreateScope();
+        var auditDb = auditScope.ServiceProvider.GetRequiredService<IsmDbContext>();
+        auditDb.AssistantActionAudits.Count(a => a.ProposalId == action.Id && a.Action == "Expired").Should().Be(1);
+    }
+
+    [Fact]
+    public async Task PriceProposal_RevisionChange_IsStaleWithoutMutatingPrice()
+    {
+        const int restaurantId = 9912;
+        var dishId = await SeedPriceAlertAsync(restaurantId, 80m, 120m);
+        using var client = CreateClient(IsmRoles.Manager, restaurantId);
+        var action = (await (await client.GetAsync("/api/assistant/actions?limit=10")).Content.ReadFromJsonAsync<List<AssistantActionResponse>>())!
+            .Single(a => a.EntityId == dishId);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<IsmDbContext>();
+            var dish = await db.Dishes.IgnoreQueryFilters().SingleAsync(d => d.Id == dishId);
+            dish.PriceRevision++;
+            await db.SaveChangesAsync();
+        }
+
+        (await client.PostAsync($"/api/assistant/actions/{action.Id}/approve", null)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await ReadDishPriceAsync(dishId)).Should().Be(80m);
+        using var auditScope = _factory.Services.CreateScope();
+        var auditDb = auditScope.ServiceProvider.GetRequiredService<IsmDbContext>();
+        auditDb.AssistantProposals.Single(p => p.Id == action.Id).Status.Should().Be(AssistantProposalStatus.Stale);
+    }
+
     [Theory]
     [InlineData(IsmRoles.Chef)]
     [InlineData(IsmRoles.Waiter)]

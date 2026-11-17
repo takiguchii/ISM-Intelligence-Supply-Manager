@@ -43,6 +43,7 @@ public sealed class AssistantService(
     public async Task<IReadOnlyList<AssistantActionResponse>> GetActionsAsync(int page, int limit, CancellationToken cancellationToken = default)
     {
         var restaurantId = RequireRestaurant();
+        await repository.ExpirePendingAsync(restaurantId, DateTime.UtcNow, cancellationToken);
         var alertPage = await alerts.GetPagedAsync(restaurantId, 1, Math.Min(Math.Max(limit * 2, 20), 200), isDismissed: false, cancellationToken: cancellationToken);
         foreach (var alert in alertPage.Items)
         {
@@ -225,11 +226,12 @@ public sealed class AssistantService(
         var entityType = alert.ReferenceEntityType ?? "Alert";
         var entityId = alert.ReferenceEntityId ?? alert.Id;
         decimal original = 0, proposed = 0, cost = 0;
+        var version = 0;
         decimal? margin = null;
         var name = alert.Title;
         if (alert.AlertType == SystemAlertType.DishCmvDefasagem && alert.ReferenceEntityId.HasValue && await dishes.GetDishByIdAsync(alert.ReferenceEntityId.Value, cancellationToken) is { } dish)
         {
-            name = dish.Name; original = dish.Price; cost = dish.Cost;
+            name = dish.Name; original = dish.Price; cost = dish.Cost; version = dish.PriceRevision;
             if (!string.IsNullOrWhiteSpace(alert.PayloadSerializedJson))
             {
                 using var json = JsonDocument.Parse(alert.PayloadSerializedJson);
@@ -246,7 +248,10 @@ public sealed class AssistantService(
             ActionType = alert.AlertType == SystemAlertType.DishCmvDefasagem ? "UpdateDishPrice" : "ReviewAlert",
             EntityType = entityType, EntityId = entityId, EntityName = name, Status = AssistantProposalStatus.Pending,
             OriginalValue = original, ProposedValue = proposed, SnapshotCost = cost, SnapshotTargetMarginPercent = margin,
-            EvidenceJson = alert.PayloadSerializedJson ?? "{}", GeneratedAtUtc = alert.GeneratedAtUtc
+            EvidenceJson = alert.PayloadSerializedJson ?? "{}", GeneratedAtUtc = alert.GeneratedAtUtc,
+            ExpiresAtUtc = alert.GeneratedAtUtc.AddDays(7),
+            IdempotencyKey = $"alert:{alert.Id}:action:{(alert.AlertType == SystemAlertType.DishCmvDefasagem ? "price" : "review")}",
+            Version = version
         };
     }
 
@@ -392,5 +397,5 @@ public sealed class AssistantService(
     };
     private static string Format(decimal value) => value.ToString("0.###", CultureInfo.InvariantCulture);
     private static string? Limit(string? value, int max) => string.IsNullOrWhiteSpace(value) ? null : value.Length <= max ? value : value[..max];
-    private static AssistantActionResponse Map(AssistantProposal p) => new(p.Id, p.AlertId, p.Specialist, p.ActionType, p.EntityType, p.EntityId, p.EntityName, p.Status, p.OriginalValue, p.ProposedValue, p.SnapshotCost, p.SnapshotTargetMarginPercent, p.EvidenceJson, p.GeneratedAtUtc, p.DecidedByUserId, p.DecidedAtUtc);
+    private static AssistantActionResponse Map(AssistantProposal p) => new(p.Id, p.AlertId, p.Specialist, p.ActionType, p.EntityType, p.EntityId, p.EntityName, p.Status, p.OriginalValue, p.ProposedValue, p.SnapshotCost, p.SnapshotTargetMarginPercent, p.EvidenceJson, p.GeneratedAtUtc, p.DecidedByUserId, p.DecidedAtUtc, p.ExpiresAtUtc, p.Version);
 }

@@ -8,7 +8,8 @@ public sealed record AssistantActionResponse(
     int Id, int AlertId, string Specialist, string ActionType, string EntityType, int EntityId,
     string EntityName, AssistantProposalStatus Status, decimal OriginalValue, decimal ProposedValue,
     decimal SnapshotCost, decimal? SnapshotTargetMarginPercent, string EvidenceJson,
-    DateTime GeneratedAtUtc, int? DecidedByUserId, DateTime? DecidedAtUtc);
+    DateTime GeneratedAtUtc, int? DecidedByUserId, DateTime? DecidedAtUtc,
+    DateTime ExpiresAtUtc, int Version);
 
 public sealed record AssistantStatusResponse(bool Enabled, bool ProviderReachable, string Model, string? Message);
 public sealed record AssistantOverviewResponse(AssistantStatusResponse Status, int PendingActions, int UnreadAlerts, IReadOnlyList<AssistantActionResponse> Actions);
