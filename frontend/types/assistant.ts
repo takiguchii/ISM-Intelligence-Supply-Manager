@@ -39,6 +39,11 @@ export interface AssistantChatResponse {
   message: string;
   source: string;
   warning: string | null;
+  specialist?: string | null;
+  toolName?: string | null;
+  decisionCode?: number | null;
+  evidence?: Array<{ sourceType: string; sourceId: string; restaurantId: number; observedAtUtc: string; asOfUtc: string | null; summary: string }>;
+  generatedAtUtc?: string;
 }
 
 export interface AssistantContext {

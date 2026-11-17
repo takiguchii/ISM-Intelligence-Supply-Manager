@@ -136,6 +136,28 @@ public sealed class AssistantApprovalTests : IClassFixture<FoundationWebApplicat
         chat!.Mode.Should().Be("deterministic");
         chat.Source.Should().Be("Dados financeiros do ISM");
         chat.Message.Should().Contain("pedidos pagos");
+        chat.ToolName.Should().Be("finance.getRevenueSummary");
+        chat.Specialist.Should().Be("finance");
+        chat.DecisionCode.Should().Be(AgentDecisionCode.CanAct);
+    }
+
+    [Fact]
+    public async Task Assistant_ContextualQuestion_DelegatesToSpecialistAndKeepsSafeFallback()
+    {
+        const int restaurantId = 9985;
+        var alertId = await SeedStockAlertAsync(restaurantId, 1m, 4m);
+        using var client = CreateClient(IsmRoles.Manager, restaurantId);
+
+        var thread = await client.PostAsJsonAsync("/api/assistant/threads", new { originAlertId = alertId });
+        thread.StatusCode.Should().Be(HttpStatusCode.OK);
+        var conversation = await thread.Content.ReadFromJsonAsync<AssistantConversationResponse>();
+        var response = await client.PostAsJsonAsync($"/api/assistant/threads/{conversation!.Thread.Id}/messages", new { message = "Devo repor este produto agora?" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = await response.Content.ReadFromJsonAsync<AssistantConversationResponse>();
+        var assistantMessage = result!.Messages.Last(message => message.Role == "assistant");
+        assistantMessage.Source.Should().Contain("stock");
+        assistantMessage.Content.Should().Contain("Dados");
     }
 
     [Fact]

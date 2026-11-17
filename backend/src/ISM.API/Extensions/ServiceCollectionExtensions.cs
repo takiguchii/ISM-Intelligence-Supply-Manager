@@ -281,6 +281,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISystemAlertService, SystemAlertService>();
         services.AddScoped<IAgentToolRegistry, AgentToolRegistry>();
         services.AddScoped<IAgentIntentRouter, AgentIntentRouter>();
+        services.AddScoped<AssistantIntentCoordinator>();
         services.AddScoped<IAgentTool, StockProductTool>();
         services.AddScoped<IAgentTool, FinanceSummaryTool>();
         services.AddScoped<IAgentTool, DishCostTool>();

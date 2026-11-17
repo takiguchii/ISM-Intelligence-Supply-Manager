@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using ISM.Application.DTOs.Assistant;
+using ISM.Application.Agents;
 using ISM.Application.Interfaces.Assistant;
 using ISM.Application.Interfaces.Finance;
 using ISM.Application.Security;
@@ -19,7 +20,9 @@ public sealed class AssistantService(
     IDishRepository dishes,
     IFinanceService finance,
     ILlmTextProvider llm,
-    ICurrentUser currentUser) : IAssistantService
+    ICurrentUser currentUser,
+    IAgentToolRegistry tools,
+    AssistantIntentCoordinator intentCoordinator) : IAssistantService
 {
     public async Task<AssistantStatusResponse> GetStatusAsync(CancellationToken cancellationToken = default)
     {
@@ -69,9 +72,11 @@ public sealed class AssistantService(
 
     public async Task<AssistantChatResponse> ChatAsync(string message, CancellationToken cancellationToken = default)
     {
-        if (IsFinancialQuestion(message)) return await BuildFinancialResponseAsync(cancellationToken);
         var restaurantId = RequireRestaurant();
         var context = await BuildContextAsync(restaurantId, cancellationToken);
+        var intent = intentCoordinator.Resolve(message, null);
+        if (intent is not null && await ExecuteIntentAsync(intent, cancellationToken) is { } routed)
+            return routed;
         var result = await llm.CompleteAsync(
             "Você é o ISM Assist. Responda em português, seja conciso e não invente dados. Nunca altere preços, estoque ou fornecedores; explique que qualquer alteração exige aprovação do gerente. Use somente o contexto fornecido.",
             $"Contexto autorizado do restaurante:\n{context}\n\nPergunta: {message.Trim()}", cancellationToken);
@@ -157,6 +162,19 @@ public sealed class AssistantService(
         }, cancellationToken);
 
         var context = DeserializeContext(thread.ContextSnapshotJson);
+        var intent = intentCoordinator.Resolve(cleanMessage, context);
+        if (intent is not null && await ExecuteIntentAsync(intent, cancellationToken) is { } routed)
+        {
+            await conversations.AddMessageAsync(new AssistantMessage
+            {
+                RestaurantId = restaurantId, ThreadId = thread.Id, Role = "assistant", Content = routed.Message,
+                Mode = routed.Mode, Source = routed.Source, CreatedAtUtc = DateTime.UtcNow
+            }, cancellationToken);
+            thread.LastMessageAtUtc = DateTime.UtcNow;
+            thread.UpdatedAtUtc = thread.LastMessageAtUtc;
+            await conversations.SaveThreadAsync(thread, cancellationToken);
+            return await BuildConversationAsync(thread, context, cancellationToken);
+        }
         if (IsFinancialQuestion(cleanMessage))
         {
             var financial = await BuildFinancialResponseAsync(cancellationToken);
@@ -304,6 +322,49 @@ public sealed class AssistantService(
                       $"Contas a receber: R$ {summary.AccountsReceivable:N2}. " +
                       $"Contas a pagar: R$ {summary.AccountsPayable:N2}.";
         return new("deterministic", message, "Dados financeiros do ISM", null);
+    }
+
+    private async Task<AssistantChatResponse?> ExecuteIntentAsync(AgentIntent intent, CancellationToken cancellationToken)
+    {
+        var result = await tools.ExecuteAsync(new AgentToolExecuteRequest(intent.ToolName, intent.Input), cancellationToken);
+        if (result.Code == AgentDecisionCode.Unreachable)
+            return new("deterministic_fallback", result.Message, "Dados determinísticos do ISM", "Nenhuma ação foi executada.") { Specialist = intent.Specialist, ToolName = intent.ToolName, DecisionCode = result.Code, Evidence = result.Evidence };
+
+        var message = DescribeToolResult(result);
+        var warning = result.Code == AgentDecisionCode.CanAct ? null : "A resposta foi limitada pela disponibilidade ou qualidade dos dados; nenhuma ação foi executada.";
+        var source = intent.ToolName == "finance.getRevenueSummary" ? "Dados financeiros do ISM" : $"Dados determinísticos do ISM · {intent.Specialist}";
+        return new("deterministic", message, source, warning)
+        {
+            Specialist = intent.Specialist,
+            ToolName = intent.ToolName,
+            DecisionCode = result.Code,
+            Evidence = result.Evidence
+        };
+    }
+
+    private static string DescribeToolResult(AgentToolResult result)
+    {
+        if (result.Data is null)
+            return result.Code == AgentDecisionCode.InsufficientData ? $"Dados insuficientes: {result.Message}" : result.Message;
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(result.Data));
+        var root = document.RootElement;
+        string Text(string name) => root.TryGetProperty(name, out var value) ? value.ToString() : string.Empty;
+        var description = result.ToolName switch
+        {
+            "stock.analyzeReplenishment" => $"{Text("ProductName")}: saldo {Text("CurrentQuantity")}, consumo médio {Text("DailyConsumption")}/dia e aproximadamente {Text("DaysRemaining")} dias restantes. {result.Message}",
+            "pricing.simulateDishPrice" => $"{Text("DishName")}: CMV atual {Text("CurrentCmvPercent")}%, custo verificado R$ {Text("VerifiedCost")} e preço simulado R$ {Text("SuggestedPrice")}. {result.Message}",
+            "suppliers.compareOffers" => $"Encontrei {root.GetProperty("Offers").GetArrayLength()} ofertas recentes e compatíveis para {Text("ProductName")} ({Text("Unit")}). {result.Message}",
+            "finance.getPeriodSummary" => $"Período consultado: receita de pedidos pagos R$ {Text("PaidSalesRevenue")}, outras entradas R$ {Text("SettledOtherIncome")}, despesas R$ {Text("SettledExpenses")} e fluxo líquido R$ {Text("NetCashFlow")}. {result.Message}",
+            "finance.getRevenueSummary" => $"Faturamento do mês, baseado em pedidos pagos: R$ {Text("SalesRevenue")}. Outras receitas liquidadas: R$ {Text("OtherIncome")}. Despesas liquidadas: R$ {Text("Expenses")}. Contas a receber: R$ {Text("AccountsReceivable")}. Contas a pagar: R$ {Text("AccountsPayable")}.",
+            "stock.getProduct" => $"{Text("Name")}: saldo atual {Text("CurrentQuantity")} e mínimo {Text("MinimumQuantity")} {Text("Unit")}. {result.Message}",
+            "pricing.getDishCost" => $"{Text("Name")}: preço R$ {Text("Price")}, custo R$ {Text("Cost")}. {result.Message}",
+            "assistant.getAlertContext" => $"Alerta: {Text("Title")}. {Text("Message")}. {result.Message}",
+            _ => result.Message
+        };
+        var evidence = result.Evidence.Count == 0
+            ? string.Empty
+            : $" Fonte: {string.Join(", ", result.Evidence.Select(item => item.SourceType))}, observado em {result.Evidence.Max(item => item.ObservedAtUtc).ToLocalTime():dd/MM/yyyy HH:mm}.";
+        return description + evidence;
     }
 
     private static bool IsFinancialQuestion(string message)
