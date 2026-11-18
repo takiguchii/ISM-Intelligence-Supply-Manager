@@ -248,9 +248,11 @@ const fecharModal = () => {
 const abrirAssistente = async () => {
   await alertCenter.ensureLoaded()
   const alert = alertCenter.alerts.value.find(item => alertTypeName(item.alertType).includes('Stock') && !item.isDismissed)
-  if (alert) assistantUi.openChat(alert)
-  else assistantUi.openGeneralChat()
+  if (alert) assistantUi.openChat(alert, 'Explique este alerta de estoque.')
+  else if (itensCriticos.value[0]?.id) consultarSaldo(itensCriticos.value[0].id)
 }
+const consultarSaldo = (productId: number) =>
+  assistantUi.openGeneralChat(`Qual é o saldo de estoque do produto ${productId}?`)
 
 onMounted(() => {
   carregarHistorico()
@@ -332,8 +334,8 @@ onMounted(() => {
             </p>
           </div>
         </div>
-        <button @click="abrirAssistente" class="w-full sm:w-auto whitespace-nowrap bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-indigo-500 active:scale-95 transition-all shadow-lg shadow-indigo-600/20">
-          Abrir no Assistente
+        <button v-if="assistantUi.canUse.value" @click="abrirAssistente" class="w-full sm:w-auto whitespace-nowrap bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-indigo-500 active:scale-95 transition-all shadow-lg shadow-indigo-600/20">
+          Consultar risco de estoque
         </button>
       </div>
     </div>
@@ -408,6 +410,7 @@ onMounted(() => {
               </td>
               <td class="px-6 py-4 text-right">
                 <div class="flex items-center justify-end gap-2">
+                  <button v-if="assistantUi.canUse.value" type="button" class="rounded-lg px-2 py-2 text-xs font-semibold text-indigo-300 hover:bg-indigo-400/10 focus-visible:ring-2 focus-visible:ring-indigo-500" @click="consultarSaldo(item.id)">Consultar saldo</button>
                   <button
                     @click="abrirModal(item)"
                     class="p-2 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700/40 transition-colors"

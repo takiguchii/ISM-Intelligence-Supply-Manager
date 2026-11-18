@@ -47,7 +47,8 @@ public sealed class ImportOrchestrator : IImportOrchestrator
         ImportContext context,
         CancellationToken ct)
     {
-        var importer = _importers.FirstOrDefault(i => i.CanHandle(contentType, fileName));
+        var importer = _importers.FirstOrDefault(i =>
+            i.HandlesEntity == context.TargetEntity && i.CanHandle(contentType, fileName));
         if (importer is null)
             throw new NotSupportedException(
                 $"Nenhum importador registrado para ContentType='{contentType}', arquivo='{fileName}'.");

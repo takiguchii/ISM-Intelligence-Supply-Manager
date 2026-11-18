@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import type { SystemAlertResponse } from "~/types/system";
 import { useSystemAlertCenter } from "~/composables/useSystemAlertCenter";
 import { useAssistantUi } from "~/composables/useAssistantUi";
@@ -23,6 +23,11 @@ const alerts = center.alerts;
 const loading = center.loading;
 const errorMessage = center.error;
 const unreadCount = center.unreadCount;
+const clearingAll = ref(false);
+const clearAllError = ref("");
+const confirmClear = ref(false);
+const auth = useAuthStore();
+const canDismiss = computed(() => !!auth.currentUser?.restaurantId && ["Admin", "Manager"].includes(auth.userRole ?? ""));
 const fetchAlerts = () => center.refresh(false);
 
 const handleMarkRead = async (alertItem: SystemAlertResponse): Promise<boolean> => {
@@ -59,6 +64,15 @@ const handleDismiss = async (alertItem: SystemAlertResponse) => {
   catch { errorMessage.value = "Não foi possível descartar o alerta. Tente novamente."; }
 };
 
+const handleClearAll = async () => {
+  if (!canDismiss.value || clearingAll.value || !alerts.value.length) return;
+  clearingAll.value = true;
+  clearAllError.value = "";
+  try { await center.dismissAll(); confirmClear.value = false; }
+  catch { clearAllError.value = "Não foi possível limpar os alertas. Tente novamente."; }
+  finally { clearingAll.value = false; }
+};
+
 const handleConversation = (alertItem: SystemAlertResponse) => {
   emit("close");
   assistantUi.openChat(alertItem);
@@ -66,7 +80,10 @@ const handleConversation = (alertItem: SystemAlertResponse) => {
 
 const handleKeydown = (event: KeyboardEvent) => { if (event.key === "Escape" && props.isOpen) emit("close"); };
 
-watch(() => props.isOpen, open => { if (open) void center.ensureLoaded(); });
+watch(() => props.isOpen, open => {
+  if (open) void center.ensureLoaded();
+  else { confirmClear.value = false; clearAllError.value = ""; }
+});
 onMounted(() => { void center.ensureLoaded(); window.addEventListener("keydown", handleKeydown); });
 onBeforeUnmount(() => window.removeEventListener("keydown", handleKeydown));
 
@@ -96,16 +113,18 @@ defineExpose({
       aria-labelledby="notification-drawer-title"
     >
       <!-- Header -->
-      <div class="p-5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/80 dark:bg-zinc-950/50">
-        <div class="flex items-center gap-3">
+      <div class="p-4 sm:p-5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-3 bg-zinc-50/80 dark:bg-zinc-950/50">
+        <div class="min-w-0">
           <h2 id="notification-drawer-title" class="text-base font-bold text-zinc-900 dark:text-white tracking-tight">Notificações Inteligentes</h2>
           <span
             v-if="unreadCount > 0"
-            class="px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
+            class="mt-0.5 block text-xs font-medium text-indigo-700 dark:text-indigo-300"
           >
             {{ unreadCount }} não lidas
           </span>
         </div>
+        <div class="flex shrink-0 items-center gap-2">
+        <button v-if="canDismiss && alerts.length" type="button" class="rounded-lg border border-zinc-200 px-2.5 py-2 text-[11px] font-semibold text-zinc-600 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800" :disabled="clearingAll" @click="confirmClear = !confirmClear">Limpar todas</button>
         <button
           @click="emit('close')"
           type="button"
@@ -117,10 +136,19 @@ defineExpose({
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
           </svg>
         </button>
+        </div>
       </div>
 
       <!-- Alerts List -->
       <div class="flex-1 overflow-y-auto p-4 space-y-3">
+        <div v-if="confirmClear" class="space-y-3 rounded-xl border border-zinc-200 p-3 text-sm dark:border-zinc-700">
+          <p>Descartar todas as notificações deste restaurante, incluindo as não lidas?</p>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" class="rounded-lg bg-red-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50" :disabled="clearingAll" @click="handleClearAll">{{ clearingAll ? 'Limpando…' : 'Confirmar limpeza' }}</button>
+            <button type="button" class="rounded-lg px-3 py-2 text-xs font-semibold" :disabled="clearingAll" @click="confirmClear = false">Cancelar</button>
+          </div>
+        </div>
+        <p v-if="clearAllError" role="alert" class="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">{{ clearAllError }}</p>
         <div v-if="loading" class="p-8 text-center text-xs text-zinc-500 font-mono">
           Carregando alertas dos agentes...
         </div>
@@ -203,7 +231,7 @@ defineExpose({
               </template>
             </button>
             <button type="button" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-zinc-700 text-zinc-300 hover:bg-zinc-800" @click="handleConversation(alertItem)">Conversar</button>
-            <button type="button" class="ml-auto px-2 py-1.5 text-[11px] text-zinc-400 hover:text-white" @click="handleDismiss(alertItem)">Descartar</button>
+            <button v-if="canDismiss" type="button" class="ml-auto px-2 py-1.5 text-[11px] text-zinc-400 hover:text-white disabled:opacity-50" :disabled="clearingAll" @click="handleDismiss(alertItem)">Descartar</button>
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import AgentMascot2D from "~/components/assistant/AgentMascot2D.vue";
+import { aggregateAgentCards } from "~/types/agentExperience";
 import { useAuthStore } from "~/stores/auth";
 import {
   supplierService,
@@ -12,6 +13,13 @@ import {
 
 const authStore = useAuthStore();
 const router = useRouter();
+const assistantUi = useAssistantUi();
+const alertCenter = useSystemAlertCenter();
+const supplierInsight = computed(() => aggregateAgentCards(alertCenter.alerts.value).find(card => card.agent === "suppliers"));
+const supplierAlert = computed(() => alertCenter.alerts.value.find(alert => alert.id === supplierInsight.value?.alertId));
+const discussSupplierAlert = () => {
+  if (supplierAlert.value) assistantUi.openChat(supplierAlert.value, `Explique o alerta ${supplierAlert.value.id}.`);
+};
 
 // State UI
 const isSidebarOpen = ref(false);
@@ -264,29 +272,23 @@ onMounted(async () => {
       </div>
 
       <!-- ========================================================= -->
-      <!-- BANNER DO AGENTE (APENAS ÍCONE CAMINHÃO E MENSAGEM SIMPLIFICADA) -->
-      <!-- ========================================================= -->
-      <div data-agent-card="suppliers" class="rounded-2xl bg-zinc-900/70 border border-zinc-800/80 p-4 sm:p-5 mb-8 border-l-4 border-l-cyan-500 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
-        <AgentMascot2D agent="suppliers" mood="curious" size="sm" />
-        <div class="hidden w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 items-center justify-center shrink-0">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8h4l3 3v5h-2m-6 0h2" />
-          </svg>
+      <!-- Cocou de fornecedores -->
+      <section v-if="assistantUi.canUse.value" data-agent-card="suppliers" class="mb-8 flex flex-wrap items-center gap-4 rounded-2xl border border-violet-200 bg-violet-50/60 p-4 dark:border-violet-500/25 dark:bg-violet-500/5 sm:p-5">
+        <AgentMascot2D agent="suppliers" :mood="supplierAlert ? supplierInsight?.mood : 'curious'" size="sm" />
+        <div class="min-w-[12rem] flex-1">
+          <h2 class="font-semibold text-zinc-900 dark:text-zinc-100">Cocou Fornecedores</h2>
+          <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-300">{{ supplierAlert?.title ?? 'Nenhum alerta de fornecedor disponível na central.' }}</p>
         </div>
-        <span class="text-sm font-semibold text-zinc-200">
-          Análises de fornecedores no ISM Assist
-        </span>
-        <button type="button" class="shrink-0 rounded-xl border border-cyan-400/30 px-3 py-2 text-xs font-semibold text-cyan-300 hover:bg-cyan-400/10" @click="window.dispatchEvent(new CustomEvent('ism-assistant-open'))">Abrir Assistente</button>
-      </div>
+        <button v-if="supplierAlert" type="button" class="rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-600 dark:bg-violet-300 dark:text-zinc-950 dark:hover:bg-violet-200" @click="discussSupplierAlert">Entender alerta</button>
+        <a v-else href="#lista-de-fornecedores" class="rounded-xl border border-violet-200 px-4 py-2.5 text-sm font-semibold text-violet-800 hover:bg-violet-100 dark:border-violet-400/30 dark:text-violet-200 dark:hover:bg-violet-400/10">Ver fornecedores</a>
+      </section>
 
-      <!-- ========================================================= -->
       <!-- SPLIT VIEW LAYOUT -->
       <!-- ========================================================= -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         <!-- LEFT COLUMN: LISTA DE PARCEIROS ATIVOS -->
-        <div class="lg:col-span-5 flex flex-col space-y-4">
+        <div id="lista-de-fornecedores" class="scroll-mt-20 lg:col-span-5 flex flex-col space-y-4">
           
           <!-- Column Header -->
           <div class="flex items-center justify-between px-1">

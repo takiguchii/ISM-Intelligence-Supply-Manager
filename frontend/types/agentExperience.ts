@@ -95,7 +95,7 @@ export const agentForAlert = (alert: Pick<SystemAlertResponse, "alertType" | "re
   }
 };
 
-export const severityForAlert = (alert: Pick<SystemAlertResponse, "severity">): AgentSeverity => {
+export const severityForAlert = (alert: { severity: string | number }): AgentSeverity => {
   switch (String(alert.severity)) {
     case "2":
     case "Critical":
@@ -112,7 +112,7 @@ export const severityForAlert = (alert: Pick<SystemAlertResponse, "severity">): 
   }
 };
 
-export const moodForAlert = (alert: Pick<SystemAlertResponse, "alertType" | "severity">): AgentMood => {
+export const moodForAlert = (alert: { alertType: string | number; severity: string | number }): AgentMood => {
   const severity = severityForAlert(alert);
   if (severity === "critical") return alertTypeName(alert.alertType) === "StockRuptureRisk48h" ? "worried" : "sad";
   if (severity === "warning") return "worried";

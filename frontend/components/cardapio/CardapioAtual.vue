@@ -40,6 +40,8 @@ interface ApiError {
 }
 
 const authStore = useAuthStore()
+const { canUse: canUseAssistant, openGeneralChat } = useAssistantUi()
+const consultarCusto = (id: number) => openGeneralChat(`Qual é o custo e o preço do prato ${id}?`)
 const router = useRouter()
 const config = useRuntimeConfig()
 const canManageMenu = computed(() => ["Admin", "Manager"].includes(authStore.currentUser?.role ?? ""))
@@ -1264,6 +1266,7 @@ onMounted(loadPage)
 
               <!-- ACTIONS -->
               <div v-if="canManageMenu" class="flex items-center gap-2 mt-5 pt-4 border-t border-zinc-800">
+                <button v-if="canUseAssistant" type="button" class="rounded-lg px-2 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-500/10 dark:text-indigo-300" @click="consultarCusto(dish.id)">Consultar custo</button>
                 <button type="button" @click="openEditDishModal(dish)"
                   class="flex-1 px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-xs font-semibold text-zinc-300 hover:text-white transition">
                   Editar

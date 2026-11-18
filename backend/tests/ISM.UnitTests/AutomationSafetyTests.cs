@@ -105,6 +105,7 @@ public sealed class AutomationSafetyTests
 
     private sealed class AlertRepositoryFake : ISystemAlertRepository
     {
+        public Task<int> DismissAllAsync(int restaurantId, int userId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<SystemAlert?> GetByIdAsync(int id, CancellationToken cancellationToken = default) => Task.FromResult<SystemAlert?>(null);
         public Task<(IReadOnlyList<SystemAlert> Items, int TotalCount)> GetPagedAsync(int? restaurantId, int pageNumber, int pageSize, SystemAlertType? alertType = null, AlertSeverity? severity = null, bool? isRead = null, bool? isDismissed = null, string? search = null, CancellationToken cancellationToken = default) => Task.FromResult<(IReadOnlyList<SystemAlert>, int)>(([], 0));
         public Task<SystemAlert> CreateAsync(SystemAlert alert, CancellationToken cancellationToken = default) => Task.FromResult(alert);

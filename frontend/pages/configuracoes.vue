@@ -2,6 +2,7 @@
 import AppearanceSettings from "~/components/settings/AppearanceSettings.vue";
 import SettingsStyles from "~/components/settings/SettingsStyles.vue";
 import GeneralSettings from "~/components/settings/GeneralSettings.vue";
+import ProfileSettings from "~/components/settings/ProfileSettings.vue";
 import AccountSecuritySettings from "~/components/settings/AccountSecuritySettings.vue";
 import NotificationSettings from "~/components/settings/NotificationSettings.vue";
 import SubscriptionSettings from "~/components/settings/SubscriptionSettings.vue";
@@ -36,16 +37,22 @@ const targetRestaurantId = ref<number | null>(null);
 const restaurants = ref<Array<{ id: number; name: string }>>([]);
 const restaurantsError = ref<string | null>(null);
 
-const activeSectionId = ref<ConfigSectionId>("ai");
-type ConfigSectionId = "ai" | "general" | "appearance" | "notifications" | "security" | "billing";
+const activeSectionId = ref<ConfigSectionId>("profile");
+type ConfigSectionId = "ai" | "profile" | "general" | "appearance" | "notifications" | "security" | "billing";
 
 const sections: Array<{
   id: ConfigSectionId;
   label: string;
   subtitle: string;
-  icon: "sparkles" | "sliders" | "palette" | "bell" | "shield" | "credit";
+  icon: "sparkles" | "user" | "sliders" | "palette" | "bell" | "shield" | "credit";
   locked?: boolean;
 }> = [
+  {
+    id: "profile",
+    label: "Perfil",
+    subtitle: "Nome e foto exibidos no menu lateral",
+    icon: "user"
+  },
   {
     id: "ai",
     label: "Inteligência Artificial",
@@ -54,7 +61,7 @@ const sections: Array<{
   },
   {
     id: "general",
-    label: "Geral",
+    label: "Restaurante",
     subtitle: "Nome do restaurante, fuso, moeda, idioma",
     icon: "sliders"
   },
@@ -686,6 +693,9 @@ onMounted(async () => {
                 <svg v-if="s.icon === 'sparkles'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
                 </svg>
+                <svg v-else-if="s.icon === 'user'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <circle cx="12" cy="8" r="3" /><path stroke-linecap="round" d="M5 20v-1a7 7 0 0114 0v1" />
+                </svg>
                 <svg v-else-if="s.icon === 'sliders'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
                 </svg>
@@ -733,6 +743,7 @@ onMounted(async () => {
           </nav>
 
           <div
+            v-if="activeSectionId === 'ai'"
             :class="[
               'rounded-xl border p-4 space-y-2',
               themeStore.isDark
@@ -1201,7 +1212,11 @@ onMounted(async () => {
           </div>
         </section>
 
-        <!-- Seção Geral -->
+        <section v-else-if="activeSectionId === 'profile'">
+          <ProfileSettings />
+        </section>
+
+        <!-- Dados do restaurante -->
         <section v-else-if="activeSectionId === 'general'" class="space-y-6">
           <GeneralSettings :restaurant-id="activeAiRestaurantId" :super-admin="isSuperAdmin" />
         </section>

@@ -471,6 +471,9 @@ namespace ISM.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("AvatarDataUrl")
+                        .HasColumnType("longtext");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime(6)");
 

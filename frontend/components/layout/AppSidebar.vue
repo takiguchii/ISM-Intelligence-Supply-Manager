@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { useAuthStore } from "~/stores/auth";
 import { useThemeStore } from "~/stores/theme";
 import { navigationForUser, type NavigationItem } from "~/utils/navigation";
@@ -62,6 +62,8 @@ const selectItem = (item: NavigationItem) => {
 };
 
 const avatarFailed = ref(false);
+const avatar = computed(() => authStore.currentUser?.avatarDataUrl);
+watch(avatar, () => { avatarFailed.value = false; });
 
 const userInitials = computed(() => {
   const name = authStore.currentUser?.name || "";
@@ -118,10 +120,10 @@ const sidebarCollapsed = false;
               ]"
             >
               <img
-                src="/logos/ism-sidebar-logo.png"
-                alt="Avatar"
+                :src="avatar"
+                alt=""
                 class="w-full h-full object-cover"
-                v-if="!avatarFailed"
+                v-if="avatar && !avatarFailed"
                 @error="avatarFailed = true"
               />
               <span v-else>{{ userInitials }}</span>
@@ -147,7 +149,7 @@ const sidebarCollapsed = false;
                 themeStore.isDark ? 'text-white' : 'text-zinc-900'
               ]"
             >
-              {{ authStore.currentUser?.name || "Takiguchi" }}
+              {{ authStore.currentUser?.name || "Usuário" }}
             </h3>
             <div class="flex items-center gap-1.5 mt-0.5 text-[11px]">
               <span

@@ -105,19 +105,43 @@ public sealed class SystemAlertRepository : ISystemAlertRepository
         return alert;
     }
 
+    public async Task<int> DismissAllAsync(int restaurantId, int userId, CancellationToken cancellationToken = default)
+    {
+        var alerts = await _dbContext.Set<SystemAlert>()
+            .Where(alert => alert.RestaurantId == restaurantId && !alert.IsDismissed)
+            .ToListAsync(cancellationToken);
+
+        var now = DateTime.UtcNow;
+        foreach (var alert in alerts)
+        {
+            alert.IsDismissed = true;
+            alert.DismissedAtUtc = now;
+            alert.DismissedByUserId = userId;
+            alert.UpdatedAtUtc = now;
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return alerts.Count;
+    }
+
     public async Task<SystemAlert?> UpdateAsync(SystemAlert alert, CancellationToken cancellationToken = default)
     {
         var existing = await _dbContext.Set<SystemAlert>().FirstOrDefaultAsync(a => a.Id == alert.Id, cancellationToken);
         if (existing is null) return null;
 
-        existing.IsRead = alert.IsRead;
-        existing.IsDismissed = alert.IsDismissed;
-        existing.ReadAtUtc = alert.ReadAtUtc;
-        existing.DismissedAtUtc = alert.DismissedAtUtc;
-        existing.DismissedByUserId = alert.DismissedByUserId;
+        if (alert.IsRead && !existing.IsRead)
+        {
+            existing.IsRead = true;
+            existing.ReadAtUtc = alert.ReadAtUtc;
+        }
+        if (alert.IsDismissed && !existing.IsDismissed)
+        {
+            existing.IsDismissed = true;
+            existing.DismissedAtUtc = alert.DismissedAtUtc;
+            existing.DismissedByUserId = alert.DismissedByUserId;
+        }
         existing.UpdatedAtUtc = DateTime.UtcNow;
 
-        _dbContext.Set<SystemAlert>().Update(existing);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return existing;
     }

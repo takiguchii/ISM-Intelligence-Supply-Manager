@@ -109,6 +109,12 @@ public sealed class SystemAlertService : ISystemAlertService
         return updated is null ? null : Map(updated);
     }
 
+    public Task<int> DismissAllAsync(CancellationToken cancellationToken = default)
+    {
+        var restaurantId = _currentUser.RestaurantId ?? throw new UnauthorizedAccessException();
+        return _systemAlertRepository.DismissAllAsync(restaurantId, _currentUser.UserId, cancellationToken);
+    }
+
     private static SystemAlertResponse Map(SystemAlert a)
         => new(
             a.Id,

@@ -1,6 +1,6 @@
 import { computed, ref } from "vue";
 import { useAuthStore } from "~/stores/auth";
-import { dismissAlert, getSystemAlerts, markAlertAsRead } from "~/services/modules/system/systemService";
+import { dismissAlert, dismissAllAlerts, getSystemAlerts, markAlertAsRead } from "~/services/modules/system/systemService";
 import { settingsService, type NotificationPreferences } from "~/services/modules/system/settingsService";
 import type { SystemAlertResponse } from "~/types/system";
 import { shouldAnnounceNewAlert } from "~/types/agentExperience";
@@ -14,6 +14,7 @@ const baselineComplete = ref(false);
 const newAlert = ref<SystemAlertResponse | null>(null);
 const groupedNewCount = ref(0);
 let requestInFlight = false;
+let alertVersion = 0;
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
 let started = false;
 let scopeKey = "";
@@ -64,11 +65,14 @@ const refresh = async (announce = false) => {
   requestInFlight = true;
   loading.value = alerts.value.length === 0;
   error.value = "";
+  const version = alertVersion;
+  const scope = scopeKey;
   try {
     const [result, savedPreferences] = await Promise.all([
       getSystemAlerts({ pageSize: 200, isDismissed: false }),
       settingsService.notifications()
     ]);
+    if (version !== alertVersion || scope !== currentScope()) return;
     preferences.value = savedPreferences;
     const nextAlerts = result.items.filter(isVisibleByPreference);
     const candidates = initialized.value && announce
@@ -145,6 +149,19 @@ const dismiss = async (alert: SystemAlertResponse) => {
   return updated;
 };
 
+const dismissAll = async () => {
+  const scope = currentScope();
+  const { count } = await dismissAllAlerts();
+  if (scope === currentScope()) {
+    alertVersion++;
+    alerts.value = [];
+    newAlert.value = null;
+    groupedNewCount.value = 0;
+    await refresh(false);
+  }
+  return count;
+};
+
 export const useSystemAlertCenter = () => ({
   alerts,
   preferences,
@@ -159,5 +176,6 @@ export const useSystemAlertCenter = () => ({
   stop,
   markRead,
   dismiss,
+  dismissAll,
   clearNewAlert: () => { newAlert.value = null; groupedNewCount.value = 0; }
 });

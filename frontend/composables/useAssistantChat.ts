@@ -8,32 +8,98 @@ const messages = ref<AssistantMessage[]>([]);
 const status = ref<AssistantStatus | null>(null);
 const pending = ref(false);
 const loadingHistory = ref(false);
+const ready = ref(false);
 const error = ref("");
-const lastMessage = ref("");
-let loaded = false;
+let revision = 0;
+let retryAction: (() => Promise<unknown>) | null = null;
 
-const applyConversation = (conversation: AssistantConversation) => {
+function resetConversation() {
+  revision++;
+  currentThread.value = null;
+  messages.value = [];
+  ready.value = false;
+  pending.value = false;
+  loadingHistory.value = false;
+  error.value = "";
+  retryAction = null;
+  return revision;
+}
+
+function applyConversation(conversation: AssistantConversation) {
   currentThread.value = conversation.thread;
   messages.value = conversation.messages;
-  threads.value = [conversation.thread, ...threads.value.filter(thread => thread.id !== conversation.thread.id)].sort((a, b) => new Date(b.lastMessageAtUtc).getTime() - new Date(a.lastMessageAtUtc).getTime());
-};
+  threads.value = [conversation.thread, ...threads.value.filter(thread => thread.id !== conversation.thread.id)]
+    .sort((a, b) => Date.parse(b.lastMessageAtUtc) - Date.parse(a.lastMessageAtUtc));
+}
 
-const load = async (originAlertId: number | null = null) => {
+async function ensureReady(originAlertId: number | null) {
+  const request = resetConversation();
+  threads.value = [];
   loadingHistory.value = true;
-  error.value = "";
   try {
-    status.value = await assistantService.status();
-    threads.value = await assistantService.threads({ limit: 30 });
-    const existing = originAlertId ? threads.value.find(thread => thread.originAlertId === originAlertId) : currentThread.value || threads.value[0];
-    if (existing) applyConversation(await assistantService.thread(existing.id));
-    else applyConversation(await assistantService.createThread({ originAlertId }));
-    loaded = true;
+    const [nextStatus, history] = await Promise.all([assistantService.status(), assistantService.threads({ limit: 30 })]);
+    if (request !== revision) return;
+    status.value = nextStatus;
+    threads.value = history;
+    if (originAlertId !== null) {
+      const existing = history.find(thread => thread.originAlertId === originAlertId);
+      const conversation = existing ? await assistantService.thread(existing.id) : await assistantService.createThread({ originAlertId });
+      if (request !== revision) return;
+      applyConversation(conversation);
+    }
+    ready.value = true;
   } catch (cause: any) {
-    error.value = cause?.data?.detail || "Não foi possível carregar o histórico do assistente.";
+    if (request !== revision) return;
+    error.value = cause?.data?.detail || "Não foi possível carregar a conversa.";
+    retryAction = () => ensureReady(originAlertId);
   } finally {
-    loadingHistory.value = false;
+    if (request === revision) loadingHistory.value = false;
   }
-};
+}
+
+async function selectThread(id: number) {
+  const request = resetConversation();
+  loadingHistory.value = true;
+  try {
+    const conversation = await assistantService.thread(id);
+    if (request !== revision) return;
+    applyConversation(conversation);
+    ready.value = true;
+  } catch (cause: any) {
+    if (request !== revision) return;
+    error.value = cause?.data?.detail || "Não foi possível abrir esta conversa.";
+    retryAction = () => selectThread(id);
+  } finally {
+    if (request === revision) loadingHistory.value = false;
+  }
+}
+
+async function send(text: string): Promise<boolean> {
+  const value = text.trim();
+  if (!value || !ready.value || pending.value || loadingHistory.value) return false;
+  const request = revision;
+  pending.value = true;
+  error.value = "";
+  retryAction = null;
+  try {
+    if (!currentThread.value) {
+      const created = await assistantService.createThread({ subject: value.slice(0, 150) });
+      if (request !== revision) return false;
+      applyConversation(created);
+    }
+    const response = await assistantService.sendMessage(currentThread.value!.id, value);
+    if (request !== revision) return false;
+    applyConversation(response);
+    return true;
+  } catch (cause: any) {
+    if (request !== revision) return false;
+    error.value = cause?.data?.detail || "Não foi possível enviar a mensagem.";
+    retryAction = () => send(value);
+    return false;
+  } finally {
+    if (request === revision) pending.value = false;
+  }
+}
 
 export const useAssistantChat = () => ({
   threads,
@@ -42,46 +108,12 @@ export const useAssistantChat = () => ({
   status,
   pending,
   loadingHistory,
+  ready,
   error,
   context: computed(() => currentThread.value?.context || null),
-  ensureReady: async (originAlertId: number | null = null) => {
-    if (!loaded || (originAlertId !== null && currentThread.value?.originAlertId !== originAlertId)) await load(originAlertId);
-  },
-  selectThread: async (thread: AssistantThread) => {
-    try {
-      error.value = "";
-      applyConversation(await assistantService.thread(thread.id));
-    } catch (cause: any) {
-      error.value = cause?.data?.detail || "Não foi possível abrir esta conversa.";
-    }
-  },
-  newConversation: async (parentThreadId: number | null = null) => {
-    try {
-      error.value = "";
-      applyConversation(await assistantService.createThread({ parentThreadId }));
-    } catch (cause: any) {
-      error.value = cause?.data?.detail || "Não foi possível iniciar uma nova conversa.";
-    }
-  },
-  send: async (text: string) => {
-    const value = text.trim();
-    if (!value || !currentThread.value || pending.value) return false;
-    pending.value = true;
-    lastMessage.value = value;
-    error.value = "";
-    try {
-      applyConversation(await assistantService.sendMessage(currentThread.value.id, value));
-      return true;
-    } catch (cause: any) {
-      error.value = cause?.data?.detail || "Não foi possível enviar a mensagem.";
-      return false;
-    } finally {
-      pending.value = false;
-    }
-  },
-  retry: async () => {
-    if (lastMessage.value) return (await useAssistantChat().send(lastMessage.value));
-    return false;
-  },
-  reload: async () => { loaded = false; await load(currentThread.value?.originAlertId || null); }
+  ensureReady,
+  selectThread,
+  resetConversation,
+  send,
+  retry: () => retryAction?.()
 });
