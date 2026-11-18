@@ -20,7 +20,6 @@ const state = computed<AgentMood>(() => {
   if (chatOpen.value) return "speaking";
   return "idle";
 });
-const stateLabel = computed(() => ({ idle: "disponível", curious: "observando", happy: "recuperado", worried: "em atenção", sad: "crítico", surprised: "novo alerta", thinking: "analisando", speaking: "respondendo", "waiting-approval": "aguardando aprovação", success: "confirmado", error: "erro", offline: "modelo indisponível" }[state.value]));
 
 const openGeneral = () => ui.openGeneralChat();
 const openNotifications = () => { if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("ism-notifications-open")); };
@@ -36,9 +35,9 @@ onBeforeUnmount(() => { window.removeEventListener("ism-assistant-open", handleE
 </script>
 
 <template>
-  <div class="pointer-events-none fixed bottom-4 right-4 z-[45] flex flex-col items-end gap-2 sm:bottom-6 sm:right-6" data-assistant-shell>
+  <div class="pointer-events-none fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-[calc(1rem+env(safe-area-inset-right))] z-[45] flex flex-col items-end gap-2 sm:bottom-6 sm:right-6" data-assistant-shell>
     <div v-if="speechAlert" class="pointer-events-auto flex w-[min(340px,calc(100vw-2rem))] items-center gap-3 rounded-2xl border border-red-200 bg-white p-3 text-xs shadow-xl dark:border-red-500/30 dark:bg-zinc-900" role="status" aria-live="polite">
-      <AgentMascot2D agent="stock" :mood="state" size="sm" attention-level="critical" />
+      <AgentMascot2D agent="general" :mood="state" size="sm" />
       <div class="min-w-0 flex-1">
         <p class="font-semibold text-zinc-900 dark:text-white">{{ groupedNewCount > 1 ? `${groupedNewCount} novos alertas` : speechAlert.title }}</p>
         <p class="mt-1 line-clamp-2 text-zinc-600 dark:text-zinc-400">{{ groupedNewCount > 1 ? "Confira o sino para ver os detalhes." : speechAlert.message }}</p>
@@ -46,12 +45,10 @@ onBeforeUnmount(() => { window.removeEventListener("ism-assistant-open", handleE
       </div>
     </div>
     <div class="flex items-center gap-2">
-      <span class="hidden rounded-lg border border-zinc-200 bg-white px-2 py-1 text-[10px] text-zinc-500 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:inline">Chat · {{ stateLabel }}</span>
-      <button type="button" class="pointer-events-auto relative flex h-12 w-12 items-center justify-center rounded-xl border border-zinc-200 bg-white shadow-md transition hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-900 motion-reduce:transform-none" :aria-expanded="chatOpen" :aria-label="`Abrir chat do ISM Assist · ${stateLabel}`" @click="openGeneral">
+      <button type="button" class="pointer-events-auto relative flex h-12 w-12 items-center justify-center rounded-xl border border-zinc-200 bg-white shadow-md transition hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-900 motion-reduce:transform-none" :aria-expanded="chatOpen" aria-label="Abrir chat do ISM Assist" @click="openGeneral">
         <AgentMascot2D agent="general" :mood="state" size="xs" />
         <span v-if="unreadCount" class="absolute -right-1 -top-1 min-w-4 rounded-full bg-indigo-600 px-1 text-center text-[9px] font-bold leading-4 text-white">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
       </button>
-      <button type="button" class="pointer-events-auto rounded-lg border border-zinc-200 bg-white px-2.5 py-2 text-xs font-semibold text-zinc-700 shadow-md hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800" :aria-expanded="chatOpen" @click="openGeneral">Chat <span aria-hidden="true">›</span></button>
     </div>
   </div>
   <AssistantChatDrawer />

@@ -26,6 +26,8 @@ export const useAgentMascotMotion = ({ mood, interactive, reducedMotion }: Motio
   let saccadeTimer: ReturnType<typeof setTimeout> | null = null;
   let blinkResetTimer: ReturnType<typeof setTimeout> | null = null;
   let squashTimer: ReturnType<typeof setTimeout> | null = null;
+  let gazeResetTimer: ReturnType<typeof setTimeout> | null = null;
+  let trackingElement: HTMLElement | null = null;
   let observer: IntersectionObserver | null = null;
   let mediaQuery: MediaQueryList | null = null;
   let visibilityHandler: (() => void) | null = null;
@@ -66,11 +68,12 @@ export const useAgentMascotMotion = ({ mood, interactive, reducedMotion }: Motio
 
   const handlePointerMove = (event: PointerEvent) => {
     if (!rootRef.value || motionReduced.value || event.pointerType === "touch" || event.pointerType === "pen") return;
-    const bounds = rootRef.value.getBoundingClientRect();
+    const bounds = (trackingElement || rootRef.value).getBoundingClientRect();
     if (!bounds.width || !bounds.height) return;
-    const nx = ((event.clientX - (bounds.left + bounds.width / 2)) / (bounds.width * 0.5));
-    const ny = ((event.clientY - (bounds.top + bounds.height / 2)) / (bounds.height * 0.5));
-    requestGaze(nx * 3.5, ny * 2.4);
+    const mascotBounds = rootRef.value.getBoundingClientRect();
+    const nx = (event.clientX - (mascotBounds.left + mascotBounds.width / 2)) / Math.max(1, bounds.width * 0.32);
+    const ny = (event.clientY - (mascotBounds.top + mascotBounds.height / 2)) / Math.max(1, bounds.height * 0.32);
+    requestGaze(nx * 5.5, ny * 4.2);
   };
 
   const handlePointerEnter = () => {
@@ -100,11 +103,12 @@ export const useAgentMascotMotion = ({ mood, interactive, reducedMotion }: Motio
 
   const scheduleSaccade = () => {
     clearTimer(saccadeTimer);
-    if (!loopsAllowed.value || pointerActive.value || ["thinking", "speaking", "sad"].includes(mood.value)) return;
+    if (!loopsAllowed.value || pointerActive.value || ["thinking", "speaking", "sad", "offline", "worried"].includes(mood.value)) return;
     saccadeTimer = setTimeout(() => {
       if (loopsAllowed.value && !pointerActive.value) {
         requestGaze((Math.random() * 4 - 2), (Math.random() * 2.4 - 1.2));
-        setTimeout(() => { if (!pointerActive.value) requestGaze(0, 0); }, 380 + Math.random() * 220);
+        clearTimer(gazeResetTimer);
+        gazeResetTimer = setTimeout(() => { if (!pointerActive.value) requestGaze(0, 0); }, 650 + Math.random() * 450);
       }
       scheduleSaccade();
     }, 4000 + Math.random() * 5000);
@@ -121,7 +125,7 @@ export const useAgentMascotMotion = ({ mood, interactive, reducedMotion }: Motio
   };
 
   const stopLoops = () => {
-    clearTimer(blinkTimer); clearTimer(saccadeTimer); clearTimer(blinkResetTimer);
+    clearTimer(blinkTimer); clearTimer(saccadeTimer); clearTimer(blinkResetTimer); clearTimer(gazeResetTimer);
     blinkTimer = null; saccadeTimer = null; blinkResetTimer = null;
     blinking.value = false;
     stopRaf();
@@ -142,10 +146,11 @@ export const useAgentMascotMotion = ({ mood, interactive, reducedMotion }: Motio
     visibilityHandler = () => { visible.value = document.visibilityState !== "hidden"; if (!visible.value) stopLoops(); else restartLoops(); };
     document.addEventListener("visibilitychange", visibilityHandler);
     observer = new IntersectionObserver(entries => { visible.value = entries[0]?.isIntersecting ?? true; if (visible.value) restartLoops(); else stopLoops(); }, { threshold: 0.05 });
-    if (rootRef.value) observer.observe(rootRef.value);
-    rootRef.value?.addEventListener("pointerenter", handlePointerEnter);
-    rootRef.value?.addEventListener("pointermove", handlePointerMove, { passive: true });
-    rootRef.value?.addEventListener("pointerleave", handlePointerLeave);
+    trackingElement = rootRef.value?.closest<HTMLElement>("[data-agent-card]") || rootRef.value;
+    if (trackingElement) observer.observe(trackingElement);
+    trackingElement?.addEventListener("pointerenter", handlePointerEnter);
+    trackingElement?.addEventListener("pointermove", handlePointerMove, { passive: true });
+    trackingElement?.addEventListener("pointerleave", handlePointerLeave);
     restartLoops();
   });
 
@@ -156,9 +161,10 @@ export const useAgentMascotMotion = ({ mood, interactive, reducedMotion }: Motio
     observer = null;
     mediaQuery?.removeEventListener?.("change", updateReducedMotion);
     if (visibilityHandler) document.removeEventListener("visibilitychange", visibilityHandler);
-    rootRef.value?.removeEventListener("pointerenter", handlePointerEnter);
-    rootRef.value?.removeEventListener("pointermove", handlePointerMove);
-    rootRef.value?.removeEventListener("pointerleave", handlePointerLeave);
+    trackingElement?.removeEventListener("pointerenter", handlePointerEnter);
+    trackingElement?.removeEventListener("pointermove", handlePointerMove);
+    trackingElement?.removeEventListener("pointerleave", handlePointerLeave);
+    trackingElement = null;
     mounted.value = false;
   });
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import AgentMascot2D from "~/components/assistant/AgentMascot2D.vue";
 import { useAuthStore } from "~/stores/auth";
 import {
   supplierService,
@@ -265,8 +266,9 @@ onMounted(async () => {
       <!-- ========================================================= -->
       <!-- BANNER DO AGENTE (APENAS ÍCONE CAMINHÃO E MENSAGEM SIMPLIFICADA) -->
       <!-- ========================================================= -->
-      <div class="rounded-2xl bg-zinc-900/70 border border-zinc-800/80 p-4 sm:p-5 mb-8 border-l-4 border-l-cyan-500 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
-        <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0">
+      <div data-agent-card="suppliers" class="rounded-2xl bg-zinc-900/70 border border-zinc-800/80 p-4 sm:p-5 mb-8 border-l-4 border-l-cyan-500 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
+        <AgentMascot2D agent="suppliers" mood="curious" size="sm" />
+        <div class="hidden w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 items-center justify-center shrink-0">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8h4l3 3v5h-2m-6 0h2" />

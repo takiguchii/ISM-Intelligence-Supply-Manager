@@ -3,6 +3,8 @@ import { financeService, FinanceEntryType, type FinanceEntry, type FinanceEntryR
 import FinanceCashFlowChart from "~/components/finance/FinanceCashFlowChart.vue";
 import FinanceExpenseChart from "~/components/finance/FinanceExpenseChart.vue";
 import FinanceTopSellingChart from "~/components/finance/FinanceTopSellingChart.vue";
+import AgentMascot2D from "~/components/assistant/AgentMascot2D.vue";
+import type { AgentMood } from "~/types/agentExperience";
 
 const overview = ref<FinanceOverview | null>(null);
 const loading = ref(false);
@@ -15,6 +17,7 @@ const pageNumber = ref(1);
 const pageSize = 10;
 const blankForm = (): FinanceEntryRequest => ({ description: "", category: "Outros", type: FinanceEntryType.Expense, amount: 0, dueDate: "", isSettled: false });
 const form = ref<FinanceEntryRequest>(blankForm());
+const financeMood = computed<AgentMood>(() => loading.value ? "thinking" : error.value ? "error" : success.value ? "success" : overview.value ? "curious" : "idle");
 const money = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const cards = computed(() => overview.value ? [
   { label: "Receita de pedidos pagos", value: overview.value.summary.salesRevenue },
@@ -68,8 +71,9 @@ onMounted(refresh);
       <div><h1 class="text-2xl font-bold dark:text-white">Financeiro</h1><p class="text-sm text-zinc-500">Receitas e despesas do mês atual; contas pendentes de todos os períodos.</p></div>
       <div class="flex gap-2"><button class="px-4 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 text-sm" :disabled="loading" @click="refresh">Atualizar</button><button class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm" @click="openForm()">Nova movimentação</button></div>
     </div>
-    <section class="flex flex-col gap-3 rounded-2xl border border-indigo-200 bg-indigo-50/70 p-4 dark:border-indigo-500/20 dark:bg-indigo-950/20 sm:flex-row sm:items-center sm:justify-between">
-      <div><p class="text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">Contexto operacional</p><p class="mt-1 text-sm text-zinc-700 dark:text-zinc-300">Alertas de CMV, estoque e fornecedores ficam reunidos no ISM Assist para não se perderem entre os módulos.</p></div>
+    <section data-agent-card="finance" class="flex flex-col gap-3 rounded-2xl border border-indigo-200 bg-indigo-50/70 p-4 dark:border-indigo-500/20 dark:bg-indigo-950/20 sm:flex-row sm:items-center sm:justify-between">
+      <AgentMascot2D agent="pricing" :mood="financeMood" size="sm" />
+      <div class="flex-1"><p class="text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">Contexto operacional</p><p class="mt-1 text-sm text-zinc-700 dark:text-zinc-300">Alertas de CMV, estoque e fornecedores ficam reunidos no ISM Assist para não se perderem entre os módulos.</p></div>
       <button type="button" class="shrink-0 rounded-xl border border-indigo-300 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 dark:border-indigo-400/30 dark:text-indigo-300 dark:hover:bg-indigo-500/10" @click="window.dispatchEvent(new CustomEvent('ism-assistant-open'))">Abrir Assistente</button>
     </section>
     <p v-if="error" role="alert" class="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300">{{ error }}</p>

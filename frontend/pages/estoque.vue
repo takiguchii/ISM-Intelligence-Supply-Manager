@@ -318,10 +318,10 @@ onMounted(() => {
     </div>
 
     <!-- ==================== ALERTA DE CRÍTICOS ==================== -->
-    <div v-if="!isLoading && itensCriticos.length > 0" class="border border-red-500/30 bg-red-500/10 rounded-2xl p-6 shadow-xl transition-all relative overflow-hidden">
+    <div v-if="!isLoading && itensCriticos.length > 0" data-agent-card="stock" class="border border-red-500/30 bg-red-500/10 rounded-2xl p-6 shadow-xl transition-all relative overflow-hidden">
       <div class="flex items-start justify-between flex-col sm:flex-row gap-4">
         <div class="flex items-start gap-4">
-          <AgentMascot2D agent="stock" :mood="bannerMood" size="lg" attention-level="critical" />
+          <AgentMascot2D agent="stock" :mood="bannerMood" size="lg" :attention-level="bannerMood === 'sad' ? 'critical' : 'warning'" />
           <div>
             <div class="flex items-center gap-2 mb-1">
               <span class="text-red-400 text-[11px] font-bold tracking-widest uppercase">✦ Risco de estoque detectado</span>
