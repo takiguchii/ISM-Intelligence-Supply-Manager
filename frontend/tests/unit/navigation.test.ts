@@ -103,7 +103,7 @@ assert.deepEqual(
 const managerNav = navigationForUser(managerUser).map((item) => item.route);
 assert.deepEqual(
   managerNav,
-  ["/", "/financeiro", "/pedidos", "/cardapio", "/estoque", "/fornecedores", "/funcionarios", "/integracoes", "/configuracoes"],
+  ["/", "/financeiro", "/caixa", "/pedidos", "/cardapio", "/estoque", "/fornecedores", "/funcionarios", "/integracoes", "/configuracoes"],
   "Manager deve ver somente a navegação administrativa reorganizada"
 );
 assert.equal(managerNav.includes("/atendimento"), false, "Atendimento não deve aparecer no menu administrativo");
@@ -121,3 +121,9 @@ console.log("Todos os testes de autorização e navegação de perfis passaram c
 const platformAdmin = { id: 100, name: "Plataforma", email: "platform@test.local", role: "Admin", restaurantId: null } as User;
 assert.equal(canAccessRoute(platformAdmin, "/configuracoes"), true, "Administrador da plataforma pode configurar o remetente compartilhado");
 assert.equal(canAccessRoute(platformAdmin, "/estoque"), false, "Configurações não concedem acesso a operações de restaurante");
+
+assert.equal(canAccessRoute(managerUser, "/caixa"), true);
+assert.equal(canAccessRoute(chefUser, "/caixa"), false);
+assert.equal(canAccessRoute(waiterUser, "/caixa"), false);
+assert.equal(canAccessRoute(platformAdmin, "/caixa"), false);
+assert.equal(canAccessRoute({ ...platformAdmin, restaurantId: 10 }, "/caixa"), true);

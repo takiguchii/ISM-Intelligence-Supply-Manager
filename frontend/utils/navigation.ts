@@ -26,6 +26,7 @@ const managementRoles = ["Admin", "Manager"] as const;
 export const navigationItems: readonly NavigationItem[] = [
   { id: "dashboard", label: "Dashboard", icon: "dashboard", route: "/", roles: ["Admin", "Manager"], category: "VISÃO GERAL" },
   { id: "financeiro", label: "Financeiro", icon: "wallet", route: "/financeiro", roles: managementRoles, category: "FINANCEIRO", requiresRestaurant: true },
+  { id: "caixa", label: "Caixa", icon: "wallet", route: "/caixa", roles: managementRoles, category: "FINANCEIRO", requiresRestaurant: true },
   { id: "atendimento", label: "Atendimento", icon: "tray", route: "/atendimento", roles: ["Admin", "Manager", "Waiter"], navigationRoles: ["Waiter"], category: "MOVIMENTAÇÕES", requiresRestaurant: true },
   { id: "cozinha", label: "Cozinha", icon: "chef-hat", route: "/cozinha", roles: ["Admin", "Manager", "Chef"], navigationRoles: ["Chef"], category: "MOVIMENTAÇÕES", requiresRestaurant: true },
   { id: "pedidos", label: "Pedidos", icon: "clipboard-list", route: "/pedidos", roles: restaurantRoles, category: "GESTÃO OPERACIONAL", requiresRestaurant: true },
@@ -65,7 +66,8 @@ export function canAccessRoute(user: User | null, path: string): boolean {
 }
 
 export function navigationForUser(user: User | null): NavigationItem[] {
-  if (!user) return [];
+  if (!user || !isAppRole(user.role)) return [];
+  const role = user.role;
 
   const home = homeForUser(user);
   const homeItem: NavigationItem = {
@@ -73,13 +75,13 @@ export function navigationForUser(user: User | null): NavigationItem[] {
     label: user.role === "Chef" || user.role === "Waiter" ? "Início" : "Dashboard",
     icon: "dashboard",
     route: home,
-    roles: [user.role as AppRole],
+    roles: [role],
     category: "VISÃO GERAL"
   };
 
   return [homeItem, ...navigationItems.filter((item) =>
     item.route !== home &&
-    (item.navigationRoles ?? item.roles).includes(user.role) &&
+    (item.navigationRoles ?? item.roles).includes(role) &&
     canAccessRoute(user, item.route)
   )];
 }
