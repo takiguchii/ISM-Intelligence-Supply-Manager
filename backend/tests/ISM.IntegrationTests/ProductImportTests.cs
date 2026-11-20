@@ -16,6 +16,27 @@ public sealed class ProductImportTests : IClassFixture<FoundationWebApplicationF
     public ProductImportTests(FoundationWebApplicationFactory factory) => _factory = factory;
 
     [Fact]
+    public async Task SupplierCsv_PersistsSupplierAndDoesNotCreateStockProduct()
+    {
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", FoundationWebApplicationFactory.Token(IsmRoles.Manager, 931));
+        const string csv = "Nome,Categoria,Descricao,Email\nDEMO Horta do Bairro,Hortifrúti,Fornecedor fictício,horta@example.invalid\n";
+        using var form = new MultipartFormDataContent();
+        var file = new ByteArrayContent(Encoding.UTF8.GetBytes(csv));
+        file.Headers.ContentType = new MediaTypeHeaderValue("text/csv");
+        form.Add(file, "file", "fornecedores-demonstracao.csv");
+        var response = await client.PostAsync("/api/import/suppliers", form);
+        response.EnsureSuccessStatusCode();
+        var result = (await response.Content.ReadFromJsonAsync<ImportResultDto>())!;
+        result.RecordsSucceeded.Should().Be(1);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IsmDbContext>();
+        (await db.Suppliers.IgnoreQueryFilters().AnyAsync(s => s.RestaurantId == 931 && s.Name == "DEMO Horta do Bairro")).Should().BeTrue();
+        (await db.Products.IgnoreQueryFilters().AnyAsync(p => p.RestaurantId == 931 && p.Name == "DEMO Horta do Bairro")).Should().BeFalse();
+    }
+
+    [Fact]
     public async Task NfeDecimals_ArePersistedWithoutChangingScale()
     {
         using var client = _factory.CreateClient();

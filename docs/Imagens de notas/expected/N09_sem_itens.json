@@ -1,0 +1,16 @@
+{
+  "id": "N09_sem_itens",
+  "document_kind": "comprovante_sem_itens",
+  "supplier": "PAGAMENTOS TESTE RIO",
+  "issue_date": "2026-11-11",
+  "document_number": "ISM-PAG-009",
+  "items": [],
+  "subtotal": "0.00",
+  "discount": "0.00",
+  "total": "0.00",
+  "payment_method": "PIX",
+  "expected_decision": "REJECT_AS_STOCK_RECEIPT",
+  "synthetic": true,
+  "fiscal_validity": false,
+  "policy": "Nunca registrar em dados reais sem revisao e aprovacao."
+}

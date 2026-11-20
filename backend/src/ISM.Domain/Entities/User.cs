@@ -19,6 +19,7 @@ public sealed class User : BaseEntity
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
+    public string? AvatarDataUrl { get; set; }
     public string Role { get; set; } = "Admin";
     public bool IsActive { get; set; } = true;
     public int? RestaurantId { get; set; }

@@ -378,6 +378,7 @@ public sealed class AuthService : IAuthService
     {
         Id = user.Id,
         Name = user.Name,
+        AvatarDataUrl = user.AvatarDataUrl,
         Email = user.Email,
         Role = user.Role,
         RestaurantId = user.RestaurantId

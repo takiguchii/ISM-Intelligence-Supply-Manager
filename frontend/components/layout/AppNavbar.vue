@@ -4,6 +4,7 @@ import { useAuthStore } from "~/stores/auth";
 import ThemeToggle from "~/components/base/ThemeToggle.vue";
 import NotificationDrawer from "~/components/layout/NotificationDrawer.vue";
 import { useThemeStore } from "~/stores/theme";
+import { useSystemAlertCenter } from "~/composables/useSystemAlertCenter";
 
 const emit = defineEmits<{
   (e: "toggleSidebar"): void;
@@ -13,6 +14,7 @@ const runtimeConfig = useRuntimeConfig();
 const authStore = useAuthStore();
 const themeStore = useThemeStore();
 const router = useRouter();
+const alertCenter = useSystemAlertCenter();
 
 const isNotificationOpen = ref(false);
 const drawerRef = ref<InstanceType<typeof NotificationDrawer> | null>(null);
@@ -51,15 +53,19 @@ const handleClickOutside = (e: MouseEvent) => {
   }
 };
 
+const openNotifications = () => { isNotificationOpen.value = true; };
+
 onMounted(() => {
   if (typeof window !== "undefined") {
     window.addEventListener("click", handleClickOutside);
+    window.addEventListener("ism-notifications-open", openNotifications);
   }
 });
 
 onUnmounted(() => {
   if (typeof window !== "undefined") {
     window.removeEventListener("click", handleClickOutside);
+    window.removeEventListener("ism-notifications-open", openNotifications);
   }
   clearTimeout(collapseTimeout);
 });
@@ -103,9 +109,9 @@ onUnmounted(() => {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
         </svg>
         <span
-          v-if="drawerRef?.unreadCount"
-          class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-indigo-500 animate-pulse"
-        ></span>
+          v-if="alertCenter.unreadCount"
+          class="absolute -right-1 -top-1 min-w-4 rounded-full bg-indigo-600 px-1 text-center text-[9px] font-bold leading-4 text-white"
+        >{{ alertCenter.unreadCount > 9 ? '9+' : alertCenter.unreadCount }}</span>
       </button>
 
       <ThemeToggle />

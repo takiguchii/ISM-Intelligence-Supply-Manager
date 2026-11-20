@@ -60,6 +60,11 @@ public sealed class SystemAlertsController : ControllerBase
         return result is null ? NotFound() : Ok(result);
     }
 
+    [HttpPatch("dismiss-all")]
+    [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
+    public async Task<IActionResult> DismissAll(CancellationToken cancellationToken)
+        => Ok(new { count = await _alertService.DismissAllAsync(cancellationToken) });
+
     [HttpPatch("{id:int}/dismiss")]
     [Authorize(Policy = IsmPolicies.RestaurantManagerOrAbove)]
     [ProducesResponseType(typeof(SystemAlertResponse), StatusCodes.Status200OK)]

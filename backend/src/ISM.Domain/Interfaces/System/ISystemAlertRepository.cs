@@ -18,6 +18,7 @@ public interface ISystemAlertRepository
         CancellationToken cancellationToken = default);
     Task<SystemAlert> CreateAsync(SystemAlert alert, CancellationToken cancellationToken = default);
     Task<SystemAlert?> UpdateAsync(SystemAlert alert, CancellationToken cancellationToken = default);
+    Task<int> DismissAllAsync(int restaurantId, int userId, CancellationToken cancellationToken = default);
     Task<bool> ExistsSameTypeNonDismissedWithinAsync(
         int restaurantId,
         SystemAlertType alertType,

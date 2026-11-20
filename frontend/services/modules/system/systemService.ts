@@ -27,3 +27,6 @@ export const dismissAlert = async (id: number) =>
     method: "PATCH"
   }));
 
+export const dismissAllAlerts = () =>
+  apiClient<{ count: number }>("/api/system/alerts/dismiss-all", { method: "PATCH" });
+

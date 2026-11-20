@@ -50,6 +50,8 @@ export interface NotificationPreferences {
 }
 
 export const settingsService = {
+  saveMyProfile: (profile: { name: string; avatarDataUrl: string | null }) =>
+    apiClientWithAuth<{ name: string; avatarDataUrl: string | null }>("/api/me/profile", { method: "PUT", body: profile }),
   getProfile: (id: number, superAdmin: boolean) => apiClientWithAuth<RestaurantSettings>(profileUrl(id, superAdmin)),
   saveProfile: (id: number, superAdmin: boolean, profile: RestaurantSettings) =>
     apiClientWithAuth(profileUrl(id, superAdmin), { method: "PUT", body: profile }),

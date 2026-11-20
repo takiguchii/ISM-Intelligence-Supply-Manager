@@ -61,6 +61,9 @@ public class AgentsTests
     {
         public List<SystemAlert> Alerts { get; } = new();
 
+        public Task<int> DismissAllAsync(int restaurantId, int userId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
         public Task<SystemAlert> CreateAsync(SystemAlert alert, CancellationToken cancellationToken = default)
         {
             alert.Id = Alerts.Count + 1;

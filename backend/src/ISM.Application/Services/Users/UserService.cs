@@ -64,6 +64,45 @@ public sealed class UserService : IUserService
         return MapToDetailsDto(user);
     }
 
+    public async Task<MyProfile?> UpdateMyProfileAsync(UpdateMyProfileRequest request, CancellationToken cancellationToken = default)
+    {
+        var user = await _userRepository.GetByIdAsync(_currentUser.UserId, cancellationToken);
+        if (user is not { IsActive: true }) return null;
+
+        var name = request.Name?.Trim();
+        if (string.IsNullOrWhiteSpace(name) || name.Length > 150)
+            throw new ArgumentException("Informe um nome de até 150 caracteres.");
+        if (request.AvatarDataUrl is { } avatar && !IsValidAvatar(avatar))
+            throw new ArgumentException("Envie uma foto PNG, JPEG ou WebP de até 200 KiB.");
+
+        user.Name = name;
+        user.AvatarDataUrl = request.AvatarDataUrl;
+        user.UpdatedAtUtc = DateTime.UtcNow;
+        await _userRepository.SaveChangesAsync(cancellationToken);
+        return new MyProfile(user.Name, user.AvatarDataUrl);
+    }
+
+    private static bool IsValidAvatar(string avatar)
+    {
+        if (avatar.Length > 273_092) return false;
+        var separator = avatar.IndexOf(',');
+        if (separator < 0) return false;
+        var mediaType = avatar[..separator];
+        if (mediaType is not ("data:image/png;base64" or "data:image/jpeg;base64" or "data:image/webp;base64"))
+            return false;
+
+        var bytes = new byte[200 * 1024];
+        if (!Convert.TryFromBase64Chars(avatar.AsSpan(separator + 1), bytes, out var length))
+            return false;
+        var image = bytes.AsSpan(0, length);
+        return mediaType switch
+        {
+            "data:image/png;base64" => image.StartsWith(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }),
+            "data:image/jpeg;base64" => image.StartsWith(new byte[] { 255, 216, 255 }),
+            _ => length >= 12 && image.StartsWith("RIFF"u8) && image.Slice(8, 4).SequenceEqual("WEBP"u8)
+        };
+    }
+
     public async Task<UserDetailsDto> UpdateUserAsync(int id, UpdateUserRequest request, CancellationToken cancellationToken = default)
     {
         var user = await _userRepository.GetByIdAsync(id, cancellationToken)

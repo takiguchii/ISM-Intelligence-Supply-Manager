@@ -62,6 +62,30 @@ public class PhotoImportServiceTests
     }
 
     [Fact]
+    public async Task LinhasDeNotaSemSaldoAtual_NaoPodemSerImportadasComoEstoque()
+    {
+        var extractor = new FakePhotoImportExtractor(
+            "Nome,Unidade,Custo Atual,Total\nArroz 5KG,un,22.90,22.90\nLeite 1L,un,4.50,13.50\n");
+        var preview = await CreateService(extractor).AnalyzePhotoAsync(Bytes("img"), "nota.png", "image/png", CancellationToken.None);
+
+        var estoque = Assert.Single(preview.Categories);
+        Assert.False(estoque.CanImport);
+        Assert.Equal(new[] { 2, 3 }, estoque.RowsWithErrors);
+        Assert.Contains(estoque.Errors, error => error.Contains("Quantidade atual ausente", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task TabelaSemLinhasMapeadas_NaoDeveSerConfirmavel()
+    {
+        var extractor = new FakePhotoImportExtractor("Nome,Unidade,Quantidade Atual,Custo\n");
+        var preview = await CreateService(extractor).AnalyzePhotoAsync(Bytes("img"), "foto.png", "image/png", CancellationToken.None);
+
+        var estoque = Assert.Single(preview.Categories);
+        Assert.False(estoque.CanImport);
+        Assert.Contains(estoque.Errors, error => error.Contains("Prévia de visão incompleta", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task FotoSemTabelaDetectavel_DeveGerarPreviewVazio()
     {
         var extractor = new FakePhotoImportExtractor("");

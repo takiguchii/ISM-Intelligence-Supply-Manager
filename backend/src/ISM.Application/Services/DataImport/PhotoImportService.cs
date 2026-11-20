@@ -35,6 +35,24 @@ public sealed class PhotoImportService : IPhotoImportService
 
         // 2. CSV virtual → mesmo pipeline de análise/confirmação do upload de planilha
         await using var csvStream = new MemoryStream(Encoding.UTF8.GetBytes(csvText));
-        return await _analyzer.AnalyzeAsync(csvStream, fileName, contentType, ct);
+        var preview = await _analyzer.AnalyzeAsync(csvStream, fileName, contentType, ct);
+        // A table of receipt line values is not a current stock balance. Never let a
+        // vision model's price/total columns become an importable stock quantity.
+        foreach (var category in preview.Categories.Where(c => c.Category.Equals("estoque", StringComparison.OrdinalIgnoreCase)))
+        {
+            var missingQuantities = category.MappedFields
+                .Select((row, index) => (row, index))
+                .Where(x => !x.row.TryGetValue("quantidadeAtual", out var value) || string.IsNullOrWhiteSpace(value))
+                .Select(x => x.index + 2)
+                .ToArray();
+            var incompleteMapping = category.RowCount == 0 || category.MappedFields.Count + category.RowsWithErrors.Count < category.RowCount;
+            if (!incompleteMapping && missingQuantities.Length == 0) continue;
+            var blockedRows = incompleteMapping ? Enumerable.Range(2, category.RowCount).ToArray() : missingQuantities;
+            category.RowsWithErrors = category.RowsWithErrors.Concat(blockedRows).Distinct().Order().ToArray();
+            category.Errors = category.Errors.Append(incompleteMapping
+                ? "Prévia de visão incompleta: não foi possível mapear todas as linhas; revisão manual obrigatória."
+                : "Quantidade atual ausente: linhas de uma nota de compra não podem ser importadas como saldo de estoque.").Distinct().ToArray();
+        }
+        return preview;
     }
 }

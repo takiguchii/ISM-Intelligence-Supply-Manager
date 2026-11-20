@@ -6,6 +6,8 @@ const route = useRoute();
 const isLoginPage = computed(() => route.path === "/login");
 
 const themeStore = useThemeStore();
+const authStore = useAuthStore();
+const canShowAssistant = computed(() => !isLoginPage.value && authReady.value && ["Admin", "Manager"].includes(authStore.userRole || "") && Boolean(authStore.currentUser?.restaurantId));
 const isSidebarOpen = ref(false);
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value;
@@ -33,6 +35,9 @@ provide("toggleSidebar", toggleSidebar);
       </template>
 
       <template v-else>
+        <Transition name="mobile-nav-backdrop">
+          <button v-if="isSidebarOpen" type="button" class="fixed inset-0 z-40 bg-zinc-950/40 backdrop-blur-[1px] lg:hidden" aria-label="Fechar menu de navegação" @click="isSidebarOpen = false" />
+        </Transition>
         <ClientOnly>
           <AppSidebar :isOpen="isSidebarOpen" @close="isSidebarOpen = false" />
         </ClientOnly>
@@ -40,7 +45,7 @@ provide("toggleSidebar", toggleSidebar);
           @click.capture="closeSidebarOnOutsideClick"
           :class="[
             'flex-1 flex flex-col min-w-0 transition-[padding] duration-[400ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
-            isSidebarOpen ? 'pl-[min(256px,65vw)] lg:pl-[256px]' : 'pl-0'
+            isSidebarOpen ? 'pl-0 lg:pl-[256px]' : 'pl-0'
           ]"
         >
           <AppNavbar @toggleSidebar="toggleSidebar" />
@@ -48,6 +53,9 @@ provide("toggleSidebar", toggleSidebar);
             <slot />
           </main>
           <AppFooter />
+          <ClientOnly>
+            <AssistantMascot v-if="canShowAssistant" />
+          </ClientOnly>
         </div>
       </template>
     </template>
@@ -70,3 +78,9 @@ provide("toggleSidebar", toggleSidebar);
     </div>
   </div>
 </template>
+
+<style scoped>
+.mobile-nav-backdrop-enter-active, .mobile-nav-backdrop-leave-active { transition: opacity 180ms ease; }
+.mobile-nav-backdrop-enter-from, .mobile-nav-backdrop-leave-to { opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .mobile-nav-backdrop-enter-active, .mobile-nav-backdrop-leave-active { transition-duration: 1ms; } }
+</style>

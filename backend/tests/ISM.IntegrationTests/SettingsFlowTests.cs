@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FluentAssertions;
 using ISM.Application.DTOs;
+using ISM.Domain.Modules.System.Entities;
 using ISM.Infrastructure.Data.Context;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -16,6 +17,94 @@ namespace ISM.IntegrationTests;
 
 public sealed class SettingsFlowTests
 {
+    [Fact]
+    public async Task Menu_AllowsCreatingCategoryAndDishWithIngredients()
+    {
+        await using var factory = new SettingsFactory();
+        using var manager = factory.CreateClient();
+        using (var scope = factory.Services.CreateScope())
+            await DbSeeder.SeedAsync(scope.ServiceProvider.GetRequiredService<IsmDbContext>(), "Settings123!");
+        await Login(manager, "gerente@ism.com.br", "Settings123!");
+        var user = (await manager.GetFromJsonAsync<UserDto>("/api/auth/me"))!;
+        var restaurant = user.RestaurantId!.Value;
+        (await manager.PostAsJsonAsync("/api/menu/categories", new CreateCategoryRequest(restaurant, "", true, 0)))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var create = await manager.PostAsJsonAsync("/api/menu/categories", new CreateCategoryRequest(restaurant, "Pratos demo", true, 0));
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        var category = (await create.Content.ReadFromJsonAsync<CategoryResponse>())!;
+        int product;
+        using (var scope = factory.Services.CreateScope())
+            product = await scope.ServiceProvider.GetRequiredService<IsmDbContext>().Products.IgnoreQueryFilters()
+                .Where(item => item.RestaurantId == restaurant).Select(item => item.Id).FirstAsync();
+
+        var dish = new CreateDishRequest(restaurant, category.Id, "Prato demo", "", 20m, 0m, true, false, null, 0, [new(product, 0.1m)]);
+        var result = await manager.PostAsJsonAsync("/api/menu/dishes", dish);
+        result.StatusCode.Should().Be(HttpStatusCode.Created);
+        (await result.Content.ReadFromJsonAsync<DishResponse>())!.Ingredients.Should().ContainSingle(item => item.ProductId == product);
+        var invalid = dish with { Ingredients = [new(product, -1m)] };
+        (await manager.PostAsJsonAsync("/api/menu/dishes", invalid)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Profile_IsPrivateAndPersistsNameAndPhoto()
+    {
+        await using var factory = new SettingsFactory();
+        using var manager = factory.CreateClient();
+        using (var scope = factory.Services.CreateScope())
+            await DbSeeder.SeedAsync(scope.ServiceProvider.GetRequiredService<IsmDbContext>(), "Settings123!");
+
+        const string photo = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/aXcAAAAASUVORK5CYII=";
+        (await manager.PutAsJsonAsync("/api/me/profile", new UpdateMyProfileRequest("Perfil", photo)))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        using var chef = factory.CreateClient();
+        await Login(manager, "gerente@ism.com.br", "Settings123!");
+        await Login(chef, "chef@ism.com.br", "Settings123!");
+        var original = (await chef.GetFromJsonAsync<UserDto>("/api/auth/me"))!;
+        var changed = await chef.PutAsJsonAsync("/api/me/profile", new { name = "  Chef Demo  ", avatarDataUrl = photo, role = "Admin", restaurantId = 999 });
+        changed.EnsureSuccessStatusCode();
+        var after = (await chef.GetFromJsonAsync<UserDto>("/api/auth/me"))!;
+        after.Name.Should().Be("Chef Demo");
+        after.AvatarDataUrl.Should().Be(photo);
+        after.Role.Should().Be(original.Role);
+        after.RestaurantId.Should().Be(original.RestaurantId);
+        (await manager.GetFromJsonAsync<UserDto>("/api/auth/me"))!.AvatarDataUrl.Should().BeNull();
+        (await chef.PutAsJsonAsync("/api/me/profile", new UpdateMyProfileRequest("Chef Demo", "data:image/png;base64,PHN2Zz4=")))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await chef.GetFromJsonAsync<UserDto>("/api/auth/me"))!.AvatarDataUrl.Should().Be(photo);
+        (await chef.PutAsJsonAsync("/api/me/profile", new UpdateMyProfileRequest("Chef Demo", null))).EnsureSuccessStatusCode();
+        (await chef.GetFromJsonAsync<UserDto>("/api/auth/me"))!.AvatarDataUrl.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task DismissAll_PreservesAuditAndOtherRestaurants()
+    {
+        await using var factory = new SettingsFactory();
+        using var manager = factory.CreateClient();
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IsmDbContext>();
+        await DbSeeder.SeedAsync(db, "Settings123!");
+        await Login(manager, "gerente@ism.com.br", "Settings123!");
+        var user = (await manager.GetFromJsonAsync<UserDto>("/api/auth/me"))!;
+        using var chef = factory.CreateClient();
+        await Login(chef, "chef@ism.com.br", "Settings123!");
+        var foreignRestaurant = user.RestaurantId!.Value + 1000;
+        var now = DateTime.UtcNow;
+        db.Set<SystemAlert>().AddRange(
+            new SystemAlert { RestaurantId = user.RestaurantId.Value, Title = "Lido", Message = "Teste", IsRead = true, GeneratedAtUtc = now },
+            new SystemAlert { RestaurantId = user.RestaurantId.Value, Title = "Não lido", Message = "Teste", GeneratedAtUtc = now },
+            new SystemAlert { RestaurantId = foreignRestaurant, Title = "Outro restaurante", Message = "Teste", GeneratedAtUtc = now });
+        await db.SaveChangesAsync();
+        (await chef.PatchAsync("/api/system/alerts/dismiss-all", null)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await manager.PatchAsync("/api/system/alerts/dismiss-all", null)).EnsureSuccessStatusCode();
+        var all = await db.Set<SystemAlert>().IgnoreQueryFilters().AsNoTracking().ToListAsync();
+        all.Where(alert => alert.RestaurantId == user.RestaurantId).Should().OnlyContain(alert =>
+            alert.IsDismissed && alert.DismissedAtUtc.HasValue && alert.DismissedByUserId == user.Id);
+        all.Single(alert => alert.RestaurantId == foreignRestaurant).IsDismissed.Should().BeFalse();
+        using var again = await manager.PatchAsync("/api/system/alerts/dismiss-all", null);
+        again.EnsureSuccessStatusCode();
+        (await again.Content.ReadFromJsonAsync<Dictionary<string, int>>())!["count"].Should().Be(0);
+    }
+
     [Fact]
     public async Task Settings_Persist_EnforcePermissions_AndProtectAccount()
     {

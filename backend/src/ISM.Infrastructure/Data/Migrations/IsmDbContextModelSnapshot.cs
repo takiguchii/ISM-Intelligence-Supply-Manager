@@ -236,6 +236,18 @@ namespace ISM.Infrastructure.Data.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("varchar(300)");
 
+                    b.Property<string>("AgentApiEndpoint")
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
+                    b.Property<string>("AgentApiKey")
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
+                    b.Property<string>("AgentModel")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
                     b.Property<string>("CNPJ")
                         .IsRequired()
                         .HasMaxLength(14)
@@ -459,6 +471,9 @@ namespace ISM.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("AvatarDataUrl")
+                        .HasColumnType("longtext");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime(6)");
 
@@ -544,6 +559,425 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.HasIndex("RestaurantId");
 
                     b.ToTable("users", (string)null);
+                });
+
+            modelBuilder.Entity("ISM.Domain.Modules.Assistant.Entities.AssistantActionAudit", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)");
+
+                    b.Property<int>("ActorUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("DetailsJson")
+                        .HasMaxLength(8000)
+                        .HasColumnType("varchar(8000)");
+
+                    b.Property<int>("EntityId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("ProposalId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RestaurantId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<decimal?>("ValueAfter")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal?>("ValueBefore")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProposalId");
+
+                    b.HasIndex("RestaurantId", "ProposalId", "OccurredAtUtc");
+
+                    b.ToTable("assistant_action_audits", (string)null);
+                });
+
+            modelBuilder.Entity("ISM.Domain.Modules.Assistant.Entities.AssistantMessage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(6000)
+                        .HasColumnType("varchar(6000)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Mode")
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)");
+
+                    b.Property<int>("RestaurantId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<int>("ThreadId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ThreadId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("RestaurantId", "ThreadId", "CreatedAtUtc");
+
+                    b.ToTable("assistant_messages", (string)null);
+                });
+
+            modelBuilder.Entity("ISM.Domain.Modules.Assistant.Entities.AssistantProposal", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ActionType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<int>("AlertId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("DecidedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("DecidedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("EntityId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("EntityName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("EvidenceJson")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("varchar(8000)");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("GeneratedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
+
+                    b.Property<decimal>("OriginalValue")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("ProposedValue")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<int>("RestaurantId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("SnapshotCost")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal?>("SnapshotTargetMarginPercent")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<string>("Specialist")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AlertId");
+
+                    b.HasIndex("RestaurantId", "AlertId")
+                        .IsUnique();
+
+                    b.HasIndex("RestaurantId", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("RestaurantId", "Status", "GeneratedAtUtc");
+
+                    b.ToTable("assistant_proposals", (string)null);
+                });
+
+            modelBuilder.Entity("ISM.Domain.Modules.Assistant.Entities.AssistantThread", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ContextSnapshotJson")
+                        .IsRequired()
+                        .HasMaxLength(12000)
+                        .HasColumnType("varchar(12000)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime>("LastMessageAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("OriginAlertId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("OriginType")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<int?>("ParentThreadId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RestaurantId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)");
+
+                    b.Property<int?>("SubjectEntityId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OriginAlertId");
+
+                    b.HasIndex("RestaurantId", "OriginAlertId");
+
+                    b.HasIndex("RestaurantId", "UserId", "LastMessageAtUtc");
+
+                    b.ToTable("assistant_threads", (string)null);
+                });
+
+            modelBuilder.Entity("ISM.Domain.Modules.Assistant.Entities.AutomationPolicy", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ActionType")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("ExpiresAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("IntervalMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("LastRunAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("MaxRunsPerPeriod")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Mode")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
+
+                    b.Property<DateTime>("NextRunAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("OwnerUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RestaurantId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RunsThisPeriod")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Specialist")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<DateTime>("StartsAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Target")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
+
+                    b.Property<string>("TimeZone")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerUserId");
+
+                    b.HasIndex("RestaurantId", "Name")
+                        .IsUnique();
+
+                    b.HasIndex("RestaurantId", "Status", "NextRunAtUtc");
+
+                    b.ToTable("assistant_automation_policies", (string)null);
+                });
+
+            modelBuilder.Entity("ISM.Domain.Modules.Assistant.Entities.AutomationRun", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CorrelationId")
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("EvidenceJson")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("varchar(8000)");
+
+                    b.Property<DateTime?>("FinishedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("varchar(160)");
+
+                    b.Property<int>("PolicyId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<int>("RestaurantId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ScheduledAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("StartedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PolicyId", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("RestaurantId", "StartedAtUtc");
+
+                    b.ToTable("assistant_automation_runs", (string)null);
                 });
 
             modelBuilder.Entity("ISM.Domain.Modules.DataImport.ImportAudit", b =>
@@ -648,6 +1082,54 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.HasIndex("ImportId");
 
                     b.ToTable("import_error_logs", (string)null);
+                });
+
+            modelBuilder.Entity("ISM.Domain.Modules.DataImport.ReceiptConfirmation", b =>
+                {
+                    b.Property<Guid>("ImportId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("ConfirmedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("ConfirmedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ContentSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("DocumentIdentitySha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<string>("RequestSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<int>("RestaurantId")
+                        .HasColumnType("int");
+
+                    b.HasKey("ImportId");
+
+                    b.HasIndex("RestaurantId", "ContentSha256")
+                        .IsUnique();
+
+                    b.HasIndex("RestaurantId", "DocumentIdentitySha256")
+                        .IsUnique();
+
+                    b.HasIndex("RestaurantId", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.ToTable("receipt_confirmations", (string)null);
                 });
 
             modelBuilder.Entity("ISM.Domain.Modules.Finance.FinanceEntry", b =>
@@ -771,6 +1253,10 @@ namespace ISM.Infrastructure.Data.Migrations
 
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(10,2)");
+
+                    b.Property<int>("PriceRevision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
 
                     b.Property<int>("RestaurantId")
                         .HasColumnType("int");
@@ -1242,6 +1728,70 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.Navigation("Restaurant");
                 });
 
+            modelBuilder.Entity("ISM.Domain.Modules.Assistant.Entities.AssistantActionAudit", b =>
+                {
+                    b.HasOne("ISM.Domain.Modules.Assistant.Entities.AssistantProposal", null)
+                        .WithMany()
+                        .HasForeignKey("ProposalId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ISM.Domain.Modules.Assistant.Entities.AssistantMessage", b =>
+                {
+                    b.HasOne("ISM.Domain.Modules.Assistant.Entities.AssistantThread", null)
+                        .WithMany()
+                        .HasForeignKey("ThreadId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ISM.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("ISM.Domain.Modules.Assistant.Entities.AssistantProposal", b =>
+                {
+                    b.HasOne("ISM.Domain.Modules.System.Entities.SystemAlert", null)
+                        .WithMany()
+                        .HasForeignKey("AlertId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ISM.Domain.Modules.Assistant.Entities.AssistantThread", b =>
+                {
+                    b.HasOne("ISM.Domain.Modules.System.Entities.SystemAlert", null)
+                        .WithMany()
+                        .HasForeignKey("OriginAlertId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ISM.Domain.Entities.Restaurant", null)
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ISM.Domain.Modules.Assistant.Entities.AutomationPolicy", b =>
+                {
+                    b.HasOne("ISM.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ISM.Domain.Modules.Assistant.Entities.AutomationRun", b =>
+                {
+                    b.HasOne("ISM.Domain.Modules.Assistant.Entities.AutomationPolicy", null)
+                        .WithMany()
+                        .HasForeignKey("PolicyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ISM.Domain.Modules.DataImport.ImportAudit", b =>
                 {
                     b.HasOne("ISM.Domain.Entities.Restaurant", "Restaurant")
@@ -1262,6 +1812,15 @@ namespace ISM.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Import");
+                });
+
+            modelBuilder.Entity("ISM.Domain.Modules.DataImport.ReceiptConfirmation", b =>
+                {
+                    b.HasOne("ISM.Domain.Entities.Restaurant", null)
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ISM.Domain.Modules.Finance.FinanceEntry", b =>

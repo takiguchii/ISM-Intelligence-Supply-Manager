@@ -98,6 +98,12 @@ export const useAuthStore = defineStore("auth", {
       }
     },
 
+    applyProfile(userId: number, profile: Pick<User, "name" | "avatarDataUrl">) {
+      if (this.user?.id !== userId) return;
+      this.user = { ...this.user, ...profile };
+      if (import.meta.client) localStorage.setItem("auth_user", JSON.stringify(this.user));
+    },
+
     clearAuth() {
       this.token = null;
       this.user = null;

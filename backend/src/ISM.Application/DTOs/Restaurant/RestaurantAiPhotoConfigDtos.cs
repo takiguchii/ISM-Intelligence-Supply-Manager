@@ -39,7 +39,7 @@ public sealed class TestRestaurantAiPhotoConfigRequestDto
     public string? OverrideModel { get; set; }
 }
 
-public sealed class TestRestaurantAiPhotoConfigResultDto
+public class TestRestaurantAiPhotoConfigResultDto
 {
     public bool Success { get; set; }
     public string Provider { get; set; } = string.Empty;
@@ -50,3 +50,28 @@ public sealed class TestRestaurantAiPhotoConfigResultDto
     public int? HttpStatusFromProvider { get; set; }
     public long? LatencyMs { get; set; }
 }
+
+public sealed class RestaurantAgentConfigDto
+{
+    public bool HasApiKey { get; set; }
+    public string? KeyLast4Digits { get; set; }
+    public string? ApiEndpoint { get; set; }
+    public string? Model { get; set; }
+}
+
+public sealed class UpdateRestaurantAgentConfigDto
+{
+    [MaxLength(512)] public string? ApiKey { get; set; }
+    [MaxLength(512)] public string? ApiEndpoint { get; set; }
+    [MaxLength(128)] public string? Model { get; set; }
+    public bool ClearKey { get; set; }
+}
+
+public sealed class TestRestaurantAgentConfigRequestDto
+{
+    [MaxLength(512)] public string? OverrideApiKey { get; set; }
+    [MaxLength(512)] public string? OverrideEndpoint { get; set; }
+    [MaxLength(128)] public string? OverrideModel { get; set; }
+}
+
+public sealed class TestRestaurantAgentConfigResultDto : TestRestaurantAiPhotoConfigResultDto { }

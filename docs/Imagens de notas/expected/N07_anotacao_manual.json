@@ -1,0 +1,31 @@
+{
+  "id": "N07_anotacao_manual",
+  "document_kind": "lista_nao_fiscal",
+  "supplier": "ANOTACAO TESTE GERENTE",
+  "issue_date": "2026-11-18",
+  "document_number": "ISM-RASC-007",
+  "items": [
+    {
+      "description": "ALFACE CRESPA",
+      "quantity": "3",
+      "unit": "un",
+      "unit_price": "4.50",
+      "line_total": "13.50"
+    },
+    {
+      "description": "BATATA KG",
+      "quantity": "2.500",
+      "unit": "kg",
+      "unit_price": "6.40",
+      "line_total": "16.00"
+    }
+  ],
+  "subtotal": "29.50",
+  "discount": "0.00",
+  "total": "29.50",
+  "payment_method": "NAO INFORMADO",
+  "expected_decision": "DRAFT_REVIEW_NO_FISCAL_VALIDITY",
+  "synthetic": true,
+  "fiscal_validity": false,
+  "policy": "Nunca registrar em dados reais sem revisao e aprovacao."
+}

@@ -2,6 +2,10 @@
 import { useConfirmation } from "~/composables/useConfirmation";
 import { ref, computed, watch, onMounted } from 'vue'
 import { productService } from '~/services/modules/stock/productService'
+import AgentMascot2D from '~/components/assistant/AgentMascot2D.vue'
+import { useAssistantUi } from '~/composables/useAssistantUi'
+import { useSystemAlertCenter } from '~/composables/useSystemAlertCenter'
+import { alertTypeName } from '~/types/agentExperience'
 
 const confirmation = useConfirmation();
 
@@ -33,6 +37,8 @@ const formData = ref<{
 
 const itensEstoque = ref<any[]>([])
 const itensCriticos = ref<any[]>([])
+const assistantUi = useAssistantUi()
+const alertCenter = useSystemAlertCenter()
 
 // Helpers de propriedades
 const getItemName = (item: any) => item?.name || item?.nome || ''
@@ -132,6 +138,7 @@ const nomesItensCriticos = computed(() => {
 })
 
 const verificarStatus = (item: any) => (getItemQty(item) <= getItemMin(item) ? 'Crítico' : 'Saudável')
+const bannerMood = computed(() => itensCriticos.value.some(item => getItemQty(item) <= 0) ? 'sad' : 'worried')
 
 // ==================== API ====================
 const fetchEstoque = async () => {
@@ -241,9 +248,14 @@ const fecharModal = () => {
   errorMessage.value = ''
 }
 
-const gerarPedido = () => {
-  alert('Conectando ao agente para gerar pedido de: ' + nomesItensCriticos.value)
+const abrirAssistente = async () => {
+  await alertCenter.ensureLoaded()
+  const alert = alertCenter.alerts.value.find(item => alertTypeName(item.alertType).includes('Stock') && !item.isDismissed)
+  if (alert) assistantUi.openChat(alert, 'Explique este alerta de estoque.')
+  else if (itensCriticos.value[0]?.id) consultarSaldo(itensCriticos.value[0].id)
 }
+const consultarSaldo = (productId: number) =>
+  assistantUi.openGeneralChat(`Qual é o saldo de estoque do produto ${productId}?`)
 
 onMounted(() => {
   carregarHistorico()
@@ -312,24 +324,22 @@ onMounted(() => {
     </div>
 
     <!-- ==================== ALERTA DE CRÍTICOS ==================== -->
-    <div v-if="!isLoading && itensCriticos.length > 0" class="border border-red-500/30 bg-red-500/10 rounded-2xl p-6 shadow-xl transition-all relative overflow-hidden">
+    <div v-if="!isLoading && itensCriticos.length > 0" data-agent-card="stock" class="border border-red-500/30 bg-red-500/10 rounded-2xl p-6 shadow-xl transition-all relative overflow-hidden">
       <div class="flex items-start justify-between flex-col sm:flex-row gap-4">
         <div class="flex items-start gap-4">
-          <div class="p-3 bg-red-500/20 rounded-xl text-red-400 text-xl border border-red-500/30 shrink-0">
-            🚨
-          </div>
+          <AgentMascot2D agent="stock" :mood="bannerMood" size="lg" :attention-level="bannerMood === 'sad' ? 'critical' : 'warning'" />
           <div>
             <div class="flex items-center gap-2 mb-1">
-              <span class="text-red-400 text-[11px] font-bold tracking-widest uppercase">✦ Agente de Estoque (IA)</span>
+              <span class="text-red-400 text-[11px] font-bold tracking-widest uppercase">✦ Risco de estoque detectado</span>
             </div>
             <h3 class="text-lg font-bold text-white mb-2">{{ itensCriticos.length }} itens em estado crítico</h3>
             <p class="text-zinc-300 text-sm max-w-2xl leading-relaxed">
-              Os seguintes itens atingiram ou estão abaixo do nível mínimo tolerável: <span class="text-white font-semibold">{{ nomesItensCriticos }}</span>. Deseja disparar a ordem de compra?
+              Os seguintes itens atingiram ou estão abaixo do nível mínimo tolerável: <span class="text-white font-semibold">{{ nomesItensCriticos }}</span>. O Assistente pode explicar o risco e abrir o contexto real, mas não cria pedidos automaticamente.
             </p>
           </div>
         </div>
-        <button @click="gerarPedido" class="w-full sm:w-auto whitespace-nowrap bg-red-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-red-500 active:scale-95 transition-all shadow-lg shadow-red-600/20">
-          Gerar Pedido Consolidado
+        <button v-if="assistantUi.canUse.value" @click="abrirAssistente" class="w-full sm:w-auto whitespace-nowrap bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-indigo-500 active:scale-95 transition-all shadow-lg shadow-indigo-600/20">
+          Consultar risco de estoque
         </button>
       </div>
     </div>
@@ -404,6 +414,7 @@ onMounted(() => {
               </td>
               <td class="px-6 py-4 text-right">
                 <div class="flex items-center justify-end gap-2">
+                  <button v-if="assistantUi.canUse.value" type="button" class="rounded-lg px-2 py-2 text-xs font-semibold text-indigo-300 hover:bg-indigo-400/10 focus-visible:ring-2 focus-visible:ring-indigo-500" @click="consultarSaldo(item.id)">Consultar saldo</button>
                   <button
                     @click="abrirModal(item)"
                     class="p-2 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700/40 transition-colors"

@@ -1,0 +1,31 @@
+{
+  "id": "N03_desconto_conferencia",
+  "document_kind": "compra_entrada",
+  "supplier": "MINIMERCADO TESTE VENTO",
+  "issue_date": "2026-11-15",
+  "document_number": "ISM-000103",
+  "items": [
+    {
+      "description": "AGUA MINERAL 1,5L",
+      "quantity": "4",
+      "unit": "un",
+      "unit_price": "3.50",
+      "line_total": "14.00"
+    },
+    {
+      "description": "MANTEIGA 200G",
+      "quantity": "2",
+      "unit": "un",
+      "unit_price": "11.25",
+      "line_total": "22.50"
+    }
+  ],
+  "subtotal": "36.50",
+  "discount": "5.00",
+  "total": "31.50",
+  "payment_method": "CARTAO",
+  "expected_decision": "PREVIEW_REQUIRES_CONFIRMATION",
+  "synthetic": true,
+  "fiscal_validity": false,
+  "policy": "Nunca registrar em dados reais sem revisao e aprovacao."
+}

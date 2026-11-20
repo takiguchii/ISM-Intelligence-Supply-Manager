@@ -54,4 +54,8 @@ public sealed class Restaurant : BaseEntity
     public string? PhotoImportApiKey { get; set; }
     public string? PhotoImportModel { get; set; }
     public string? PhotoImportApiEndpoint { get; set; }
+
+    [StringLength(512)] public string? AgentApiKey { get; set; }
+    [StringLength(512)] public string? AgentApiEndpoint { get; set; }
+    [StringLength(128)] public string? AgentModel { get; set; }
 }

@@ -1,0 +1,24 @@
+{
+  "id": "N08_devolucao",
+  "document_kind": "devolucao",
+  "supplier": "ATACADO TESTE VALE",
+  "issue_date": "2026-11-12",
+  "document_number": "ISM-DEV-008",
+  "items": [
+    {
+      "description": "QUEIJO MUSSARELA KG",
+      "quantity": "1.000",
+      "unit": "kg",
+      "unit_price": "34.00",
+      "line_total": "34.00"
+    }
+  ],
+  "subtotal": "34.00",
+  "discount": "0.00",
+  "total": "34.00",
+  "payment_method": "ESTORNO",
+  "expected_decision": "DO_NOT_RECORD_AS_STOCK_INBOUND",
+  "synthetic": true,
+  "fiscal_validity": false,
+  "policy": "Nunca registrar em dados reais sem revisao e aprovacao."
+}

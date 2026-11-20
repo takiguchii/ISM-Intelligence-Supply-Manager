@@ -10,7 +10,7 @@ public sealed class StockCategoryProfile : ImportCategoryProfileBase
     [
         ("nome", ["Nome", "Name", "Produto", "Item"]),
         ("unidade", ["Unidade", "Unit", "Un", "UM"]),
-        ("quantidadeAtual", ["QuantidadeAtual", "CurrentQuantity", "Qtd Atual", "Estoque", "EstoqueAtual", "Quantidade"]),
+        ("quantidadeAtual", ["QuantidadeAtual", "Quantidade Atual", "CurrentQuantity", "Qtd Atual", "Estoque", "EstoqueAtual", "Quantidade"]),
         ("quantidadeMinima", ["QuantidadeMinima", "MinimumQuantity", "Qtd Mínima", "Qtd Minima", "EstoqueMinimo", "Min"]),
         ("custoMedio", ["CustoMedio", "AverageCost", "Custo Médio", "Custo Medio", "PrecoCusto", "Preço Custo", "Custo"])
     ];

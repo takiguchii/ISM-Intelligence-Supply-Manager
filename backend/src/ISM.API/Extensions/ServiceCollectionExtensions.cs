@@ -32,6 +32,12 @@ using ISM.Application.Services.DataImport.Readers;
 using ISM.Infrastructure.Data.Options;
 using ISM.Infrastructure.DependencyInjection;
 using ISM.Infrastructure.Services;
+using ISM.Infrastructure.Services.DataImport;
+using ISM.Infrastructure.AI;
+using ISM.Application.Interfaces.Assistant;
+using ISM.Application.Agents;
+using ISM.Application.Services.Assistant;
+using ISM.Application.Services.Agents;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Hosting;
@@ -60,6 +66,14 @@ public static class ServiceCollectionExtensions
         });
         services.AddHttpContextAccessor();
         services.AddHttpClient();
+        services.AddSingleton(TimeProvider.System);
+        services.Configure<AssistantAiOptions>(configuration.GetSection(AssistantAiOptions.SectionName));
+        services.AddHttpClient<ILlmTextProvider, OllamaTextProvider>((sp, client) =>
+        {
+            var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AssistantAiOptions>>().Value;
+            client.BaseAddress = new Uri(options.OllamaBaseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(Math.Clamp(options.TimeoutSeconds, 3, 120));
+        });
         services.Configure<ISM.Application.DTOs.Notifications.SmtpOptions>(configuration.GetSection("Notifications:Smtp"));
         services.Configure<ISM.Application.DTOs.Notifications.WhatsAppOptions>(configuration.GetSection("Notifications:WhatsApp"));
         services.AddHttpClient<ISM.Infrastructure.Notifications.NotificationTransport>(client => client.Timeout = TimeSpan.FromSeconds(25));
@@ -256,8 +270,12 @@ public static class ServiceCollectionExtensions
 
         // Importação por foto/PDF escaneado (visão computacional)
         services.Configure<PhotoImportOptions>(configuration.GetSection(PhotoImportOptions.SectionName));
-        services.AddHttpClient<IPhotoImportExtractor, LlmVisionPhotoExtractor>();
+        services.AddHttpClient<LlmVisionPhotoExtractor>(client => client.Timeout = TimeSpan.FromMinutes(3));
+        services.AddScoped<IPhotoImportExtractor>(sp => sp.GetRequiredService<LlmVisionPhotoExtractor>());
+        services.AddScoped<IReceiptVisionExtractor>(sp => sp.GetRequiredService<LlmVisionPhotoExtractor>());
         services.AddScoped<IPhotoImportService, PhotoImportService>();
+        services.AddScoped<ReceiptPreviewService>();
+        services.AddScoped<IReceiptConfirmationService, ReceiptConfirmationService>();
         
         // Criação do valor padrão de margem ideal para o preço de um produto
         services.Configure<PricingOptions>(configuration.GetSection(PricingOptions.SectionName));
@@ -267,6 +285,20 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISupplierAgent, SupplierAgent>();
         services.AddScoped<IPricingAgent, PricingCmvService>();
         services.AddScoped<ISystemAlertService, SystemAlertService>();
+        services.AddScoped<IAgentToolRegistry, AgentToolRegistry>();
+        services.AddScoped<IAgentIntentRouter, AgentIntentRouter>();
+        services.AddScoped<AssistantIntentCoordinator>();
+        services.AddScoped<IAutomationService, AutomationService>();
+        services.AddScoped<IAutomationRunner, AutomationRunner>();
+        services.AddScoped<IAgentTool, StockProductTool>();
+        services.AddScoped<IAgentTool, FinanceSummaryTool>();
+        services.AddScoped<IAgentTool, DishCostTool>();
+        services.AddScoped<IAgentTool, AlertContextTool>();
+        services.AddScoped<IAgentTool, StockReplenishmentTool>();
+        services.AddScoped<IAgentTool, DishPriceSimulationTool>();
+        services.AddScoped<IAgentTool, SupplierComparisonTool>();
+        services.AddScoped<IAgentTool, FinancePeriodTool>();
+        services.AddScoped<IAssistantService, AssistantService>();
         services.AddHostedService<AgentsBackgroundScheduler>();
         services.AddHostedService<NotificationDeliveryWorker>();
 

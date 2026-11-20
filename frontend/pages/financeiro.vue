@@ -4,6 +4,8 @@ import { financeService, FinanceEntryType, type FinanceEntry, type FinanceEntryR
 import FinanceCashFlowChart from "~/components/finance/FinanceCashFlowChart.vue";
 import FinanceExpenseChart from "~/components/finance/FinanceExpenseChart.vue";
 import FinanceTopSellingChart from "~/components/finance/FinanceTopSellingChart.vue";
+import AgentMascot2D from "~/components/assistant/AgentMascot2D.vue";
+import type { AgentMood } from "~/types/agentExperience";
 
 const confirmation = useConfirmation();
 
@@ -18,6 +20,9 @@ const pageNumber = ref(1);
 const pageSize = 10;
 const blankForm = (): FinanceEntryRequest => ({ description: "", category: "Outros", type: FinanceEntryType.Expense, amount: 0, dueDate: "", isSettled: false });
 const form = ref<FinanceEntryRequest>(blankForm());
+const financeMood = computed<AgentMood>(() => loading.value ? "thinking" : error.value ? "error" : success.value ? "success" : overview.value ? "curious" : "idle");
+const { canUse: canUseAssistant, openGeneralChat } = useAssistantUi();
+const consultFinance = () => openGeneralChat("Qual é o resumo do faturamento e das despesas deste mês?");
 const money = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const cards = computed(() => overview.value ? [
   { label: "Receita de pedidos pagos", value: overview.value.summary.salesRevenue },
@@ -72,6 +77,14 @@ onMounted(refresh);
       <div><h1 class="text-2xl font-bold dark:text-white">Financeiro</h1><p class="text-sm text-zinc-500">Receitas e despesas do mês atual; contas pendentes de todos os períodos.</p></div>
       <div class="flex gap-2"><button class="px-4 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 text-sm" :disabled="loading" @click="refresh">Atualizar</button><button class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm" @click="openForm()">Nova movimentação</button></div>
     </div>
+    <section v-if="canUseAssistant" data-agent-card="finance" class="flex flex-wrap items-center gap-4 rounded-2xl border border-amber-200 bg-amber-50/60 p-4 sm:p-5 dark:border-amber-500/25 dark:bg-amber-500/5">
+      <AgentMascot2D agent="pricing" :mood="financeMood" size="sm" />
+      <div class="min-w-[12rem] flex-1">
+        <h2 class="font-semibold text-zinc-900 dark:text-zinc-100">Cocou Financeiro</h2>
+        <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-300">Consulte faturamento, despesas e o total de contas a pagar e a receber.</p>
+      </div>
+      <button type="button" class="rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700 focus-visible:ring-2 focus-visible:ring-amber-500 dark:bg-amber-300 dark:text-zinc-950 dark:hover:bg-amber-200" @click="consultFinance">Consultar resumo mensal</button>
+    </section>
     <p v-if="error" role="alert" class="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300">{{ error }}</p>
     <p v-if="success" role="status" class="text-sm text-emerald-600">{{ success }}</p>
     <p v-if="loading && !overview" class="text-sm text-zinc-500">Carregando financeiro...</p>

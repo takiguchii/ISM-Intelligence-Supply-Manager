@@ -18,4 +18,5 @@ public interface ISystemAlertService
     Task<SystemAlertResponse?> MarkReadAsync(int alertId, CancellationToken cancellationToken = default);
 
     Task<SystemAlertResponse?> DismissAsync(int alertId, CancellationToken cancellationToken = default);
+    Task<int> DismissAllAsync(CancellationToken cancellationToken = default);
 }

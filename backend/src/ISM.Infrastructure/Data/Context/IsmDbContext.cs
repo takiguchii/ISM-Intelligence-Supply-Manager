@@ -11,6 +11,7 @@ using ISM.Domain.Modules.DataImport;
 using ISM.Domain.Modules.Menu.Entities;
 using ISM.Domain.Modules.Orders;
 using ISM.Domain.Modules.Finance;
+using ISM.Domain.Modules.Assistant.Entities;
 
 namespace ISM.Infrastructure.Data.Context;
 
@@ -39,8 +40,15 @@ public sealed class IsmDbContext : DbContext
     public DbSet<DishIngredient> DishIngredients => Set<DishIngredient>();
     public DbSet<User> Users => Set<User>();
     public DbSet<ImportAudit> ImportAudits => Set<ImportAudit>();
+    public DbSet<ReceiptConfirmation> ReceiptConfirmations => Set<ReceiptConfirmation>();
     public DbSet<ImportErrorLog> ImportErrorLogs => Set<ImportErrorLog>();
     public DbSet<TmpAuthorization> TmpAuthorizations => Set<TmpAuthorization>();
+    public DbSet<AssistantProposal> AssistantProposals => Set<AssistantProposal>();
+    public DbSet<AssistantActionAudit> AssistantActionAudits => Set<AssistantActionAudit>();
+    public DbSet<AssistantThread> AssistantThreads => Set<AssistantThread>();
+    public DbSet<AssistantMessage> AssistantMessages => Set<AssistantMessage>();
+    public DbSet<AutomationPolicy> AutomationPolicies => Set<AutomationPolicy>();
+    public DbSet<AutomationRun> AutomationRuns => Set<AutomationRun>();
 
     internal int? CurrentUserRestaurantId =>
         _currentUser != null && !_currentUser.IsSuperAdmin
@@ -51,6 +59,22 @@ public sealed class IsmDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<ReceiptConfirmation>(builder =>
+        {
+            builder.ToTable("receipt_confirmations");
+            builder.HasKey(x => x.ImportId);
+            builder.Property(x => x.ImportId).ValueGeneratedNever();
+            builder.Property(x => x.ContentSha256).HasMaxLength(64).IsRequired();
+            builder.Property(x => x.DocumentIdentitySha256).HasMaxLength(64).IsRequired();
+            builder.Property(x => x.IdempotencyKey).HasMaxLength(80).IsRequired();
+            builder.Property(x => x.RequestSha256).HasMaxLength(64).IsRequired();
+            builder.Property(x => x.ConfirmedAtUtc).HasColumnType("datetime(6)").IsRequired();
+            builder.HasIndex(x => new { x.RestaurantId, x.ContentSha256 }).IsUnique();
+            builder.HasIndex(x => new { x.RestaurantId, x.DocumentIdentitySha256 }).IsUnique();
+            builder.HasIndex(x => new { x.RestaurantId, x.IdempotencyKey }).IsUnique();
+            builder.HasOne<Restaurant>().WithMany().HasForeignKey(x => x.RestaurantId).OnDelete(DeleteBehavior.Cascade);
+            builder.ApplyTenantQueryFilter(this);
+        });
         modelBuilder.Entity<NotificationDelivery>(builder =>
         {
             builder.ToTable("notification_deliveries");
@@ -339,6 +363,7 @@ public sealed class IsmDbContext : DbContext
             builder.Property(d => d.UrlImage).HasMaxLength(255).IsRequired(false);
             builder.Property(d => d.Cost).HasColumnType("decimal(10,2)").IsRequired();
             builder.Property(d => d.Price).HasColumnType("decimal(10,2)").IsRequired();
+            builder.Property(d => d.PriceRevision).IsRequired().IsConcurrencyToken();
             builder.Property(d => d.IsActive).IsRequired();
             builder.Property(d => d.Highlight).IsRequired();
             builder.Property(d => d.DisplayOrder).IsRequired();
@@ -357,6 +382,107 @@ public sealed class IsmDbContext : DbContext
                 .HasForeignKey(d => d.RestaurantId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            builder.ApplyTenantQueryFilter(this);
+        });
+
+        modelBuilder.Entity<AssistantProposal>(builder =>
+        {
+            builder.ToTable("assistant_proposals");
+            builder.HasKey(p => p.Id);
+            builder.Property(p => p.Specialist).HasMaxLength(40).IsRequired();
+            builder.Property(p => p.ActionType).HasMaxLength(50).IsRequired();
+            builder.Property(p => p.EntityType).HasMaxLength(50).IsRequired();
+            builder.Property(p => p.EntityName).HasMaxLength(150).IsRequired();
+            builder.Property(p => p.Status).HasConversion<int>().IsRequired();
+            builder.Property(p => p.OriginalValue).HasColumnType("decimal(10,2)");
+            builder.Property(p => p.ProposedValue).HasColumnType("decimal(10,2)");
+            builder.Property(p => p.SnapshotCost).HasColumnType("decimal(10,2)");
+            builder.Property(p => p.SnapshotTargetMarginPercent).HasColumnType("decimal(5,2)");
+            builder.Property(p => p.EvidenceJson).HasMaxLength(8000).IsRequired();
+            builder.Property(p => p.IdempotencyKey).HasMaxLength(120).IsRequired();
+            builder.Property(p => p.Version).IsConcurrencyToken();
+            builder.HasIndex(p => new { p.RestaurantId, p.AlertId }).IsUnique();
+            builder.HasIndex(p => new { p.RestaurantId, p.IdempotencyKey }).IsUnique();
+            builder.HasIndex(p => new { p.RestaurantId, p.Status, p.GeneratedAtUtc });
+            builder.HasOne<SystemAlert>().WithMany().HasForeignKey(p => p.AlertId).OnDelete(DeleteBehavior.Cascade);
+            builder.ApplyTenantQueryFilter(this);
+        });
+
+        modelBuilder.Entity<AssistantActionAudit>(builder =>
+        {
+            builder.ToTable("assistant_action_audits");
+            builder.HasKey(a => a.Id);
+            builder.Property(a => a.Action).HasMaxLength(30).IsRequired();
+            builder.Property(a => a.EntityType).HasMaxLength(50).IsRequired();
+            builder.Property(a => a.ValueBefore).HasColumnType("decimal(10,2)");
+            builder.Property(a => a.ValueAfter).HasColumnType("decimal(10,2)");
+            builder.Property(a => a.DetailsJson).HasMaxLength(8000);
+            builder.HasIndex(a => new { a.RestaurantId, a.ProposalId, a.OccurredAtUtc });
+            builder.HasOne<AssistantProposal>().WithMany().HasForeignKey(a => a.ProposalId).OnDelete(DeleteBehavior.Cascade);
+            builder.ApplyTenantQueryFilter(this);
+        });
+
+        modelBuilder.Entity<AutomationPolicy>(builder =>
+        {
+            builder.ToTable("assistant_automation_policies");
+            builder.HasKey(p => p.Id);
+            builder.Property(p => p.Name).HasMaxLength(120).IsRequired();
+            builder.Property(p => p.Specialist).HasMaxLength(40).IsRequired();
+            builder.Property(p => p.ActionType).HasMaxLength(80).IsRequired();
+            builder.Property(p => p.Target).HasMaxLength(120).IsRequired();
+            builder.Property(p => p.TimeZone).HasMaxLength(80).IsRequired();
+            builder.Property(p => p.Status).HasConversion<int>().IsRequired();
+            builder.Property(p => p.Mode).HasConversion<int>().IsRequired();
+            builder.Property(p => p.Version).IsConcurrencyToken();
+            builder.HasIndex(p => new { p.RestaurantId, p.Status, p.NextRunAtUtc });
+            builder.HasIndex(p => new { p.RestaurantId, p.Name }).IsUnique();
+            builder.HasOne<User>().WithMany().HasForeignKey(p => p.OwnerUserId).OnDelete(DeleteBehavior.Restrict);
+            builder.ApplyTenantQueryFilter(this);
+        });
+
+        modelBuilder.Entity<AutomationRun>(builder =>
+        {
+            builder.ToTable("assistant_automation_runs");
+            builder.HasKey(r => r.Id);
+            builder.Property(r => r.IdempotencyKey).HasMaxLength(160).IsRequired();
+            builder.Property(r => r.Reason).HasMaxLength(500).IsRequired();
+            builder.Property(r => r.EvidenceJson).HasMaxLength(8000).IsRequired();
+            builder.Property(r => r.CorrelationId).HasMaxLength(80);
+            builder.Property(r => r.Status).HasConversion<int>().IsRequired();
+            builder.HasIndex(r => new { r.PolicyId, r.IdempotencyKey }).IsUnique();
+            builder.HasIndex(r => new { r.RestaurantId, r.StartedAtUtc });
+            builder.HasOne<AutomationPolicy>().WithMany().HasForeignKey(r => r.PolicyId).OnDelete(DeleteBehavior.Cascade);
+            builder.ApplyTenantQueryFilter(this);
+        });
+
+        modelBuilder.Entity<AssistantThread>(builder =>
+        {
+            builder.ToTable("assistant_threads");
+            builder.HasKey(t => t.Id);
+            builder.Property(t => t.OriginType).HasMaxLength(40).IsRequired();
+            builder.Property(t => t.Subject).HasMaxLength(150).IsRequired();
+            builder.Property(t => t.ContextSnapshotJson).HasMaxLength(12000).IsRequired();
+            builder.Property(t => t.LastMessageAtUtc).HasColumnType("datetime(6)").IsRequired();
+            builder.Property(t => t.CreatedAtUtc).HasColumnType("datetime(6)").IsRequired();
+            builder.HasIndex(t => new { t.RestaurantId, t.UserId, t.LastMessageAtUtc });
+            builder.HasIndex(t => new { t.RestaurantId, t.OriginAlertId });
+            builder.HasOne<Restaurant>().WithMany().HasForeignKey(t => t.RestaurantId).OnDelete(DeleteBehavior.Cascade);
+            builder.HasOne<SystemAlert>().WithMany().HasForeignKey(t => t.OriginAlertId).OnDelete(DeleteBehavior.SetNull);
+            builder.ApplyTenantQueryFilter(this);
+        });
+
+        modelBuilder.Entity<AssistantMessage>(builder =>
+        {
+            builder.ToTable("assistant_messages");
+            builder.HasKey(m => m.Id);
+            builder.Property(m => m.Role).HasMaxLength(20).IsRequired();
+            builder.Property(m => m.Content).HasMaxLength(6000).IsRequired();
+            builder.Property(m => m.Mode).HasMaxLength(30);
+            builder.Property(m => m.Source).HasMaxLength(80);
+            builder.Property(m => m.CreatedAtUtc).HasColumnType("datetime(6)").IsRequired();
+            builder.HasIndex(m => new { m.RestaurantId, m.ThreadId, m.CreatedAtUtc });
+            builder.HasOne<AssistantThread>().WithMany().HasForeignKey(m => m.ThreadId).OnDelete(DeleteBehavior.Cascade);
+            builder.HasOne<User>().WithMany().HasForeignKey(m => m.UserId).OnDelete(DeleteBehavior.SetNull);
             builder.ApplyTenantQueryFilter(this);
         });
 

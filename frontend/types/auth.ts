@@ -1,6 +1,7 @@
 export interface User {
   id: number;
   name: string;
+  avatarDataUrl?: string | null;
   email: string;
   role: string;
   restaurantId: number | null;

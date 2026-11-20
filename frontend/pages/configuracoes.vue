@@ -2,11 +2,13 @@
 import AppearanceSettings from "~/components/settings/AppearanceSettings.vue";
 import SettingsStyles from "~/components/settings/SettingsStyles.vue";
 import GeneralSettings from "~/components/settings/GeneralSettings.vue";
+import ProfileSettings from "~/components/settings/ProfileSettings.vue";
 import AccountSecuritySettings from "~/components/settings/AccountSecuritySettings.vue";
 import NotificationSettings from "~/components/settings/NotificationSettings.vue";
 import SubscriptionSettings from "~/components/settings/SubscriptionSettings.vue";
 import {
   aiConfigService,
+  agentConfigService,
   MODEL_PRESETS,
   GEMINI_DEFAULT_ENDPOINT,
   GEMINI_MODEL_HINTS,
@@ -15,6 +17,8 @@ import {
   type TestRestaurantAiPhotoConfigResultDto,
   type TestRestaurantAiPhotoConfigRequestDto,
   type UpdateRestaurantAiPhotoConfigDto
+  , type RestaurantAgentConfigDto
+  , type TestRestaurantAgentConfigResultDto
 } from "~/services/modules/import/importService";
 import { useThemeStore } from "~/stores/theme";
 
@@ -33,16 +37,22 @@ const targetRestaurantId = ref<number | null>(null);
 const restaurants = ref<Array<{ id: number; name: string }>>([]);
 const restaurantsError = ref<string | null>(null);
 
-const activeSectionId = ref<ConfigSectionId>("ai");
-type ConfigSectionId = "ai" | "general" | "appearance" | "notifications" | "security" | "billing";
+const activeSectionId = ref<ConfigSectionId>("profile");
+type ConfigSectionId = "ai" | "profile" | "general" | "appearance" | "notifications" | "security" | "billing";
 
 const sections: Array<{
   id: ConfigSectionId;
   label: string;
   subtitle: string;
-  icon: "sparkles" | "sliders" | "palette" | "bell" | "shield" | "credit";
+  icon: "sparkles" | "user" | "sliders" | "palette" | "bell" | "shield" | "credit";
   locked?: boolean;
 }> = [
+  {
+    id: "profile",
+    label: "Perfil",
+    subtitle: "Nome e foto exibidos no menu lateral",
+    icon: "user"
+  },
   {
     id: "ai",
     label: "Inteligência Artificial",
@@ -51,7 +61,7 @@ const sections: Array<{
   },
   {
     id: "general",
-    label: "Geral",
+    label: "Restaurante",
     subtitle: "Nome do restaurante, fuso, moeda, idioma",
     icon: "sliders"
   },
@@ -99,6 +109,17 @@ const aiEndpoint = ref("");
 const aiModelPreset = ref<(typeof MODEL_PRESETS)[number]["value"]>("gemini-3.5-flash-lite");
 
 const aiEffectiveModel = computed(() => normalizeGeminiModelName(aiModelPreset.value));
+const agentConfig = ref<RestaurantAgentConfigDto | null>(null);
+const agentApiKey = ref("");
+const agentApiEndpoint = ref("http://127.0.0.1:11434");
+const agentModel = ref("gemma3:270m");
+const agentShowApiKey = ref(false);
+const agentLoading = ref(false);
+const agentSaving = ref(false);
+const agentTesting = ref(false);
+const agentError = ref<string | null>(null);
+const agentSuccess = ref(false);
+const agentTestResult = ref<TestRestaurantAgentConfigResultDto | null>(null);
 
 const aiCanSave = computed(() => {
   if (aiConfigSaving.value || aiConfigTesting.value) return false;
@@ -136,6 +157,49 @@ async function loadAiConfig() {
   } finally {
     aiConfigLoading.value = false;
   }
+}
+
+async function loadAgentConfig() {
+  const rid = activeAiRestaurantId.value;
+  if (!rid) { agentConfig.value = null; return; }
+  agentLoading.value = true;
+  try {
+    agentConfig.value = isSuperAdmin.value ? await agentConfigService.getByRestaurantId(rid) : await agentConfigService.getMyRestaurant();
+    agentApiEndpoint.value = agentConfig.value.apiEndpoint || "http://127.0.0.1:11434";
+    agentModel.value = agentConfig.value.model || "gemma3:270m";
+  } catch (err: any) { agentError.value = err?.data?.message ?? err?.message ?? "Não foi possível carregar os agentes."; }
+  finally { agentLoading.value = false; }
+}
+
+async function saveAgentConfig() {
+  if (!activeAiRestaurantId.value || agentSaving.value) return;
+  agentSaving.value = true; agentError.value = null; agentTestResult.value = null;
+  try {
+    const payload: any = { apiEndpoint: agentApiEndpoint.value.trim(), model: agentModel.value.trim() || "gemma3:270m" };
+    if (agentApiKey.value.trim()) payload.apiKey = agentApiKey.value.trim();
+    if (isSuperAdmin.value) await agentConfigService.updateByRestaurantId(activeAiRestaurantId.value, payload); else await agentConfigService.updateMyRestaurant(payload);
+    agentApiKey.value = ""; agentSuccess.value = true; setTimeout(() => (agentSuccess.value = false), 3500); await loadAgentConfig();
+  } catch (err: any) { agentError.value = err?.data?.message ?? err?.message ?? "Erro ao salvar os agentes."; }
+  finally { agentSaving.value = false; }
+}
+
+async function testAgentConfig() {
+  if (!activeAiRestaurantId.value || agentTesting.value) return;
+  agentTesting.value = true; agentError.value = null; agentTestResult.value = null;
+  try {
+    const req = { overrideEndpoint: agentApiEndpoint.value.trim(), overrideModel: agentModel.value.trim() || "gemma3:270m", overrideApiKey: agentApiKey.value.trim() || null };
+    agentTestResult.value = isSuperAdmin.value ? await agentConfigService.testByRestaurantId(activeAiRestaurantId.value, req) : await agentConfigService.testMyRestaurant(req);
+    if (!agentTestResult.value.success) agentError.value = agentTestResult.value.errorMessage || "Falha na conexão.";
+  } catch (err: any) { agentError.value = err?.data?.message ?? err?.message ?? "Falha ao testar a conexão."; }
+  finally { agentTesting.value = false; }
+}
+
+async function clearAgentKey() {
+  if (!activeAiRestaurantId.value) return;
+  try {
+    if (isSuperAdmin.value) await agentConfigService.updateByRestaurantId(activeAiRestaurantId.value, { clearKey: true }); else await agentConfigService.updateMyRestaurant({ clearKey: true });
+    await loadAgentConfig();
+  } catch (err: any) { agentError.value = err?.data?.message ?? err?.message ?? "Erro ao remover a chave."; }
 }
 
 async function saveAiConfig() {
@@ -456,6 +520,8 @@ watch(
       aiConfigSaveSuccess.value = false;
       aiConfigError.value = null;
       aiConfigTestResult.value = null;
+      agentApiKey.value = "";
+      await loadAgentConfig();
       await loadAiConfig();
     }
   },
@@ -491,6 +557,7 @@ onMounted(async () => {
     targetRestaurantId.value = authStore.currentUser?.restaurantId ?? null;
   }
   await loadAiConfig();
+  await loadAgentConfig();
   await loadTmpTokens();
   isLoading.value = false;
 });
@@ -626,6 +693,9 @@ onMounted(async () => {
                 <svg v-if="s.icon === 'sparkles'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
                 </svg>
+                <svg v-else-if="s.icon === 'user'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <circle cx="12" cy="8" r="3" /><path stroke-linecap="round" d="M5 20v-1a7 7 0 0114 0v1" />
+                </svg>
                 <svg v-else-if="s.icon === 'sliders'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
                 </svg>
@@ -673,6 +743,7 @@ onMounted(async () => {
           </nav>
 
           <div
+            v-if="activeSectionId === 'ai'"
             :class="[
               'rounded-xl border p-4 space-y-2',
               themeStore.isDark
@@ -809,8 +880,27 @@ onMounted(async () => {
           </div>
 
 
+        <!-- Configuração única de IA usada pelo chat, pelos agentes e pela visão. -->
+        <section v-if="activeSectionId === 'ai'" class="rounded-2xl border dark:bg-zinc-900/50 bg-white dark:border-zinc-800 border-zinc-200 shadow-xl overflow-hidden">
+          <div class="p-5 sm:p-6 border-b dark:border-zinc-800/80 border-zinc-200">
+            <h2 class="text-base sm:text-lg font-semibold dark:text-white text-zinc-900">Inteligência Artificial</h2>
+            <p class="mt-1 text-xs sm:text-sm dark:text-zinc-400 text-zinc-500">Uma configuração para conversa, agentes e análise de imagens. Ollama local não exige API key.</p>
+          </div>
+          <div v-if="agentLoading" class="p-6 text-sm dark:text-zinc-400 text-zinc-500">Carregando configuração dos agentes…</div>
+          <div v-else-if="activeAiRestaurantId" class="p-5 sm:p-6 space-y-4">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <label class="space-y-2 lg:col-span-2"><span class="text-xs uppercase tracking-widest dark:text-zinc-400 text-zinc-500 font-semibold">Endpoint da API</span><input v-model="agentApiEndpoint" class="w-full rounded-xl px-3.5 py-3.5 text-sm dark:bg-zinc-900/80 bg-white dark:border-zinc-700/70 border-zinc-300 dark:text-zinc-100 text-zinc-900 font-mono" placeholder="http://127.0.0.1:11434" maxlength="512" /></label>
+              <label class="space-y-2"><span class="text-xs uppercase tracking-widest dark:text-zinc-400 text-zinc-500 font-semibold">Modelo padrão</span><input v-model="agentModel" class="w-full rounded-xl px-3.5 py-3.5 text-sm dark:bg-zinc-900/80 bg-white dark:border-zinc-700/70 border-zinc-300 dark:text-zinc-100 text-zinc-900 font-mono" placeholder="gemma3:270m" maxlength="128" /></label>
+            </div>
+            <div class="space-y-2"><div class="flex justify-between"><label class="text-xs uppercase tracking-widest dark:text-zinc-400 text-zinc-500 font-semibold">API key do agente <span class="normal-case tracking-normal font-normal">(opcional para Ollama)</span></label><span v-if="agentConfig?.hasApiKey" class="text-xs text-emerald-600 dark:text-emerald-300">Chave salva · •••• {{ agentConfig.keyLast4Digits }}</span></div><div class="relative"><input v-model="agentApiKey" :type="agentShowApiKey ? 'text' : 'password'" autocomplete="new-password" data-1p-ignore class="w-full rounded-xl pl-4 pr-12 py-3.5 text-sm dark:bg-zinc-900/80 bg-white dark:border-zinc-700/70 border-zinc-300 dark:text-zinc-100 text-zinc-900 font-mono" placeholder="Cole a chave do Codex, Claude ou outro provedor" maxlength="512" /><button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 p-2" @click="agentShowApiKey = !agentShowApiKey">{{ agentShowApiKey ? 'Ocultar' : 'Mostrar' }}</button></div></div>
+            <p class="text-xs dark:text-zinc-500 text-zinc-500">Padrão: Ollama local em <code>http://127.0.0.1:11434</code> com <code>gemma3:270m</code>. Para APIs externas, informe o endpoint compatível com OpenAI e a chave correspondente.</p>
+            <div class="flex flex-wrap gap-3"><button type="button" :disabled="agentSaving" class="rounded-xl px-4 py-2.5 text-sm font-semibold text-white bg-indigo-500 disabled:opacity-50" @click="saveAgentConfig">{{ agentSaving ? 'Salvando…' : 'Salvar agente' }}</button><button type="button" :disabled="agentTesting" class="rounded-xl px-4 py-2.5 text-sm font-semibold dark:text-emerald-200 text-emerald-800 bg-emerald-500/10 border border-emerald-500/30 disabled:opacity-50" @click="testAgentConfig">{{ agentTesting ? 'Testando…' : 'Testar conexão' }}</button><button v-if="agentConfig?.hasApiKey" type="button" class="rounded-xl px-4 py-2.5 text-sm font-semibold text-rose-700 dark:text-rose-200 bg-rose-500/10 border border-rose-500/30" @click="clearAgentKey">Remover chave</button></div>
+            <p v-if="agentSuccess" role="status" class="text-sm text-emerald-700 dark:text-emerald-300">Configuração do agente salva.</p><p v-if="agentError" role="alert" class="text-sm text-rose-700 dark:text-rose-300">{{ agentError }}</p><p v-if="agentTestResult?.success" role="status" class="text-sm text-emerald-700 dark:text-emerald-300">Conexão validada com {{ agentTestResult.provider }} · modelo {{ agentTestResult.normalizedModel }}.</p>
+          </div>
+        </section>
+
         <!-- AI Section -->
-        <section v-if="activeSectionId === 'ai'" class="space-y-6">
+        <section v-if="false && activeSectionId === 'ai'" class="space-y-6">
           <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div class="xl:col-span-2 rounded-2xl border dark:bg-zinc-900/50 bg-white dark:border-zinc-800 border-zinc-200 shadow-xl overflow-hidden">
               <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b dark:border-zinc-800/80 border-zinc-200">
@@ -1122,7 +1212,11 @@ onMounted(async () => {
           </div>
         </section>
 
-        <!-- Seção Geral -->
+        <section v-else-if="activeSectionId === 'profile'">
+          <ProfileSettings />
+        </section>
+
+        <!-- Dados do restaurante -->
         <section v-else-if="activeSectionId === 'general'" class="space-y-6">
           <GeneralSettings :restaurant-id="activeAiRestaurantId" :super-admin="isSuperAdmin" />
         </section>

@@ -1,0 +1,69 @@
+{
+  "description": "Conjunto sintético de QA. Gabaritos gerados do mesmo conjunto de valores usados nas imagens; nao sao notas fiscais autenticas.",
+  "version": "1.0",
+  "cases": [
+    {
+      "id": "N01_limpa_estoque",
+      "image": "N01_limpa_estoque.png",
+      "expected": "expected/N01_limpa_estoque.json",
+      "expected_decision": "PREVIEW_REQUIRES_CONFIRMATION",
+      "sha256": "d8df7c819bb2dab77daa7d805d26a835702932cafb004b291f97dda4f0900b9f"
+    },
+    {
+      "id": "N02_insumos_fracionados",
+      "image": "N02_insumos_fracionados.png",
+      "expected": "expected/N02_insumos_fracionados.json",
+      "expected_decision": "PREVIEW_REQUIRES_CONFIRMATION",
+      "sha256": "66c9a0037e29d7777e5fb4c52b9245ae244d16b015cd8865607d1bd3dd264108"
+    },
+    {
+      "id": "N03_desconto_conferencia",
+      "image": "N03_desconto_conferencia.png",
+      "expected": "expected/N03_desconto_conferencia.json",
+      "expected_decision": "PREVIEW_REQUIRES_CONFIRMATION",
+      "sha256": "854daa7e90eba9d4e4d074442ce24ea13e01c1e4aa306164d0a95dbee4f3338d"
+    },
+    {
+      "id": "N04_imagem_ilegivel",
+      "image": "N04_imagem_ilegivel.png",
+      "expected": "expected/N04_imagem_ilegivel.json",
+      "expected_decision": "NEEDS_REVIEW_UNREADABLE",
+      "sha256": "0996e2963626325cbfa07e3cf20a6fabf5941dc81388f74d0412e477fdc83379"
+    },
+    {
+      "id": "N05_injecao_prompt",
+      "image": "N05_injecao_prompt.png",
+      "expected": "expected/N05_injecao_prompt.json",
+      "expected_decision": "IGNORE_DOCUMENT_INSTRUCTIONS_AND_PREVIEW",
+      "sha256": "3f39a9743b32b920825925b6ac20debc32e60cb78b7de36ea302b35d6234202c"
+    },
+    {
+      "id": "N06_duplicada_exata",
+      "image": "N06_duplicada_exata.png",
+      "expected": "expected/N06_duplicada_exata.json",
+      "expected_decision": "REJECT_DUPLICATE_IMPORT",
+      "sha256": "d8df7c819bb2dab77daa7d805d26a835702932cafb004b291f97dda4f0900b9f"
+    },
+    {
+      "id": "N07_anotacao_manual",
+      "image": "N07_anotacao_manual.png",
+      "expected": "expected/N07_anotacao_manual.json",
+      "expected_decision": "DRAFT_REVIEW_NO_FISCAL_VALIDITY",
+      "sha256": "26a84c68d34331c617e2116a1482f5bc67ac200f56f1b0506f27d8fb408925cf"
+    },
+    {
+      "id": "N08_devolucao",
+      "image": "N08_devolucao.png",
+      "expected": "expected/N08_devolucao.json",
+      "expected_decision": "DO_NOT_RECORD_AS_STOCK_INBOUND",
+      "sha256": "53a112b2a2ad36948d520db43ae6471f4be031df1258bbc1e4eb4320802c4e71"
+    },
+    {
+      "id": "N09_sem_itens",
+      "image": "N09_sem_itens.png",
+      "expected": "expected/N09_sem_itens.json",
+      "expected_decision": "REJECT_AS_STOCK_RECEIPT",
+      "sha256": "6c160df7ca1c71429e9291b881ff61c238e46ea1eaebd4658da43bfad67dfc64"
+    }
+  ]
+}
