@@ -32,6 +32,7 @@ using ISM.Application.Services.DataImport.Readers;
 using ISM.Infrastructure.Data.Options;
 using ISM.Infrastructure.DependencyInjection;
 using ISM.Infrastructure.Services;
+using ISM.Infrastructure.Services.DataImport;
 using ISM.Infrastructure.AI;
 using ISM.Application.Interfaces.Assistant;
 using ISM.Application.Agents;
@@ -269,8 +270,12 @@ public static class ServiceCollectionExtensions
 
         // Importação por foto/PDF escaneado (visão computacional)
         services.Configure<PhotoImportOptions>(configuration.GetSection(PhotoImportOptions.SectionName));
-        services.AddHttpClient<IPhotoImportExtractor, LlmVisionPhotoExtractor>();
+        services.AddHttpClient<LlmVisionPhotoExtractor>(client => client.Timeout = TimeSpan.FromMinutes(3));
+        services.AddScoped<IPhotoImportExtractor>(sp => sp.GetRequiredService<LlmVisionPhotoExtractor>());
+        services.AddScoped<IReceiptVisionExtractor>(sp => sp.GetRequiredService<LlmVisionPhotoExtractor>());
         services.AddScoped<IPhotoImportService, PhotoImportService>();
+        services.AddScoped<ReceiptPreviewService>();
+        services.AddScoped<IReceiptConfirmationService, ReceiptConfirmationService>();
         
         // Criação do valor padrão de margem ideal para o preço de um produto
         services.Configure<PricingOptions>(configuration.GetSection(PricingOptions.SectionName));

@@ -1084,6 +1084,54 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.ToTable("import_error_logs", (string)null);
                 });
 
+            modelBuilder.Entity("ISM.Domain.Modules.DataImport.ReceiptConfirmation", b =>
+                {
+                    b.Property<Guid>("ImportId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("ConfirmedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("ConfirmedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ContentSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("DocumentIdentitySha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<string>("RequestSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<int>("RestaurantId")
+                        .HasColumnType("int");
+
+                    b.HasKey("ImportId");
+
+                    b.HasIndex("RestaurantId", "ContentSha256")
+                        .IsUnique();
+
+                    b.HasIndex("RestaurantId", "DocumentIdentitySha256")
+                        .IsUnique();
+
+                    b.HasIndex("RestaurantId", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.ToTable("receipt_confirmations", (string)null);
+                });
+
             modelBuilder.Entity("ISM.Domain.Modules.Finance.FinanceEntry", b =>
                 {
                     b.Property<int>("Id")
@@ -1764,6 +1812,15 @@ namespace ISM.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Import");
+                });
+
+            modelBuilder.Entity("ISM.Domain.Modules.DataImport.ReceiptConfirmation", b =>
+                {
+                    b.HasOne("ISM.Domain.Entities.Restaurant", null)
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ISM.Domain.Modules.Finance.FinanceEntry", b =>

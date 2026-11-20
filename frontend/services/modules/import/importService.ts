@@ -57,6 +57,69 @@ export interface ImportPreviewDto {
   categories: CategoryConfirmationDto[];
 }
 
+export interface ReceiptPreviewDto {
+  sha256: string;
+  documentKind: string;
+  supplier?: string | null;
+  documentNumber?: string | null;
+  issueDate?: string | null;
+  items: Array<{ description: string; quantity?: number | null; unit?: string | null; unitPrice?: number | null; lineTotal?: number | null }>;
+  subtotal?: number | null;
+  discount?: number | null;
+  total?: number | null;
+  taxes?: number | null;
+  paymentMethod?: string | null;
+  uncertainFields: string[];
+  validationIssues: string[];
+  decision: string;
+  requiresConfirmation: boolean;
+  fiscalDocument: boolean;
+}
+
+export async function previewReceipt(file: File): Promise<ReceiptPreviewDto> {
+  const runtimeConfig = useRuntimeConfig();
+  const token = process.client ? localStorage.getItem("auth_token") : "";
+  const formData = new FormData();
+  formData.append("file", file);
+  return await $fetch<ReceiptPreviewDto>(`${runtimeConfig.public.apiBase}/api/import/receipt-preview`, {
+    method: "POST",
+    body: formData,
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+}
+
+export interface ReceiptProductMappingDto {
+  lineIndex: number;
+  productId: number;
+  quantityInStockUnit: number;
+  conversionNote?: string | null;
+}
+
+export interface ReceiptConfirmationResultDto {
+  importId: string;
+  alreadyConfirmed: boolean;
+  productsUpdated: number;
+  sha256: string;
+}
+
+export async function confirmReceipt(file: File, confirmation: {
+  confirm: true;
+  idempotencyKey: string;
+  expectedSha256: string;
+  productMappings: ReceiptProductMappingDto[];
+}): Promise<ReceiptConfirmationResultDto> {
+  const runtimeConfig = useRuntimeConfig();
+  const token = process.client ? localStorage.getItem("auth_token") : "";
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("confirmation", JSON.stringify(confirmation));
+  return await $fetch<ReceiptConfirmationResultDto>(`${runtimeConfig.public.apiBase}/api/import/receipt-confirm`, {
+    method: "POST",
+    body: formData,
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+}
+
 /** Tipos de arquivo aceitos no upload universal. */
 export const PHOTO_CONTENT_PREFIXES = ["image/", "application/pdf"];
 

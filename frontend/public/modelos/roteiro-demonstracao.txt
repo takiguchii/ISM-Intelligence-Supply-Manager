@@ -1,0 +1,19 @@
+ISM — Roteiro de demonstração administrativa
+
+Use um restaurante de teste. Todos os nomes, quantidades e valores deste
+roteiro são fictícios. Revise as linhas na prévia antes de importar.
+
+1. Importe os modelos de estoque e fornecedores pela tela Integrações.
+2. Cadastre a categoria Pratos do dia em Cardápio.
+3. Cadastre o prato DEMO Bowl de frango por R$ 29,00. Na ficha técnica,
+   use 0,15 kg de DEMO Arroz branco, 0,18 kg de DEMO Frango em cubos e
+   0,08 kg de DEMO Tomate.
+4. Cadastre o prato DEMO Arroz com feijão por R$ 18,00. Use 0,18 kg de
+   DEMO Arroz branco e 0,14 kg de DEMO Feijão carioca.
+5. Crie um pedido de teste para a referência Salão — Mesa 01. Use Balcão
+   ou Delivery como referências em outros pedidos.
+6. Em Financeiro, registre uma despesa de R$ 45,00 (DEMO Embalagens)
+   e uma receita avulsa de R$ 25,00 (DEMO Venda balcão). Use o mês atual.
+7. Abra o Cocou Financeiro e envie a pergunta do resumo mensal. Compare
+   o retorno com os cartões do Financeiro. No Estoque, use Consultar saldo
+   na linha do insumo cadastrado.

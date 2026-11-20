@@ -1,0 +1,38 @@
+{
+  "id": "N02_insumos_fracionados",
+  "document_kind": "compra_entrada",
+  "supplier": "DISTRIBUIDORA TESTE SOL",
+  "issue_date": "2026-11-16",
+  "document_number": "ISM-000102",
+  "items": [
+    {
+      "description": "CAFE TORRADO 500G",
+      "quantity": "2",
+      "unit": "pct",
+      "unit_price": "17.90",
+      "line_total": "35.80"
+    },
+    {
+      "description": "FARINHA TRIGO 1KG",
+      "quantity": "1",
+      "unit": "un",
+      "unit_price": "5.20",
+      "line_total": "5.20"
+    },
+    {
+      "description": "ACUCAR CRISTAL 2KG",
+      "quantity": "1",
+      "unit": "pct",
+      "unit_price": "9.40",
+      "line_total": "9.40"
+    }
+  ],
+  "subtotal": "50.40",
+  "discount": "0.00",
+  "total": "50.40",
+  "payment_method": "BOLETO",
+  "expected_decision": "PREVIEW_REQUIRES_CONFIRMATION",
+  "synthetic": true,
+  "fiscal_validity": false,
+  "policy": "Nunca registrar em dados reais sem revisao e aprovacao."
+}

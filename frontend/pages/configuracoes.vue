@@ -880,11 +880,11 @@ onMounted(async () => {
           </div>
 
 
-        <!-- Agent AI Section: separate from Gemini photo/PDF OCR configuration below. -->
+        <!-- Configuração única de IA usada pelo chat, pelos agentes e pela visão. -->
         <section v-if="activeSectionId === 'ai'" class="rounded-2xl border dark:bg-zinc-900/50 bg-white dark:border-zinc-800 border-zinc-200 shadow-xl overflow-hidden">
           <div class="p-5 sm:p-6 border-b dark:border-zinc-800/80 border-zinc-200">
-            <h2 class="text-base sm:text-lg font-semibold dark:text-white text-zinc-900">Agentes de IA</h2>
-            <p class="mt-1 text-xs sm:text-sm dark:text-zinc-400 text-zinc-500">Configuração independente do Gemini usado na importação de fotos/PDF. Aceita Ollama local e APIs externas compatíveis.</p>
+            <h2 class="text-base sm:text-lg font-semibold dark:text-white text-zinc-900">Inteligência Artificial</h2>
+            <p class="mt-1 text-xs sm:text-sm dark:text-zinc-400 text-zinc-500">Uma configuração para conversa, agentes e análise de imagens. Ollama local não exige API key.</p>
           </div>
           <div v-if="agentLoading" class="p-6 text-sm dark:text-zinc-400 text-zinc-500">Carregando configuração dos agentes…</div>
           <div v-else-if="activeAiRestaurantId" class="p-5 sm:p-6 space-y-4">
@@ -900,7 +900,7 @@ onMounted(async () => {
         </section>
 
         <!-- AI Section -->
-        <section v-if="activeSectionId === 'ai'" class="space-y-6">
+        <section v-if="false && activeSectionId === 'ai'" class="space-y-6">
           <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div class="xl:col-span-2 rounded-2xl border dark:bg-zinc-900/50 bg-white dark:border-zinc-800 border-zinc-200 shadow-xl overflow-hidden">
               <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b dark:border-zinc-800/80 border-zinc-200">

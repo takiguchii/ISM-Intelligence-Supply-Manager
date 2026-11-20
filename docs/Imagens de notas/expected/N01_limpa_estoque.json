@@ -1,0 +1,38 @@
+{
+  "id": "N01_limpa_estoque",
+  "document_kind": "compra_entrada",
+  "supplier": "MERCADO TESTE LUA",
+  "issue_date": "2026-11-17",
+  "document_number": "ISM-000101",
+  "items": [
+    {
+      "description": "ARROZ TIPO 1 5KG",
+      "quantity": "1",
+      "unit": "un",
+      "unit_price": "22.90",
+      "line_total": "22.90"
+    },
+    {
+      "description": "LEITE INTEGRAL 1L",
+      "quantity": "3",
+      "unit": "un",
+      "unit_price": "4.50",
+      "line_total": "13.50"
+    },
+    {
+      "description": "TOMATE KG",
+      "quantity": "1.200",
+      "unit": "kg",
+      "unit_price": "6.75",
+      "line_total": "8.10"
+    }
+  ],
+  "subtotal": "44.50",
+  "discount": "0.00",
+  "total": "44.50",
+  "payment_method": "PIX",
+  "expected_decision": "PREVIEW_REQUIRES_CONFIRMATION",
+  "synthetic": true,
+  "fiscal_validity": false,
+  "policy": "Nunca registrar em dados reais sem revisao e aprovacao."
+}

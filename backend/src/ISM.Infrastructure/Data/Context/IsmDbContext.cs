@@ -40,6 +40,7 @@ public sealed class IsmDbContext : DbContext
     public DbSet<DishIngredient> DishIngredients => Set<DishIngredient>();
     public DbSet<User> Users => Set<User>();
     public DbSet<ImportAudit> ImportAudits => Set<ImportAudit>();
+    public DbSet<ReceiptConfirmation> ReceiptConfirmations => Set<ReceiptConfirmation>();
     public DbSet<ImportErrorLog> ImportErrorLogs => Set<ImportErrorLog>();
     public DbSet<TmpAuthorization> TmpAuthorizations => Set<TmpAuthorization>();
     public DbSet<AssistantProposal> AssistantProposals => Set<AssistantProposal>();
@@ -58,6 +59,22 @@ public sealed class IsmDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<ReceiptConfirmation>(builder =>
+        {
+            builder.ToTable("receipt_confirmations");
+            builder.HasKey(x => x.ImportId);
+            builder.Property(x => x.ImportId).ValueGeneratedNever();
+            builder.Property(x => x.ContentSha256).HasMaxLength(64).IsRequired();
+            builder.Property(x => x.DocumentIdentitySha256).HasMaxLength(64).IsRequired();
+            builder.Property(x => x.IdempotencyKey).HasMaxLength(80).IsRequired();
+            builder.Property(x => x.RequestSha256).HasMaxLength(64).IsRequired();
+            builder.Property(x => x.ConfirmedAtUtc).HasColumnType("datetime(6)").IsRequired();
+            builder.HasIndex(x => new { x.RestaurantId, x.ContentSha256 }).IsUnique();
+            builder.HasIndex(x => new { x.RestaurantId, x.DocumentIdentitySha256 }).IsUnique();
+            builder.HasIndex(x => new { x.RestaurantId, x.IdempotencyKey }).IsUnique();
+            builder.HasOne<Restaurant>().WithMany().HasForeignKey(x => x.RestaurantId).OnDelete(DeleteBehavior.Cascade);
+            builder.ApplyTenantQueryFilter(this);
+        });
         modelBuilder.Entity<NotificationDelivery>(builder =>
         {
             builder.ToTable("notification_deliveries");

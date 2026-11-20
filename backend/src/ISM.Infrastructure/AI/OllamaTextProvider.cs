@@ -95,6 +95,7 @@ public sealed class OllamaTextProvider(
             {
                 model = configuration.Model,
                 stream = false,
+                think = false,
                 messages = new[] { new { role = "system", content = systemPrompt }, new { role = "user", content = userPrompt } },
                 options = new { num_predict = _options.MaxOutputTokens }
             },

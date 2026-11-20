@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -15,7 +16,7 @@ public sealed class RestaurantAiConfigService : IRestaurantAiConfigService
 {
     private const string DefaultModel = "gemini-3.5-flash-lite";
     private const string RequiredEndpointHost = "generativelanguage.googleapis.com";
-    private const int RequestTimeoutSeconds = 15;
+    private const int RequestTimeoutSeconds = 240;
 
     private readonly IRestaurantRepository _restaurantRepository;
 
@@ -383,7 +384,7 @@ public sealed class RestaurantAiConfigService : IRestaurantAiConfigService
             if (provider == "Anthropic Claude") { request.Headers.Add("x-api-key", apiKey); request.Headers.Add("anthropic-version", "2023-06-01"); }
             else if (provider != "Ollama") request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
             object payload = provider == "Ollama"
-                ? new { model, stream = false, messages = new[] { new { role = "user", content = "ping responda somente pong" } } }
+                ? new { model, stream = false, think = false, messages = new[] { new { role = "user", content = "ping responda somente pong" } }, options = new { num_predict = 16 } }
                 : provider == "Anthropic Claude"
                     ? new { model, max_tokens = 8, messages = new[] { new { role = "user", content = "ping responda somente pong" } } }
                     : new { model, messages = new[] { new { role = "user", content = "ping responda somente pong" } }, max_tokens = 8 };
@@ -405,8 +406,32 @@ public sealed class RestaurantAiConfigService : IRestaurantAiConfigService
         if (string.IsNullOrWhiteSpace(endpoint)) return "http://127.0.0.1:11434";
         var value = endpoint.Trim();
         if (!value.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && !value.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) value = "https://" + value;
-        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https")) throw new InvalidOperationException("Endpoint inválido. Use uma URL HTTP ou HTTPS.");
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https") ||
+            !string.IsNullOrEmpty(uri.UserInfo) || !string.IsNullOrEmpty(uri.Query) || !string.IsNullOrEmpty(uri.Fragment))
+            throw new InvalidOperationException("Endpoint inválido. Use uma URL HTTP ou HTTPS sem credenciais ou parâmetros.");
+        var host = uri.Host.TrimEnd('.');
+        var localHost = host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+            host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
+            host.Equals("::1", StringComparison.OrdinalIgnoreCase) ||
+            host.Equals("host.docker.internal", StringComparison.OrdinalIgnoreCase);
+        if (!localHost && uri.Scheme != Uri.UriSchemeHttps)
+            throw new InvalidOperationException("Endpoints externos devem usar HTTPS.");
+        if (host.Equals("169.254.169.254", StringComparison.OrdinalIgnoreCase) ||
+            host.Equals("metadata.google.internal", StringComparison.OrdinalIgnoreCase) ||
+            host.Equals("metadata.google.com", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Endpoint bloqueado por segurança.");
+        if (IPAddress.TryParse(host, out var ip) && !IPAddress.IsLoopback(ip) &&
+            (IsPrivateIpv4(ip) || ip.IsIPv6LinkLocal || ip.IsIPv6SiteLocal))
+            throw new InvalidOperationException("Endpoint interno não autorizado.");
         return value.TrimEnd('/');
+    }
+
+    private static bool IsPrivateIpv4(IPAddress ip)
+    {
+        var bytes = ip.GetAddressBytes();
+        return ip.AddressFamily == global::System.Net.Sockets.AddressFamily.InterNetwork &&
+            (bytes[0] == 10 || (bytes[0] == 172 && bytes[1] is >= 16 and <= 31) ||
+             (bytes[0] == 192 && bytes[1] == 168) || bytes[0] == 169 && bytes[1] == 254);
     }
 
     private static TestRestaurantAgentConfigResultDto AgentFailure(string provider, string endpoint, string model, string error, Stopwatch stopwatch)

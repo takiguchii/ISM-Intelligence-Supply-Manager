@@ -1,0 +1,31 @@
+{
+  "id": "N04_imagem_ilegivel",
+  "document_kind": "compra_entrada",
+  "supplier": "EMPORIO TESTE PINHEIRO",
+  "issue_date": "2026-11-14",
+  "document_number": "ISM-000104",
+  "items": [
+    {
+      "description": "OLEO DE SOJA 900ML",
+      "quantity": "2",
+      "unit": "un",
+      "unit_price": "8.45",
+      "line_total": "16.90"
+    },
+    {
+      "description": "SAL REFINADO 1KG",
+      "quantity": "3",
+      "unit": "un",
+      "unit_price": "2.95",
+      "line_total": "8.85"
+    }
+  ],
+  "subtotal": "25.75",
+  "discount": "0.00",
+  "total": "25.75",
+  "payment_method": "DINHEIRO",
+  "expected_decision": "NEEDS_REVIEW_UNREADABLE",
+  "synthetic": true,
+  "fiscal_validity": false,
+  "policy": "Nunca registrar em dados reais sem revisao e aprovacao."
+}
