@@ -3,6 +3,7 @@ import { useConfirmation } from "~/composables/useConfirmation";
 import { ref, computed, watch, onMounted } from 'vue'
 import { productService } from '~/services/modules/stock/productService'
 import AgentMascot2D from '~/components/assistant/AgentMascot2D.vue'
+import AssistantReceiptCapture from '~/components/assistant/AssistantReceiptCapture.vue'
 import { useAssistantUi } from '~/composables/useAssistantUi'
 import { useSystemAlertCenter } from '~/composables/useSystemAlertCenter'
 import { alertTypeName } from '~/types/agentExperience'
@@ -33,7 +34,8 @@ const formData = ref<{
   unidade: string
   quantidade: number
   minimo: number
-}>({ id: null, nome: '', unidade: 'kg', quantidade: 0, minimo: 0 })
+  maximo: number
+}>({ id: null, nome: '', unidade: 'kg', quantidade: 0, minimo: 0, maximo: 0 })
 
 const itensEstoque = ref<any[]>([])
 const itensCriticos = ref<any[]>([])
@@ -45,6 +47,7 @@ const getItemName = (item: any) => item?.name || item?.nome || ''
 const getItemUnit = (item: any) => item?.unit || item?.unidade || ''
 const getItemQty = (item: any) => item?.currentQuantity ?? item?.quantidade ?? 0
 const getItemMin = (item: any) => item?.minimumQuantity ?? item?.minimo ?? 0
+const getItemMax = (item: any) => item?.maximumQuantity ?? item?.maximo ?? 0
 
 // ==================== HISTÓRICO DE BUSCA ====================
 const carregarHistorico = () => {
@@ -192,7 +195,11 @@ const salvarItem = async () => {
       name: formData.value.nome,
       unit: formData.value.unidade,
       currentQuantity: formData.value.quantidade,
-      minimumQuantity: formData.value.minimo
+      minimumQuantity: formData.value.minimo,
+      maximumQuantity: formData.value.maximo,
+      reorderPoint: formData.value.minimo,
+      averageCost: 0,
+      movingAverageConsumption: 0
     }
 
     if (isEditing.value && formData.value.id) {
@@ -233,11 +240,12 @@ const abrirModal = (item: any = null) => {
       nome: getItemName(item),
       unidade: getItemUnit(item),
       quantidade: getItemQty(item),
-      minimo: getItemMin(item)
+      minimo: getItemMin(item),
+      maximo: getItemMax(item)
     }
     isEditing.value = true
   } else {
-    formData.value = { id: null, nome: '', unidade: 'kg', quantidade: 0, minimo: 0 }
+    formData.value = { id: null, nome: '', unidade: 'kg', quantidade: 0, minimo: 0, maximo: 0 }
     isEditing.value = false
   }
   isModalOpen.value = true
@@ -246,6 +254,11 @@ const abrirModal = (item: any = null) => {
 const fecharModal = () => {
   isModalOpen.value = false
   errorMessage.value = ''
+}
+
+const onReceiptConfirmed = async () => {
+  await fetchEstoque()
+  await fetchCriticos()
 }
 
 const abrirAssistente = async () => {
@@ -472,13 +485,28 @@ onMounted(() => {
     </section>
 
     <!-- ==================== MODAL ==================== -->
-    <div v-if="isModalOpen" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative space-y-4">
-        <h3 class="text-lg font-bold text-white border-b border-zinc-800 pb-4">
-          {{ isEditing ? 'Editar Insumo' : 'Novo Insumo' }}
+    <div v-if="isModalOpen" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+      <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-5xl p-5 sm:p-6 shadow-2xl relative space-y-4 my-6">
+        <button
+          type="button"
+          aria-label="Fechar modal"
+          class="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-xl text-zinc-500 transition hover:bg-zinc-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          @click="fecharModal"
+        >
+          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" d="m6 6 12 12M18 6 6 18" />
+          </svg>
+        </button>
+        <h3 class="border-b border-zinc-800 pb-4 pr-12 text-lg font-bold text-white">
+          {{ isEditing ? 'Editar insumo' : 'Adicionar entrada ao estoque' }}
         </h3>
 
-        <form @submit.prevent="salvarItem" class="space-y-4">
+        <div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.95fr)]">
+        <form @submit.prevent="salvarItem" class="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
+          <div v-if="!isEditing" class="rounded-xl border border-indigo-500/20 bg-indigo-500/10 p-3">
+            <p class="text-sm font-semibold text-indigo-100">Cadastro manual</p>
+            <p class="mt-1 text-xs leading-5 text-zinc-400">Preencha um insumo individualmente ou use a leitura de nota ao lado para conferir vários itens.</p>
+          </div>
           <!-- NOME -->
           <div>
             <label class="block text-[11px] font-bold text-zinc-400 mb-2 uppercase tracking-wider">Nome do Insumo</label>
@@ -520,8 +548,8 @@ onMounted(() => {
             </div>
           </div>
 
-          <!-- ESTOQUE MÍNIMO -->
-          <div class="grid grid-cols-2 gap-4">
+          <!-- LIMITES DE ESTOQUE -->
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label class="block text-[11px] font-bold text-zinc-400 mb-2 uppercase tracking-wider">Estoque Mínimo</label>
               <input
@@ -534,17 +562,8 @@ onMounted(() => {
               />
             </div>
             <div>
-              <label class="block text-[11px] font-bold text-zinc-400 mb-2 uppercase tracking-wider">Unidade</label>
-              <div
-                aria-readonly="true"
-                class="w-full bg-zinc-950/50 text-zinc-500 border border-zinc-800/60 rounded-xl px-4 py-2.5 flex items-center justify-between select-none cursor-not-allowed text-sm"
-              >
-                <span>{{ formData.unidade || '—' }}</span>
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-zinc-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="11" width="18" height="11" rx="2" />
-                  <path d="M7 11V7a5 5 0 0110 0v4" />
-                </svg>
-              </div>
+              <label class="block text-[11px] font-bold text-zinc-400 mb-2 uppercase tracking-wider">Estoque Máximo</label>
+              <input v-model.number="formData.maximo" type="number" step="0.01" min="0" class="no-spinner w-full bg-zinc-950 text-zinc-100 border border-zinc-800 rounded-xl px-4 py-2.5 focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 outline-none transition-all text-sm" />
             </div>
           </div>
 
@@ -565,6 +584,13 @@ onMounted(() => {
             </button>
           </div>
         </form>
+        <div v-if="!isEditing" class="min-w-0">
+          <AssistantReceiptCapture stock-mode @confirmed="onReceiptConfirmed" />
+        </div>
+        <div v-else class="hidden lg:block rounded-2xl border border-dashed border-zinc-800 p-5 text-sm text-zinc-500">
+          A leitura de nota fica disponível ao cadastrar uma nova entrada. Para alterar este registro, edite os campos ao lado.
+        </div>
+        </div>
       </div>
     </div>
   </div>

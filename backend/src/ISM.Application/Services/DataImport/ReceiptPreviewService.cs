@@ -13,8 +13,8 @@ public sealed class ReceiptPreviewService(IReceiptVisionExtractor extractor)
     {
         if (bytes.Length == 0 || bytes.Length > MaxImageBytes)
             throw new InvalidOperationException("Imagem vazia ou acima do limite de 12 MB.");
-        if (!IsSupportedImage(bytes, contentType))
-            throw new InvalidOperationException("Envie uma imagem PNG, JPEG ou WEBP válida.");
+        if (!IsSupportedImageOrPdf(bytes, contentType))
+            throw new InvalidOperationException("Envie uma imagem PNG, JPEG, WEBP ou PDF válido.");
 
         var json = await extractor.ExtractReceiptJsonAsync(bytes, Path.GetFileName(fileName), contentType, ct);
         ReceiptVisionJson source;
@@ -89,11 +89,12 @@ public sealed class ReceiptPreviewService(IReceiptVisionExtractor extractor)
             ? null : trimmed;
     }
 
-    private static bool IsSupportedImage(byte[] bytes, string contentType)
+    private static bool IsSupportedImageOrPdf(byte[] bytes, string contentType)
     {
         var normalized = contentType.Split(';', 2)[0].Trim().ToLowerInvariant();
         return normalized switch
         {
+            "application/pdf" => bytes.Length >= 5 && bytes.AsSpan(0, 5).SequenceEqual("%PDF-"u8),
             "image/png" => bytes.Length >= 8 && bytes.AsSpan(0, 8).SequenceEqual(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }),
             "image/jpeg" => bytes.Length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF,
             "image/webp" => bytes.Length >= 12 && bytes.AsSpan(0, 4).SequenceEqual("RIFF"u8) && bytes.AsSpan(8, 4).SequenceEqual("WEBP"u8),

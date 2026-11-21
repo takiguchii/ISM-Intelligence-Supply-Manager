@@ -14,6 +14,10 @@ public sealed class ReceiptProductMappingDto
     public int ProductId { get; set; }
     public decimal QuantityInStockUnit { get; set; }
     public string? ConversionNote { get; set; }
+    public string? NewProductName { get; set; }
+    public string? NewProductUnit { get; set; }
+    public decimal? NewProductMinimumQuantity { get; set; }
+    public decimal? NewProductMaximumQuantity { get; set; }
 }
 
 public sealed record ReceiptConfirmationResultDto(Guid ImportId, bool AlreadyConfirmed, int ProductsUpdated, string Sha256);

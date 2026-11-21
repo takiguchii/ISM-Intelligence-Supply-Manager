@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using ISM.Application.Interfaces.DataImport;
@@ -57,6 +58,7 @@ public sealed class LlmVisionPhotoExtractor : IPhotoImportExtractor, IReceiptVis
         string contentType,
         CancellationToken ct)
     {
+        (fileBytes, contentType) = await PrepareVisionInputAsync(fileBytes, contentType, ct);
         var endpoint = _options.ApiEndpoint;
         var model = _options.Model;
         var apiKey = _options.ApiKey;
@@ -131,6 +133,7 @@ public sealed class LlmVisionPhotoExtractor : IPhotoImportExtractor, IReceiptVis
 
     public async Task<string> ExtractReceiptJsonAsync(byte[] fileBytes, string fileName, string contentType, CancellationToken ct)
     {
+        (fileBytes, contentType) = await PrepareVisionInputAsync(fileBytes, contentType, ct);
         var endpoint = _options.ApiEndpoint;
         var model = _options.Model;
         var apiKey = _options.ApiKey;
@@ -192,5 +195,33 @@ public sealed class LlmVisionPhotoExtractor : IPhotoImportExtractor, IReceiptVis
         var start = lines[0].StartsWith("```") ? 1 : 0;
         var end = lines.Length > start && lines[^1].Trim().StartsWith("```") ? lines.Length - 1 : lines.Length;
         return string.Join('\n', lines[start..end]);
+    }
+
+    private static async Task<(byte[] Bytes, string ContentType)> PrepareVisionInputAsync(byte[] bytes, string contentType, CancellationToken ct)
+    {
+        if (!contentType.StartsWith("application/pdf", StringComparison.OrdinalIgnoreCase))
+            return (bytes, contentType);
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "pdftoppm",
+            Arguments = "-f 1 -singlefile -png -r 180 - -",
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("Não foi possível preparar o PDF para análise.");
+        await process.StandardInput.BaseStream.WriteAsync(bytes, ct);
+        await process.StandardInput.BaseStream.FlushAsync(ct);
+        process.StandardInput.Close();
+        using var output = new MemoryStream();
+        await process.StandardOutput.BaseStream.CopyToAsync(output, ct);
+        var error = await process.StandardError.ReadToEndAsync(ct);
+        await process.WaitForExitAsync(ct);
+        if (process.ExitCode != 0 || output.Length == 0)
+            throw new InvalidOperationException($"Não foi possível ler o PDF para análise: {error.Trim()}");
+        return (output.ToArray(), "image/png");
     }
 }

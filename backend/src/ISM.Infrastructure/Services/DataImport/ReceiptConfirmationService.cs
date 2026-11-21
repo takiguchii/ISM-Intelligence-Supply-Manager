@@ -62,25 +62,68 @@ public sealed class ReceiptConfirmationService(
         if (concurrentBefore is not null) return ResolveExisting(concurrentBefore, request.IdempotencyKey, requestHash, sha);
         await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
         var products = new Dictionary<int, Product>();
+        var resolvedProductIds = new int[mappings.Length];
+        var newProductsByLine = new Product?[mappings.Length];
         for (var i = 0; i < mappings.Length; i++)
         {
             var mapping = mappings[i];
             var item = preview.Items[i];
-            if (mapping.ProductId <= 0 || mapping.QuantityInStockUnit <= 0 || mapping.QuantityInStockUnit > 9999999.999m ||
+            if ((mapping.ProductId <= 0 && string.IsNullOrWhiteSpace(mapping.NewProductName)) || mapping.QuantityInStockUnit <= 0 || mapping.QuantityInStockUnit > 9999999.999m ||
                 decimal.Round(mapping.QuantityInStockUnit, 3) != mapping.QuantityInStockUnit)
                 throw new InvalidOperationException($"Quantidade de estoque inválida na linha {i + 1}.");
-            if (!products.TryGetValue(mapping.ProductId, out var product))
+            Product product;
+            if (mapping.ProductId > 0)
             {
-                product = await db.Products.SingleOrDefaultAsync(x => x.Id == mapping.ProductId && x.RestaurantId == restaurantId, ct)
+                product = products.TryGetValue(mapping.ProductId, out var cached)
+                    ? cached
+                    : await db.Products.SingleOrDefaultAsync(x => x.Id == mapping.ProductId && x.RestaurantId == restaurantId, ct)
                     ?? throw new InvalidOperationException($"Produto da linha {i + 1} não existe neste restaurante.");
                 if (!product.IsActive) throw new InvalidOperationException($"Produto da linha {i + 1} está inativo.");
-                products.Add(product.Id, product);
+                products.TryAdd(product.Id, product);
             }
+            else
+            {
+                var name = mapping.NewProductName?.Trim();
+                var unit = mapping.NewProductUnit?.Trim();
+                var minimum = mapping.NewProductMinimumQuantity ?? 0m;
+                var maximum = mapping.NewProductMaximumQuantity ?? 0m;
+                if (string.IsNullOrWhiteSpace(name) || name.Length > 120 || string.IsNullOrWhiteSpace(unit) || unit.Length > 10)
+                    throw new InvalidOperationException($"Informe nome e unidade válidos para o novo insumo da linha {i + 1}.");
+                if (minimum < 0m || maximum < 0m || (maximum > 0m && maximum < minimum))
+                    throw new InvalidOperationException($"Os limites de estoque do novo insumo da linha {i + 1} são inválidos.");
+                product = new Product
+                {
+                    RestaurantId = restaurantId,
+                    Name = name,
+                    Unit = unit,
+                    CurrentQuantity = 0m,
+                    MinimumQuantity = minimum,
+                    MaximumQuantity = maximum,
+                    IsActive = true,
+                    CreatedAtUtc = DateTime.UtcNow
+                };
+                db.Products.Add(product);
+                newProductsByLine[i] = product;
+            }
+            resolvedProductIds[i] = product.Id;
             if (!string.Equals(item.Unit, product.Unit, StringComparison.OrdinalIgnoreCase) &&
                 string.IsNullOrWhiteSpace(mapping.ConversionNote))
                 throw new InvalidOperationException($"Informe a conversão de {item.Unit} para {product.Unit} na linha {i + 1}.");
             if (item.LineTotal is null || item.LineTotal < 0)
                 throw new InvalidOperationException($"Total inválido na linha {i + 1}.");
+        }
+
+        if (newProductsByLine.Any(product => product is not null))
+        {
+            await db.SaveChangesAsync(ct);
+            for (var i = 0; i < newProductsByLine.Length; i++)
+            {
+                if (newProductsByLine[i] is { } newProduct)
+                {
+                    resolvedProductIds[i] = newProduct.Id;
+                    products[newProduct.Id] = newProduct;
+                }
+            }
         }
 
         var importId = Guid.NewGuid();
@@ -119,7 +162,7 @@ public sealed class ReceiptConfirmationService(
                     preview.Items[i].Description,
                     SourceQuantity = preview.Items[i].Quantity,
                     SourceUnit = preview.Items[i].Unit,
-                    mapping.ProductId,
+                    ProductId = resolvedProductIds[i],
                     mapping.QuantityInStockUnit,
                     mapping.ConversionNote
                 })
@@ -127,11 +170,11 @@ public sealed class ReceiptConfirmationService(
         });
 
         var netCostFactor = preview.Subtotal is > 0m ? preview.Total!.Value / preview.Subtotal.Value : 1m;
-        foreach (var group in mappings.GroupBy(x => x.ProductId))
+        foreach (var group in mappings.Select((mapping, index) => new { mapping, ProductId = resolvedProductIds[index] }).GroupBy(x => x.ProductId))
         {
             var product = products[group.Key];
-            var quantity = group.Sum(x => x.QuantityInStockUnit);
-            var cost = group.Sum(x => preview.Items[x.LineIndex].LineTotal!.Value * netCostFactor);
+            var quantity = group.Sum(x => x.mapping.QuantityInStockUnit);
+            var cost = group.Sum(x => preview.Items[x.mapping.LineIndex].LineTotal!.Value * netCostFactor);
             var newQuantity = product.CurrentQuantity + quantity;
             if (newQuantity > 9999999.999m) throw new InvalidOperationException("Saldo excede o limite do produto.");
             product.AverageCost = newQuantity == 0 ? product.AverageCost :
@@ -139,13 +182,13 @@ public sealed class ReceiptConfirmationService(
             product.CurrentQuantity = newQuantity;
             product.UpdatedAtUtc = now;
         }
-        foreach (var mapping in mappings)
+        foreach (var (mapping, index) in mappings.Select((mapping, index) => (mapping, index)))
         {
             var item = preview.Items[mapping.LineIndex];
             db.StockMovements.Add(new StockMovement
             {
                 RestaurantId = restaurantId,
-                ProductId = mapping.ProductId,
+                ProductId = resolvedProductIds[index],
                 MovementType = StockMovementType.Import,
                 QuantityDelta = mapping.QuantityInStockUnit,
                 UnitCostSnapshot = decimal.Round(item.LineTotal!.Value * netCostFactor / mapping.QuantityInStockUnit, 2, MidpointRounding.AwayFromZero),

@@ -93,6 +93,10 @@ export interface ReceiptProductMappingDto {
   productId: number;
   quantityInStockUnit: number;
   conversionNote?: string | null;
+  newProductName?: string | null;
+  newProductUnit?: string | null;
+  newProductMinimumQuantity?: number | null;
+  newProductMaximumQuantity?: number | null;
 }
 
 export interface ReceiptConfirmationResultDto {

@@ -58,6 +58,9 @@ services:
       AssistantAi__OllamaBaseUrl: ${ASSISTANT_OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       AssistantAi__Model: gemma3:270m
       AssistantAi__TimeoutSeconds: ${ASSISTANT_AI_TIMEOUT_SECONDS:-20}
+      PhotoImport__ApiEndpoint: ${PHOTO_IMPORT_API_ENDPOINT:-http://host.docker.internal:11434}
+      PhotoImport__Model: ${PHOTO_IMPORT_MODEL:-qwen3.5:4b}
+      PhotoImport__ApiKey: ${PHOTO_IMPORT_APIKEY:-}
     depends_on:
       mysql:
         condition: service_healthy

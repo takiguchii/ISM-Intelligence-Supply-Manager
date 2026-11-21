@@ -7,6 +7,8 @@ export interface ProductResponse {
   unit: string;
   currentQuantity: number;
   minimumQuantity: number;
+  maximumQuantity: number;
+  reorderPoint: number;
   averageCost: number;
   isActive: boolean;
   createdAtUtc: string;
@@ -29,6 +31,8 @@ export interface CreateProductRequest {
   unit: string;
   currentQuantity: number;
   minimumQuantity: number;
+  maximumQuantity?: number;
+  reorderPoint?: number;
   averageCost?: number;
 }
 
@@ -37,6 +41,8 @@ export interface UpdateProductRequest {
   unit: string;
   currentQuantity: number;
   minimumQuantity: number;
+  maximumQuantity?: number;
+  reorderPoint?: number;
   averageCost?: number;
 }
 

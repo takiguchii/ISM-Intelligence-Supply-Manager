@@ -4,6 +4,7 @@ import { useAssistantUi } from "~/composables/useAssistantUi";
 import { useAssistantChat } from "~/composables/useAssistantChat";
 import { useSystemAlertCenter } from "~/composables/useSystemAlertCenter";
 import AgentMascot2D from "~/components/assistant/AgentMascot2D.vue";
+import AssistantChatDrawer from "~/components/assistant/AssistantChatDrawer.vue";
 import type { AgentMood } from "~/types/agentExperience";
 
 const ui = useAssistantUi();

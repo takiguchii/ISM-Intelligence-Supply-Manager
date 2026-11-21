@@ -239,26 +239,6 @@ onMounted(async () => {
 
       <!-- ABA 1: MAIN PLUG & PLAY VIEW (Protótipo Exato) -->
       <div v-if="activeTab === 'skills'" class="space-y-8">
-        <div class="grid gap-4 lg:grid-cols-2">
-          <section class="rounded-2xl border border-indigo-200 bg-indigo-50 p-5 dark:border-indigo-500/30 dark:bg-indigo-500/10">
-            <div class="flex flex-wrap items-center gap-2">
-              <h2 class="font-semibold text-zinc-900 dark:text-zinc-100">Importação por foto</h2>
-              <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-800 dark:bg-indigo-400/20 dark:text-indigo-200">Beta</span>
-            </div>
-            <p class="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-300">Configure o Gemini para extrair dados de fotos de compras. Revise a prévia antes de confirmar a importação.</p>
-            <NuxtLink to="/configuracoes#ai" class="mt-4 inline-flex rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-600 focus-visible:ring-2 focus-visible:ring-indigo-500">Configurar importação por foto</NuxtLink>
-          </section>
-          <section class="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-            <h2 class="font-semibold text-zinc-900 dark:text-zinc-100">Dados de demonstração</h2>
-            <p class="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-300">Baixe exemplos fictícios para testar em um restaurante de demonstração. O roteiro inclui pratos, fichas técnicas, mesas e movimentações.</p>
-            <div class="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm font-semibold text-indigo-700 dark:text-indigo-300">
-              <a href="/modelos/estoque-demonstracao.csv" download class="underline underline-offset-4">Estoque CSV</a>
-              <a href="/modelos/fornecedores-demonstracao.csv" download class="underline underline-offset-4">Fornecedores CSV</a>
-              <a href="/modelos/roteiro-demonstracao.txt" download class="underline underline-offset-4">Roteiro de teste</a>
-            </div>
-          </section>
-        </div>
-        
         <!-- CARD PRINCIPAL: Carga diária de dados -->
         <div id="dropzone-card" class="rounded-2xl bg-[#121214] border border-zinc-800/80 p-6 sm:p-8 space-y-6 shadow-2xl relative overflow-hidden">
           <div>
