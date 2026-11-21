@@ -53,13 +53,19 @@ public sealed class OllamaTextProvider(
     }
 
     public async Task<LlmTextResult> CompleteAsync(string systemPrompt, string userPrompt, CancellationToken cancellationToken = default)
+        => await CompleteCoreAsync(systemPrompt, userPrompt, null, null, cancellationToken);
+
+    public async Task<LlmTextResult> CompleteWithImageAsync(string systemPrompt, string userPrompt, byte[] imageBytes, string contentType, CancellationToken cancellationToken = default)
+        => await CompleteCoreAsync(systemPrompt, userPrompt, imageBytes, contentType, cancellationToken);
+
+    private async Task<LlmTextResult> CompleteCoreAsync(string systemPrompt, string userPrompt, byte[]? imageBytes, string? contentType, CancellationToken cancellationToken)
     {
         var configuration = await ResolveConfigurationAsync(cancellationToken);
         if (!configuration.Enabled) return new(false, null, "Provider desabilitado");
 
         try
         {
-            using var request = BuildRequest(configuration, systemPrompt, userPrompt);
+            using var request = BuildRequest(configuration, systemPrompt, userPrompt, imageBytes, contentType);
             using var response = await httpClient.SendAsync(request, cancellationToken);
             if (!response.IsSuccessStatusCode) return new(false, null, $"HTTP {(int)response.StatusCode}");
 
@@ -79,7 +85,7 @@ public sealed class OllamaTextProvider(
         }
     }
 
-    private HttpRequestMessage BuildRequest(RuntimeConfiguration configuration, string systemPrompt, string userPrompt)
+    private HttpRequestMessage BuildRequest(RuntimeConfiguration configuration, string systemPrompt, string userPrompt, byte[]? imageBytes, string? contentType)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, configuration.Provider switch
         {
@@ -89,6 +95,7 @@ public sealed class OllamaTextProvider(
         });
         ApplyAuthorization(request, configuration);
 
+        var encodedImage = imageBytes is null ? null : Convert.ToBase64String(imageBytes);
         object payload = configuration.Provider switch
         {
             "Ollama" => new
@@ -96,7 +103,9 @@ public sealed class OllamaTextProvider(
                 model = configuration.Model,
                 stream = false,
                 think = false,
-                messages = new[] { new { role = "system", content = systemPrompt }, new { role = "user", content = userPrompt } },
+                messages = encodedImage is null
+                    ? new object[] { new { role = "system", content = systemPrompt }, new { role = "user", content = userPrompt } }
+                    : new object[] { new { role = "system", content = systemPrompt }, new { role = "user", content = userPrompt, images = new[] { encodedImage } } },
                 options = new { num_predict = _options.MaxOutputTokens }
             },
             "Anthropic Claude" => new
@@ -104,13 +113,17 @@ public sealed class OllamaTextProvider(
                 model = configuration.Model,
                 max_tokens = _options.MaxOutputTokens,
                 system = systemPrompt,
-                messages = new[] { new { role = "user", content = userPrompt } }
+                messages = encodedImage is null
+                    ? new object[] { new { role = "user", content = userPrompt } }
+                    : new object[] { new { role = "user", content = new object[] { new { type = "image", source = new { type = "base64", media_type = contentType, data = encodedImage } }, new { type = "text", text = userPrompt } } } }
             },
             _ => new
             {
                 model = configuration.Model,
                 max_tokens = _options.MaxOutputTokens,
-                messages = new[] { new { role = "system", content = systemPrompt }, new { role = "user", content = userPrompt } }
+                messages = encodedImage is null
+                    ? new object[] { new { role = "system", content = systemPrompt }, new { role = "user", content = userPrompt } }
+                    : new object[] { new { role = "system", content = systemPrompt }, new { role = "user", content = new object[] { new { type = "text", text = userPrompt }, new { type = "image_url", image_url = new { url = $"data:{contentType};base64,{encodedImage}" } } } } }
             }
         };
         request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");

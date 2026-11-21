@@ -13,5 +13,11 @@ export const assistantService = {
   createThread: (body: { originAlertId?: number | null; parentThreadId?: number | null; subject?: string | null }) => apiClientWithAuth<AssistantConversation>("/api/assistant/threads", { method: "POST", body }),
   thread: (id: number) => apiClientWithAuth<AssistantConversation>(`/api/assistant/threads/${id}`),
   alertContext: (id: number) => apiClientWithAuth<AssistantContext>(`/api/assistant/alerts/${id}/context`),
-  sendMessage: (id: number, message: string) => apiClientWithAuth<AssistantConversation>(`/api/assistant/threads/${id}/messages`, { method: "POST", body: { message } })
+  sendMessage: (id: number, message: string) => apiClientWithAuth<AssistantConversation>(`/api/assistant/threads/${id}/messages`, { method: "POST", body: { message } }),
+  sendMessageWithImage: (id: number, message: string, file: File) => {
+    const body = new FormData();
+    body.append("message", message);
+    body.append("file", file, file.name);
+    return apiClientWithAuth<AssistantConversation>(`/api/assistant/threads/${id}/messages/attachment`, { method: "POST", body });
+  }
 };

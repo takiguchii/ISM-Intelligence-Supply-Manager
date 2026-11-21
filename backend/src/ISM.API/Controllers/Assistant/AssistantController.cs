@@ -114,4 +114,30 @@ public sealed class AssistantController(IAssistantService service, IAgentToolReg
         var result = await service.SendMessageAsync(id, request.Message, cancellationToken);
         return result is null ? NotFound() : Ok(result);
     }
+
+    [HttpPost("threads/{id:int}/messages/attachment")]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(12 * 1024 * 1024)]
+    public async Task<ActionResult<AssistantConversationResponse>> SendImageAttachment(
+        int id,
+        [FromForm] string? message,
+        [FromForm] IFormFile? file,
+        CancellationToken cancellationToken)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest(new { detail = "Selecione uma imagem para anexar." });
+        if (file.Length > 12 * 1024 * 1024)
+            return BadRequest(new { detail = "A imagem deve ter no máximo 12 MB." });
+        if (!IsSupportedImage(file.ContentType))
+            return BadRequest(new { detail = "O chat aceita imagens PNG, JPEG ou WEBP." });
+
+        await using var stream = file.OpenReadStream();
+        using var memory = new MemoryStream();
+        await stream.CopyToAsync(memory, cancellationToken);
+        var result = await service.SendMessageAsync(id, message ?? string.Empty, cancellationToken, memory.ToArray(), file.ContentType, file.FileName);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    private static bool IsSupportedImage(string? contentType)
+        => contentType is "image/png" or "image/jpeg" or "image/webp";
 }

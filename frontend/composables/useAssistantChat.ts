@@ -74,27 +74,29 @@ async function selectThread(id: number) {
   }
 }
 
-async function send(text: string): Promise<boolean> {
+async function send(text: string, image: File | null = null): Promise<boolean> {
   const value = text.trim();
-  if (!value || !ready.value || pending.value || loadingHistory.value) return false;
+  if ((!value && !image) || !ready.value || pending.value || loadingHistory.value) return false;
   const request = revision;
   pending.value = true;
   error.value = "";
   retryAction = null;
   try {
     if (!currentThread.value) {
-      const created = await assistantService.createThread({ subject: value.slice(0, 150) });
+      const created = await assistantService.createThread({ subject: (value || "Imagem anexada ao ISM Assist").slice(0, 150) });
       if (request !== revision) return false;
       applyConversation(created);
     }
-    const response = await assistantService.sendMessage(currentThread.value!.id, value);
+    const response = image
+      ? await assistantService.sendMessageWithImage(currentThread.value!.id, value, image)
+      : await assistantService.sendMessage(currentThread.value!.id, value);
     if (request !== revision) return false;
     applyConversation(response);
     return true;
   } catch (cause: any) {
     if (request !== revision) return false;
     error.value = cause?.data?.detail || "Não foi possível enviar a mensagem.";
-    retryAction = () => send(value);
+    retryAction = () => send(value, image);
     return false;
   } finally {
     if (request === revision) pending.value = false;

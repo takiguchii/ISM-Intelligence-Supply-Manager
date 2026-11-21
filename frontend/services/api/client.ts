@@ -4,9 +4,8 @@ export function apiClient<T>(url: string, options?: FetchOptions) {
   const runtimeConfig = useRuntimeConfig();
   const token = process.client ? localStorage.getItem("auth_token") : null;
 
-  const defaultHeaders: Record<string, string> = {
-    "Content-Type": "application/json"
-  };
+  const isMultipart = process.client && typeof FormData !== "undefined" && options?.body instanceof FormData;
+  const defaultHeaders: Record<string, string> = isMultipart ? {} : { "Content-Type": "application/json" };
 
   if (token) {
     defaultHeaders["Authorization"] = `Bearer ${token}`;

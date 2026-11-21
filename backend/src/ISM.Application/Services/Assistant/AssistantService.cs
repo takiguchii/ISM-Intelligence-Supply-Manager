@@ -152,21 +152,37 @@ public sealed class AssistantService(
         return alert is null || alert.RestaurantId != restaurantId ? null : await BuildAlertContextAsync(alert, restaurantId, cancellationToken);
     }
 
-    public async Task<AssistantConversationResponse?> SendMessageAsync(int threadId, string message, CancellationToken cancellationToken = default)
+    public async Task<AssistantConversationResponse?> SendMessageAsync(
+        int threadId,
+        string message,
+        CancellationToken cancellationToken = default,
+        byte[]? imageBytes = null,
+        string? imageContentType = null,
+        string? imageFileName = null)
     {
         var restaurantId = RequireRestaurant();
         var thread = await conversations.GetThreadAsync(threadId, restaurantId, currentUser.UserId, cancellationToken);
         var cleanMessage = message.Trim();
-        if (thread is null || string.IsNullOrWhiteSpace(cleanMessage)) return null;
+        var hasImage = imageBytes is { Length: > 0 };
+        if (thread is null || (string.IsNullOrWhiteSpace(cleanMessage) && !hasImage)) return null;
+        if (hasImage && imageContentType is not ("image/png" or "image/jpeg" or "image/webp"))
+            throw new InvalidOperationException("O chat aceita imagens PNG, JPEG ou WEBP.");
+
+        var promptMessage = string.IsNullOrWhiteSpace(cleanMessage)
+            ? "Analise o anexo enviado e descreva os dados relevantes para a gestão do restaurante."
+            : cleanMessage;
+        var storedMessage = hasImage
+            ? Limit($"{promptMessage}\n\n[Imagem anexada: {imageFileName ?? "arquivo"}]", 6000)!
+            : Limit(promptMessage, 1000)!;
 
         await conversations.AddMessageAsync(new AssistantMessage
         {
             RestaurantId = restaurantId, ThreadId = thread.Id, UserId = currentUser.UserId, Role = "user",
-            Content = Limit(cleanMessage, 1000)!, Mode = "user", Source = "Administrador", CreatedAtUtc = DateTime.UtcNow
+            Content = storedMessage, Mode = "user", Source = "Administrador", CreatedAtUtc = DateTime.UtcNow
         }, cancellationToken);
 
         var context = DeserializeContext(thread.ContextSnapshotJson);
-        if (await TryCreateAutomationDraftAsync(cleanMessage, cancellationToken) is { } automationDraft)
+        if (!hasImage && await TryCreateAutomationDraftAsync(promptMessage, cancellationToken) is { } automationDraft)
         {
             await conversations.AddMessageAsync(new AssistantMessage
             {
@@ -178,7 +194,7 @@ public sealed class AssistantService(
             await conversations.SaveThreadAsync(thread, cancellationToken);
             return await BuildConversationAsync(thread, context, cancellationToken);
         }
-        var intent = intentCoordinator.Resolve(cleanMessage, context);
+        var intent = hasImage ? null : intentCoordinator.Resolve(promptMessage, context);
         if (intent is not null && await ExecuteIntentAsync(intent, cancellationToken) is { } routed)
         {
             await conversations.AddMessageAsync(new AssistantMessage
@@ -191,7 +207,7 @@ public sealed class AssistantService(
             await conversations.SaveThreadAsync(thread, cancellationToken);
             return await BuildConversationAsync(thread, context, cancellationToken);
         }
-        if (IsFinancialQuestion(cleanMessage))
+        if (!hasImage && IsFinancialQuestion(promptMessage))
         {
             var financial = await BuildFinancialResponseAsync(cancellationToken);
             await conversations.AddMessageAsync(new AssistantMessage
@@ -204,7 +220,7 @@ public sealed class AssistantService(
             await conversations.SaveThreadAsync(thread, cancellationToken);
             return await BuildConversationAsync(thread, context, cancellationToken);
         }
-        var deterministic = BuildDeterministicResponse(cleanMessage, context);
+        var deterministic = hasImage ? null : BuildDeterministicResponse(promptMessage, context);
         AssistantChatResponse response;
         if (deterministic is not null)
         {
@@ -215,9 +231,11 @@ public sealed class AssistantService(
             var factualContext = context is null ? await BuildContextAsync(restaurantId, cancellationToken) : JsonSerializer.Serialize(context);
             var history = await conversations.GetMessagesAsync(thread.Id, restaurantId, currentUser.UserId, 8, cancellationToken);
             var historyText = string.Join('\n', history.TakeLast(8).Select(item => $"{item.Role}: {item.Content}"));
-            var result = await llm.CompleteAsync(
-                "Você é o ISM Assist. Responda em português simples e conciso. Use somente os fatos fornecidos. Não invente números, IDs ou histórico. Não execute nem autorize alterações; qualquer ação exige confirmação do administrador e as regras do ISM.",
-                $"Contexto factual autorizado:\n{factualContext}\n\nHistórico recente:\n{historyText}\n\nPergunta atual: {cleanMessage}", cancellationToken);
+            const string systemPrompt = "Você é o ISM Assist. Responda em português simples e conciso. Use somente os fatos fornecidos e o conteúdo visual do anexo. Não invente números, IDs ou histórico. Não execute nem autorize alterações; qualquer ação exige confirmação do administrador e as regras do ISM.";
+            var userPrompt = $"Contexto factual autorizado:\n{factualContext}\n\nHistórico recente:\n{historyText}\n\nPergunta atual: {promptMessage}";
+            var result = hasImage
+                ? await llm.CompleteWithImageAsync(systemPrompt, userPrompt, imageBytes!, imageContentType!, cancellationToken)
+                : await llm.CompleteAsync(systemPrompt, userPrompt, cancellationToken);
             response = result.Success
                 ? new("llm", Limit(result.Text!.Trim(), 5000)!, "Ollama local", null)
                 : new("deterministic_fallback", "A conversação com o modelo local está indisponível no momento. Não tenho dados suficientes para concluir isso além dos fatos exibidos nesta conversa.", "Dados determinísticos do ISM", "Tente novamente quando o Ollama estiver disponível; nenhuma ação foi executada.");

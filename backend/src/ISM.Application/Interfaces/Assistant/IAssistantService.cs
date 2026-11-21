@@ -16,5 +16,11 @@ public interface IAssistantService
     Task<AssistantConversationResponse?> CreateThreadAsync(AssistantCreateThreadRequest request, CancellationToken cancellationToken = default);
     Task<AssistantConversationResponse?> GetThreadAsync(int threadId, CancellationToken cancellationToken = default);
     Task<AssistantContextResponse?> GetAlertContextAsync(int alertId, CancellationToken cancellationToken = default);
-    Task<AssistantConversationResponse?> SendMessageAsync(int threadId, string message, CancellationToken cancellationToken = default);
+    Task<AssistantConversationResponse?> SendMessageAsync(
+        int threadId,
+        string message,
+        CancellationToken cancellationToken = default,
+        byte[]? imageBytes = null,
+        string? imageContentType = null,
+        string? imageFileName = null);
 }

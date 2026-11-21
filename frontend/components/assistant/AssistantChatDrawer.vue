@@ -3,7 +3,6 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
 import { useAssistantUi } from "~/composables/useAssistantUi";
 import { useAssistantChat } from "~/composables/useAssistantChat";
 import AgentMascot2D from "~/components/assistant/AgentMascot2D.vue";
-import AssistantReceiptCapture from "~/components/assistant/AssistantReceiptCapture.vue";
 import { agentForAlert, moodForAlert, type AgentMood } from "~/types/agentExperience";
 
 const ui = useAssistantUi();
@@ -23,11 +22,53 @@ const chatMood = computed<AgentMood>(() => {
   return chat.context.value ? moodForAlert(chat.context.value) : "curious";
 });
 const inputRef = ref<HTMLTextAreaElement | null>(null);
+const attachmentInputRef = ref<HTMLInputElement | null>(null);
+const cameraInputRef = ref<HTMLInputElement | null>(null);
+const attachment = ref<File | null>(null);
+const attachmentPreview = ref("");
+const attachmentError = ref("");
+const canSubmit = computed(() => Boolean(draft.value.trim() || attachment.value));
 const dialogRef = ref<HTMLElement | null>(null);
 let returnFocusTo: HTMLElement | null = null;
 
+const imageTypeFor = (file: File) => {
+  if (file.type) return file.type;
+  if (/\.png$/i.test(file.name)) return "image/png";
+  if (/\.webp$/i.test(file.name)) return "image/webp";
+  if (/\.jpe?g$/i.test(file.name)) return "image/jpeg";
+  return "";
+};
+const clearAttachment = () => {
+  if (attachmentPreview.value) URL.revokeObjectURL(attachmentPreview.value);
+  attachment.value = null;
+  attachmentPreview.value = "";
+  attachmentError.value = "";
+};
+const chooseAttachment = (selected: File | undefined) => {
+  if (!selected) return;
+  const contentType = imageTypeFor(selected);
+  if (!/^image\/(png|jpeg|webp)$/i.test(contentType)) {
+    attachmentError.value = "Anexe uma imagem PNG, JPEG ou WEBP.";
+    return;
+  }
+  if (selected.size > 12 * 1024 * 1024) {
+    attachmentError.value = "A imagem deve ter no máximo 12 MB.";
+    return;
+  }
+  clearAttachment();
+  attachment.value = selected.type ? selected : new File([selected], selected.name, { type: contentType });
+  attachmentPreview.value = URL.createObjectURL(attachment.value);
+};
+const handleAttachmentChange = (event: Event) => {
+  chooseAttachment((event.target as HTMLInputElement).files?.[0]);
+  (event.target as HTMLInputElement).value = "";
+};
+const openAttachmentPicker = () => attachmentInputRef.value?.click();
+const openCamera = () => cameraInputRef.value?.click();
+
 const prepare = async (request: number) => {
   draft.value = ui.requestedDraft.value;
+  clearAttachment();
   const preparation = chat.ensureReady(requestedOrigin.value);
   await nextTick();
   if (ui.chatOpen.value && request === ui.openRequest.value) dialogRef.value?.focus();
@@ -39,10 +80,14 @@ const prepare = async (request: number) => {
 };
 const selectHistory = (event: Event) => {
   const id = Number((event.target as HTMLSelectElement).value);
-  if (id > 0) { draft.value = ""; void chat.selectThread(id); }
+  if (id > 0) { draft.value = ""; clearAttachment(); void chat.selectThread(id); }
 };
 const retry = async () => { if (await chat.retry() === true) draft.value = ""; };
-const submit = async () => { const sent = await chat.send(draft.value); if (sent) draft.value = ""; };
+const submit = async () => {
+  if (!canSubmit.value) return;
+  const sent = await chat.send(draft.value || "Analise a imagem anexada.", attachment.value);
+  if (sent) { draft.value = ""; clearAttachment(); }
+};
 const handleKeydown = (event: KeyboardEvent) => {
   if (!ui.chatOpen.value) return;
   if (event.key === "Escape") { ui.closeChat(); return; }
@@ -62,7 +107,7 @@ watch([ui.chatOpen, ui.openRequest], ([open, request], [wasOpen]) => {
   else chat.resetConversation();
 });
 onMounted(() => window.addEventListener("keydown", handleKeydown));
-onBeforeUnmount(() => { window.removeEventListener("keydown", handleKeydown); restoreBody(); });
+onBeforeUnmount(() => { window.removeEventListener("keydown", handleKeydown); restoreBody(); clearAttachment(); });
 </script>
 
 <template>
@@ -85,8 +130,33 @@ onBeforeUnmount(() => { window.removeEventListener("keydown", handleKeydown); re
             <div v-else class="space-y-5"><article v-for="message in chat.messages.value" :key="message.id" class="flex flex-col" :class="message.role === 'user' ? 'items-end' : 'items-start'"><p class="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{{ message.role === 'user' ? 'Você' : 'ISM Assist' }}</p><div class="max-w-[90%] rounded-2xl px-4 py-3 text-[14px] leading-6 shadow-sm" :class="message.role === 'user' ? 'rounded-br-md bg-indigo-600 text-white shadow-indigo-900/10' : 'rounded-bl-md border border-zinc-200/80 bg-white text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200'"><p class="whitespace-pre-wrap break-words">{{ message.content }}</p><p v-if="message.role === 'assistant' && message.mode" class="mt-2 border-t border-zinc-200/70 pt-1.5 text-[10px] opacity-55 dark:border-zinc-700">{{ message.source || (message.mode === 'llm' ? 'Assistente local' : 'Dados do ISM') }}</p></div></article><p v-if="chat.pending.value" class="animate-pulse px-1 text-xs text-zinc-500">Consultando informações autorizadas…</p></div>
           </div>
           <div v-if="chat.error.value" class="mx-5 mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-700 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-300" role="alert">{{ chat.error.value }} <button type="button" class="ml-1 font-semibold underline underline-offset-2" @click="retry">Tentar novamente</button></div>
-        <div class="border-t border-zinc-200/80 bg-white/90 pt-3 dark:border-zinc-800 dark:bg-zinc-950/90"><AssistantReceiptCapture /></div>
-        <form class="border-t border-zinc-200/80 bg-white/90 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] dark:border-zinc-800 dark:bg-zinc-950/90" @submit.prevent="submit"><label for="assistant-chat-input" class="sr-only">Pergunta para o ISM Assist</label><div class="flex items-end gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 p-2 transition focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-500/15 dark:border-zinc-700 dark:bg-zinc-900"><textarea id="assistant-chat-input" ref="inputRef" v-model="draft" rows="2" maxlength="1000" class="min-w-0 flex-1 resize-none bg-transparent px-2 py-2 text-sm leading-5 text-zinc-800 outline-none placeholder:text-zinc-400 dark:text-zinc-100" placeholder="Escreva sua pergunta…" :disabled="!chat.ready.value || chat.pending.value" @keydown.enter.exact.prevent="submit"/><button type="submit" class="rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45 dark:focus-visible:ring-offset-zinc-950" :disabled="!chat.ready.value || chat.pending.value || !draft.trim()">Enviar</button></div><p class="mt-2 px-1 text-[10px] text-zinc-400">Enter para enviar · Shift + Enter para nova linha</p></form>
+          <form class="assistant-composer-shell border-t border-zinc-200/80 bg-white/90 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] dark:border-zinc-800 dark:bg-zinc-950/90" @submit.prevent="submit">
+            <input ref="attachmentInputRef" type="file" accept="image/png,image/jpeg,image/webp" class="sr-only" @change="handleAttachmentChange" />
+            <input ref="cameraInputRef" type="file" accept="image/png,image/jpeg,image/webp" capture="environment" class="sr-only" @change="handleAttachmentChange" />
+            <div v-if="attachment" class="mb-2 flex items-center gap-2 rounded-xl border border-indigo-200/80 bg-indigo-50/70 px-2.5 py-2 dark:border-indigo-400/20 dark:bg-indigo-400/10">
+              <img :src="attachmentPreview" alt="Prévia da imagem anexada" class="h-10 w-10 rounded-lg object-cover" />
+              <span class="min-w-0 flex-1 truncate text-xs font-medium text-indigo-800 dark:text-indigo-100">{{ attachment.name }}</span>
+              <button type="button" class="grid h-7 w-7 place-items-center rounded-lg text-indigo-500 transition hover:bg-indigo-100 hover:text-indigo-800 dark:hover:bg-indigo-400/20 dark:hover:text-white" aria-label="Remover imagem anexada" @click="clearAttachment">×</button>
+            </div>
+            <div class="assistant-composer flex items-center gap-1.5 rounded-[1.35rem] border border-zinc-200 bg-zinc-50 px-2 py-2 shadow-sm transition focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-500/15 dark:border-zinc-700 dark:bg-zinc-900">
+              <button type="button" class="assistant-composer-action" aria-label="Tirar foto" title="Tirar foto" @click="openCamera">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8.5h3l1.2-2h3.6l1.2 2H16a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3v-5a3 3 0 0 1 3-3Z"/><circle cx="10" cy="14" r="3"/></svg>
+              </button>
+              <button type="button" class="assistant-composer-action" aria-label="Anexar imagem" title="Anexar imagem" @click="openAttachmentPicker">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path stroke-linecap="round" stroke-linejoin="round" d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>
+              </button>
+              <button type="button" class="assistant-composer-action" aria-label="Selecionar arquivo de imagem" title="Selecionar arquivo de imagem" @click="openAttachmentPicker">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m3 8 1.4-3.1A2 2 0 0 1 6.2 3.7h3.1l1.5 1.8h7.1a3 3 0 0 1 3 3v8.8a2.7 2.7 0 0 1-2.7 2.7H5.8A2.8 2.8 0 0 1 3 17.2V8Z"/><path stroke-linecap="round" d="M3 9h18"/></svg>
+              </button>
+              <label for="assistant-chat-input" class="sr-only">Pergunta para o ISM Assist</label>
+              <textarea id="assistant-chat-input" ref="inputRef" v-model="draft" rows="1" maxlength="1000" class="min-h-10 min-w-0 flex-1 resize-none bg-transparent px-2 py-2.5 text-sm leading-5 text-zinc-800 outline-none placeholder:text-zinc-400 dark:text-zinc-100" placeholder="Pergunte ao ISM Assist…" :disabled="!chat.ready.value || chat.pending.value" @keydown.enter.exact.prevent="submit" />
+              <button type="submit" class="assistant-composer-send" aria-label="Enviar mensagem" :disabled="!chat.ready.value || chat.pending.value || !canSubmit">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m5 12 14-7-4 14-3-6-7-1Z"/><path stroke-linecap="round" d="m12 13 3-2"/></svg>
+              </button>
+            </div>
+            <p v-if="attachmentError" role="alert" class="mt-2 px-1 text-[11px] text-rose-600 dark:text-rose-300">{{ attachmentError }}</p>
+            <p class="mt-2 px-1 text-[10px] text-zinc-400">Enter para enviar · imagens até 12 MB · Shift + Enter para nova linha</p>
+          </form>
         </aside>
       </div>
     </Transition>
@@ -98,5 +168,44 @@ onBeforeUnmount(() => { window.removeEventListener("keydown", handleKeydown); re
 .assistant-chat-enter-active .assistant-chat-panel, .assistant-chat-leave-active .assistant-chat-panel { transition: transform 340ms cubic-bezier(.22,1,.36,1); }
 .assistant-chat-enter-from, .assistant-chat-leave-to { opacity: 0; }
 .assistant-chat-enter-from .assistant-chat-panel, .assistant-chat-leave-to .assistant-chat-panel { transform: translateX(32px); }
+.assistant-composer-action,
+.assistant-composer-send {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 9999px;
+  transition: color 180ms ease, background-color 180ms ease, transform 180ms ease, opacity 180ms ease;
+}
+
+.assistant-composer-action {
+  width: 2.25rem;
+  height: 2.25rem;
+  color: #a1a1aa;
+}
+
+.assistant-composer-action:hover,
+.assistant-composer-action:focus-visible {
+  background: rgb(99 102 241 / 0.1);
+  color: #6366f1;
+  outline: none;
+}
+
+.assistant-composer-action:active,
+.assistant-composer-send:active { transform: scale(0.92); }
+
+.assistant-composer-action svg,
+.assistant-composer-send svg { width: 1.15rem; height: 1.15rem; }
+
+.assistant-composer-send {
+  width: 2.5rem;
+  height: 2.5rem;
+  color: white;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  box-shadow: 0 5px 16px rgb(79 70 229 / 0.22);
+}
+
+.assistant-composer-send:hover:not(:disabled) { background: linear-gradient(135deg, #4f46e5, #7c3aed); }
+.assistant-composer-send:focus-visible { outline: 2px solid #818cf8; outline-offset: 2px; }
+.assistant-composer-send:disabled { cursor: not-allowed; opacity: 0.4; box-shadow: none; }
 @media (prefers-reduced-motion: reduce) { .assistant-chat-enter-active, .assistant-chat-leave-active, .assistant-chat-enter-active .assistant-chat-panel, .assistant-chat-leave-active .assistant-chat-panel { transition-duration: 1ms; } }
 </style>
