@@ -90,13 +90,14 @@ public static class DbSeeder
             await context.SaveChangesAsync();
         }
 
-        // 2. Usuários padrão por cargo (Admin, Manager, Chef, Waiter), idempotente por e-mail.
+        // 2. Usuários padrão por cargo (Admin, Manager, Chef, Waiter, Cashier), idempotente por e-mail.
         var defaultUsers = new[]
         {
             ("Super Administrador ISM", "admin@ism.com.br", "Admin"),
             ("Mariana Gerente", "gerente@ism.com.br", "Manager"),
             ("Chef Carlos Silva", "chef@ism.com.br", "Chef"),
-            ("Lucas Garçom", "garcom@ism.com.br", "Waiter")
+            ("Lucas Garçom", "garcom@ism.com.br", "Waiter"),
+            ("Ana Caixa", "caixa@ism.com.br", "Cashier")
         };
         var knownEmails = await context.Users
             .Where(user => defaultUsers.Select(seed => seed.Item2).Contains(user.Email))

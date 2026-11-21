@@ -67,12 +67,25 @@ public sealed class AuthorizationPolicyTests
     [InlineData(IsmRoles.Manager, 10, true)]
     [InlineData(IsmRoles.Chef, 10, true)]
     [InlineData(IsmRoles.Waiter, 10, true)]
+    [InlineData(IsmRoles.Cashier, 10, true)]
     [InlineData(IsmRoles.Chef, null, false)]
     [InlineData(IsmRoles.Waiter, null, false)]
     [InlineData(IsmRoles.Admin, null, false)]
     public async Task RestaurantAnyUser_ShouldAllowAllOperationalRolesWithTenant(string role, int? restaurantId, bool expectedSuccess)
     {
         var result = await AuthorizeAsync(Principal(role, restaurantId), IsmPolicies.RestaurantAnyUser);
+        result.Succeeded.Should().Be(expectedSuccess);
+    }
+
+    [Theory]
+    [InlineData(IsmRoles.Admin, 10, true)]
+    [InlineData(IsmRoles.Manager, 10, true)]
+    [InlineData(IsmRoles.Chef, 10, true)]
+    [InlineData(IsmRoles.Waiter, 10, true)]
+    [InlineData(IsmRoles.Cashier, 10, false)]
+    public async Task RestaurantOrderOperator_ShouldRejectCashierWriteOperations(string role, int? restaurantId, bool expectedSuccess)
+    {
+        var result = await AuthorizeAsync(Principal(role, restaurantId), IsmPolicies.RestaurantOrderOperator);
         result.Succeeded.Should().Be(expectedSuccess);
     }
 

@@ -24,9 +24,10 @@ public sealed class UserManagementAuthorizationTests
     [Theory]
     [InlineData(IsmRoles.Chef, true)]
     [InlineData(IsmRoles.Waiter, true)]
+    [InlineData(IsmRoles.Cashier, true)]
     [InlineData(IsmRoles.Manager, false)]
     [InlineData(IsmRoles.Admin, false)]
-    public async Task UpdateUserAsync_ManagerCanOnlyManageChefAndWaiter(string targetRole, bool allowed)
+    public async Task UpdateUserAsync_ManagerCanOnlyManageOperationalRoles(string targetRole, bool allowed)
     {
         var userRepository = new InMemoryUserRepository(new User
         {

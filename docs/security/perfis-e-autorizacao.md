@@ -1,69 +1,67 @@
-# Matriz de Perfis, Autenticação e Acesso a Views (ISM)
+# Perfis, usuários e autorização no ISM
 
-Este documento descreve as funções de cada perfil de usuário no **ISM (Intelligence Supply Manager)**, a matriz de direcionamento de rotas (home route) e as permissões de acesso às views no frontend e endpoints no backend.
+Este documento é a referência operacional dos perfis do ISM: quem pode entrar, qual é a responsabilidade de cada cargo e quais views/endpoints estão disponíveis.
 
----
+## Credenciais de demonstração local
 
-## 👥 Perfis de Usuário
+Quando `SEED_DEMO_DATA=true`, o backend cria os usuários abaixo de forma idempotente. Todos usam o valor de `SEED_PASSWORD`; se essa variável não for informada em ambiente de desenvolvimento, o fallback atual é `admin123`.
 
-| Perfil | Escopo / Papel | Home Route | Descrição Operacional |
+| Perfil | E-mail de demonstração | Senha local padrão | Home |
 | :--- | :--- | :--- | :--- |
-| **Manager (Gerente / Admin do Restaurante)** | Restaurante (`restaurantId != null`) | `/` | Gestão operacional e financeira do restaurante. Responsável por analisar indicadores no Dashboard, controlar movimentações financeiras, gerenciar equipe, fornecedores, estoque e cardápio. |
-| **Chef (Cozinha)** | Restaurante (`restaurantId != null`) | `/chef` | Operação do preparo e despacho de pedidos da cozinha. Acesso focado no KDS (Kitchen Display System), kanban de pedidos e consulta rápida à ficha do cardápio. |
-| **Waiter (Atendimento / Garçom)** | Restaurante (`restaurantId != null`) | `/garcom` | Operação do salão e atendimento ao cliente. Responsável por lançar pedidos, gerenciar comandas/mesas, consultar cardápio e encaminhar pedidos para a cozinha/bar. |
-| **Super Admin (Plataforma)** | Plataforma ISM (`restaurantId == null`) | `/` | **[EM CONSTRUÇÃO]** Gestão multi-tenant da plataforma ISM (onboarding de restaurantes, controle de planos, métricas globais e infraestrutura de IA). Não opera diretamente o fluxo do salão/cozinha de um restaurante. |
+| Administrador (`Admin`) | `admin@ism.com.br` | valor de `SEED_PASSWORD` ou `admin123` | `/` |
+| Gerente (`Manager`) | `gerente@ism.com.br` | valor de `SEED_PASSWORD` ou `admin123` | `/` |
+| Chef / Cozinha (`Chef`) | `chef@ism.com.br` | valor de `SEED_PASSWORD` ou `admin123` | `/chef` |
+| Garçom / Atendimento (`Waiter`) | `garcom@ism.com.br` | valor de `SEED_PASSWORD` ou `admin123` | `/garcom` |
+| Caixa (`Cashier`) | `caixa@ism.com.br` | valor de `SEED_PASSWORD` ou `admin123` | `/caixa` |
 
----
+Essas credenciais são exclusivamente para desenvolvimento/demo. Em qualquer ambiente compartilhado ou produtivo, configure uma senha forte em `SEED_PASSWORD`, altere as senhas depois do primeiro acesso e não reutilize a senha de demonstração.
 
-## 🧭 Matriz de Acesso às Views no Frontend (Nuxt 3)
+## Perfis e responsabilidades
 
-O controle de visualização e navegação é implementado de forma unificada no composable/utilitário [`frontend/utils/navigation.ts`](file:///home/takiguchi/Documentos/github/ISM-Intelligence-Supply-Manager/frontend/utils/navigation.ts) e assegurado globalmente pelo middleware [`frontend/middleware/auth.global.ts`](file:///home/takiguchi/Documentos/github/ISM-Intelligence-Supply-Manager/frontend/middleware/auth.global.ts).
+| Perfil | Escopo | Pode fazer | Deve fazer | Não deve fazer |
+| :--- | :--- | :--- | :--- | :--- |
+| `Admin` | Plataforma, quando sem `restaurantId`; restaurante, quando vinculado | Administrar a configuração compatível com seu escopo, usuários e permissões administrativas | Manter tenant, segurança e responsáveis do restaurante | Operar caixa como rotina; o Caixa é um perfil separado |
+| `Manager` | Restaurante | Dashboard, financeiro, pedidos administrativos, estoque, fornecedores, cardápio, integrações, configurações e equipe | Coordenar operação, compras, custos, metas e colaboradores | Receber pagamentos no módulo exclusivo do Caixa |
+| `Chef` | Restaurante | Cozinha/KDS, pedidos de produção e consulta de cardápio | Atualizar preparo, disponibilidade e despacho da cozinha | Acessar financeiro, estoque administrativo ou caixa |
+| `Waiter` | Restaurante | Atendimento, comandas, pedidos e consulta de cardápio | Registrar pedidos corretamente e acompanhar o atendimento do salão | Editar cadastros administrativos ou receber pagamentos no Caixa |
+| `Cashier` | Restaurante | Somente a view `/caixa`, consulta de pedidos concluídos, turnos, movimentações e comprovantes locais | Conferir pedido, forma de pagamento, troco e fechamento do turno | Criar/alterar pedidos, acessar estoque, financeiro, equipe, fornecedores, integrações ou configurações |
 
-| Rota / View | Manager / Admin Restaurante | Chef (Cozinha) | Waiter (Garçom) | Super Admin |
-| :--- | :---: | :---: | :---: | :---: |
-| `/` (Dashboard / Início) |  Permitido | 🚫 Redireciona `/chef` | 🚫 Redireciona `/garcom` |  Permitido (Visão Plataforma) |
-| `/chef` (KDS Cozinha Direto) | 🚫 (usa `/cozinha`) |  Permitido | 🚫 Redireciona `/garcom` | 🚫 Bloqueado |
-| `/garcom` (Comandas Direto) | 🚫 (usa `/atendimento`) | 🚫 Redireciona `/chef` |  Permitido | 🚫 Bloqueado |
-| `/financeiro` |  Permitido | 🚫 Redireciona `/chef` | 🚫 Redireciona `/garcom` | 🚫 Bloqueado |
-| `/atendimento` |  Permitido | 🚫 Redireciona `/chef` |  Permitido | 🚫 Bloqueado |
-| `/cozinha` |  Permitido |  Permitido | 🚫 Redireciona `/garcom` | 🚫 Bloqueado |
-| `/pedidos` |  Permitido |  Permitido |  Permitido | 🚫 Bloqueado |
-| `/cardapio` |  Permitido |  Permitido |  Permitido | 🚫 Bloqueado |
-| `/estoque` |  Permitido | 🚫 Redireciona `/chef` | 🚫 Redireciona `/garcom` | 🚫 Bloqueado |
-| `/fornecedores` |  Permitido | 🚫 Redireciona `/chef` | 🚫 Redireciona `/garcom` | 🚫 Bloqueado |
-| `/funcionarios` |  Permitido | 🚫 Redireciona `/chef` | 🚫 Redireciona `/garcom` | 🚫 Bloqueado |
-| `/integracoes` |  Permitido | 🚫 Redireciona `/chef` | 🚫 Redireciona `/garcom` | 🚫 Bloqueado |
-| `/configuracoes` |  Permitido | 🚫 Redireciona `/chef` | 🚫 Redireciona `/garcom` | 🚫 Bloqueado |
+`Admin` é um único role técnico. O escopo é definido pela claim `restaurantId`: sem essa claim é Super Admin da plataforma; com ela é administrador daquele restaurante. O usuário seed `admin@ism.com.br` é criado vinculado ao restaurante demo.
 
-> **Nota de Segurança no Frontend:** Qualquer tentativa de acesso via URL direta por um perfil não autorizado aciona o `auth.global.ts`, que cancela a rota e força o redirecionamento com `replace: true` para a rota principal do perfil correspondente.
+## Acesso às views
 
----
+| View | Admin | Manager | Chef | Waiter | Cashier |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| Dashboard `/` | Sim | Sim | Não | Não | Não |
+| Financeiro `/financeiro` | Sim* | Sim | Não | Não | Não |
+| Caixa `/caixa` | Não | Não | Não | Não | Sim |
+| Pedidos `/pedidos` | Sim | Sim | Sim | Sim | Não |
+| Cardápio `/cardapio` | Sim | Sim | Sim | Sim | Não |
+| Cozinha `/cozinha` e `/chef` | Não** | Não** | Sim | Não | Não |
+| Atendimento `/atendimento` e `/garcom` | Não** | Não** | Não | Sim | Não |
+| Estoque `/estoque` | Sim | Sim | Não | Não | Não |
+| Fornecedores `/fornecedores` | Sim | Sim | Não | Não | Não |
+| Funcionários `/funcionarios` | Sim | Sim | Não | Não | Não |
+| Integrações `/integracoes` | Sim | Sim | Não | Não | Não |
+| Configurações `/configuracoes` | Sim | Sim | Não | Não | Não |
 
-## 🔒 Políticas de Autorização no Backend (.NET 8)
+\* O acesso financeiro exige um administrador de restaurante ou gerente com tenant; o Super Admin de plataforma não opera o financeiro de um restaurante sem seleção de tenant.
 
-As políticas de acesso são validadas em nível de controller através de tokens JWT com claims de `role` e `restaurantId`:
+\*\* Administradores e gerentes podem consultar os fluxos administrativos de pedidos, mas as rotas operacionais dedicadas `/chef` e `/garcom` são exclusivas dos respectivos perfis.
 
-1. **`SuperAdminOnly`**:
-   - Requer `Role = Admin` e ausência da claim `restaurantId` (usuário de plataforma).
-   - Bloqueia administradores e funcionários de restaurantes.
-2. **`RestaurantManagerOrAbove`**:
-   - Requer `Role in ("Admin", "Manager")` e presença de `restaurantId > 0`.
-   - Utilizado em endpoints sensíveis: `/api/finance`, exclusão/edição de produtos em estoque, fornecedores e configurações da loja.
-3. **`RestaurantAnyUser`**:
-   - Requer `Role in ("Admin", "Manager", "Chef", "Waiter")` associado ao restaurante.
-   - Utilizado nos endpoints operacionais compartilhados: listagem e atualização de pedidos (`/api/orders`), consulta de pratos e categorias (`/api/dishes`, `/api/categories`).
-4. **`UserManagement`**:
-   - Requer `SuperAdmin` (para criar/gerenciar qualquer restaurante) ou `Admin/Manager` de um restaurante específico para administrar os colaboradores daquele tenant.
+O middleware global do Nuxt impede acesso direto a uma rota não autorizada e redireciona para a home do perfil. A sidebar é filtrada pela mesma matriz.
 
----
+## Policies do backend
 
-## 🏗️ Seção: Super Admin (Em Construção)
+- `SuperAdminOnly`: `Admin` sem `restaurantId`, para operações da plataforma.
+- `RestaurantAdminOnly`: `Admin` com `restaurantId`.
+- `UserManagement`: `Admin` ou `Manager`, com escopo de restaurante válido ou Super Admin.
+- `RestaurantManagerOrAbove`: `Admin` ou `Manager` vinculados a um restaurante, para operações administrativas.
+- `RestaurantAnyUser`: leitura/rotinas compartilhadas de um restaurante, incluindo `Cashier`.
+- `RestaurantOrderOperator`: `Admin`, `Manager`, `Chef` ou `Waiter`; exclui `Cashier` de criação e mudança de status de pedidos.
 
-> **Status:** **EM CONSTRUÇÃO**
->
-> A área de Super Admin está reservada para o painel mestre da plataforma ISM. Suas funcionalidades planejadas incluem:
-> - Cadastro e gerenciamento global de restaurantes parceiros (tenants).
-> - Controle de faturamento, assinaturas e limites por plano.
-> - Monitoramento de infraestrutura, logs de agentes de inteligência e telemetria geral.
->
-> Enquanto a definição negocial e de arquitetura do Super Admin é finalizada, o foco operacional permanece 100% voltado aos três perfis de restaurante: **Manager**, **Chef** e **Waiter**.
+O frontend não é a barreira de segurança. Controllers e policies do backend continuam sendo a autoridade final; o token JWT precisa conter `role` e `restaurantId` compatíveis com a operação.
+
+## Regra de administração de equipe
+
+Administradores podem criar e gerenciar `Manager`, `Chef`, `Waiter` e `Cashier` do próprio restaurante. Gerentes podem criar e gerenciar `Chef`, `Waiter` e `Cashier`, mas não outro `Manager` ou `Admin`. Chef, Waiter e Cashier não administram usuários.

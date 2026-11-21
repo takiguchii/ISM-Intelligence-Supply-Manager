@@ -1,6 +1,6 @@
 import type { User } from "~/types/auth";
 
-export type AppRole = "Admin" | "Manager" | "Chef" | "Waiter";
+export type AppRole = "Admin" | "Manager" | "Chef" | "Waiter" | "Cashier";
 
 export type NavigationCategory =
   | "VISÃO GERAL"
@@ -26,7 +26,7 @@ const managementRoles = ["Admin", "Manager"] as const;
 export const navigationItems: readonly NavigationItem[] = [
   { id: "dashboard", label: "Dashboard", icon: "dashboard", route: "/", roles: ["Admin", "Manager"], category: "VISÃO GERAL" },
   { id: "financeiro", label: "Financeiro", icon: "wallet", route: "/financeiro", roles: managementRoles, category: "FINANCEIRO", requiresRestaurant: true },
-  { id: "caixa", label: "Caixa", icon: "wallet", route: "/caixa", roles: managementRoles, category: "FINANCEIRO", requiresRestaurant: true },
+  { id: "caixa", label: "Caixa", icon: "wallet", route: "/caixa", roles: ["Cashier"], category: "FINANCEIRO", requiresRestaurant: true },
   { id: "atendimento", label: "Atendimento", icon: "tray", route: "/atendimento", roles: ["Admin", "Manager", "Waiter"], navigationRoles: ["Waiter"], category: "MOVIMENTAÇÕES", requiresRestaurant: true },
   { id: "cozinha", label: "Cozinha", icon: "chef-hat", route: "/cozinha", roles: ["Admin", "Manager", "Chef"], navigationRoles: ["Chef"], category: "MOVIMENTAÇÕES", requiresRestaurant: true },
   { id: "pedidos", label: "Pedidos", icon: "clipboard-list", route: "/pedidos", roles: restaurantRoles, category: "GESTÃO OPERACIONAL", requiresRestaurant: true },
@@ -42,11 +42,12 @@ const roleHome: Record<AppRole, string> = {
   Admin: "/",
   Manager: "/",
   Chef: "/chef",
-  Waiter: "/garcom"
+  Waiter: "/garcom",
+  Cashier: "/caixa"
 };
 
 function isAppRole(role: string | undefined): role is AppRole {
-  return role === "Admin" || role === "Manager" || role === "Chef" || role === "Waiter";
+  return role === "Admin" || role === "Manager" || role === "Chef" || role === "Waiter" || role === "Cashier";
 }
 
 export function homeForUser(user: User | null): string {
@@ -72,7 +73,7 @@ export function navigationForUser(user: User | null): NavigationItem[] {
   const home = homeForUser(user);
   const homeItem: NavigationItem = {
     id: "inicio",
-    label: user.role === "Chef" || user.role === "Waiter" ? "Início" : "Dashboard",
+    label: user.role === "Chef" || user.role === "Waiter" || user.role === "Cashier" ? "Início" : "Dashboard",
     icon: "dashboard",
     route: home,
     roles: [role],

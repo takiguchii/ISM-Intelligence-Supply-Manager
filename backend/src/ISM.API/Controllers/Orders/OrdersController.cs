@@ -27,6 +27,7 @@ public sealed class OrdersController(IOrderService orders) : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = IsmPolicies.RestaurantOrderOperator)]
     public async Task<ActionResult<OrderResponse>> Create(CreateOrderRequest request, CancellationToken cancellationToken)
     {
         var order = await orders.CreateAsync(request, cancellationToken);
@@ -34,6 +35,7 @@ public sealed class OrdersController(IOrderService orders) : ControllerBase
     }
 
     [HttpPut("{id:int}/status")]
+    [Authorize(Policy = IsmPolicies.RestaurantOrderOperator)]
     public async Task<ActionResult<OrderResponse>> UpdateStatus(int id, UpdateOrderStatusRequest request, CancellationToken cancellationToken)
     {
         var order = await orders.UpdateStatusAsync(id, request, cancellationToken);

@@ -225,6 +225,6 @@ public sealed class UserService : IUserService
 
     private bool CanManageRole(string role) =>
         _currentUser.Role == IsmRoles.Admin
-            ? role is IsmRoles.Manager or IsmRoles.Chef or IsmRoles.Waiter
-            : role is IsmRoles.Chef or IsmRoles.Waiter;
+            ? role is IsmRoles.Manager or IsmRoles.Chef or IsmRoles.Waiter or IsmRoles.Cashier
+            : role is IsmRoles.Chef or IsmRoles.Waiter or IsmRoles.Cashier;
 }

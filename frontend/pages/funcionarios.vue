@@ -10,7 +10,8 @@ const ROLE_LABELS: Record<string, string> = {
   Admin: "Administrador",
   Manager: "Gerente",
   Chef: "Chef / Cozinha",
-  Waiter: "Garçom"
+  Waiter: "Garçom",
+  Cashier: "Caixa"
 };
 
 const authStore = useAuthStore();
@@ -58,8 +59,8 @@ const canManage = computed(() => {
 
 const manageableRoles = computed(() =>
   authStore.currentUser?.role === "Admin"
-    ? ["Manager", "Chef", "Waiter"]
-    : ["Chef", "Waiter"]
+    ? ["Manager", "Chef", "Waiter", "Cashier"]
+    : ["Chef", "Waiter", "Cashier"]
 );
 
 const canManageEmployee = (employee: EmployeeResponse) =>

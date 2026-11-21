@@ -189,6 +189,10 @@ public static class ServiceCollectionExtensions
                       .RequireAssertion(ctx =>
                           int.TryParse(ctx.User.FindFirstValue("restaurantId"), out var restaurantId) && restaurantId > 0))
             .AddPolicy(IsmPolicies.RestaurantAnyUser, policy =>
+                policy.RequireRole(IsmRoles.Admin, IsmRoles.Manager, IsmRoles.Chef, IsmRoles.Waiter, IsmRoles.Cashier)
+                      .RequireAssertion(ctx =>
+                          int.TryParse(ctx.User.FindFirstValue("restaurantId"), out var restaurantId) && restaurantId > 0))
+            .AddPolicy(IsmPolicies.RestaurantOrderOperator, policy =>
                 policy.RequireRole(IsmRoles.Admin, IsmRoles.Manager, IsmRoles.Chef, IsmRoles.Waiter)
                       .RequireAssertion(ctx =>
                           int.TryParse(ctx.User.FindFirstValue("restaurantId"), out var restaurantId) && restaurantId > 0));

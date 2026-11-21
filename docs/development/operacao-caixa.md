@@ -1,6 +1,8 @@
 # Operação de caixa local
 
-A rota `/caixa` é restrita a administradores e gerentes vinculados a um restaurante. Turnos, movimentações e comprovantes internos são armazenados no navegador por restaurante. Esta etapa não dá baixa no pagamento do pedido no servidor nem substitui a integração financeira.
+A rota `/caixa` é exclusiva do perfil `Cashier` (Caixa), sempre vinculado a um restaurante. Administradores e gerentes não recebem mais essa view no menu e são redirecionados caso tentem abrir a rota diretamente. Turnos, movimentações e comprovantes internos são armazenados no navegador por restaurante. Esta etapa não dá baixa no pagamento do pedido no servidor nem substitui a integração financeira.
+
+O Caixa pode consultar pedidos para localizar os pedidos concluídos e registrar o recebimento local. A API bloqueia criação, alteração de status, edição e exclusão de pedidos para esse perfil.
 
 ## Validação antes do recebimento
 

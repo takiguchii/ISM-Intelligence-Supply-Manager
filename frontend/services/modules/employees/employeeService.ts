@@ -1,7 +1,7 @@
 import { apiClientWithAuth } from "~/services/api/client";
 import type { AuthResponse } from "~/types/auth";
 
-export const EMPLOYEE_ROLES = ["Admin", "Manager", "Chef", "Waiter"] as const;
+export const EMPLOYEE_ROLES = ["Admin", "Manager", "Chef", "Waiter", "Cashier"] as const;
 
 export type EmployeeRole = (typeof EMPLOYEE_ROLES)[number];
 

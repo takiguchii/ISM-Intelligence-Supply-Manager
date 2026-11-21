@@ -6,8 +6,9 @@ public static class IsmRoles
     public const string Manager = "Manager";
     public const string Chef = "Chef";
     public const string Waiter = "Waiter";
+    public const string Cashier = "Cashier";
 
-    public static readonly IReadOnlyList<string> AllAllowed = new[] { Admin, Manager, Chef, Waiter };
+    public static readonly IReadOnlyList<string> AllAllowed = new[] { Admin, Manager, Chef, Waiter, Cashier };
 
     public static bool IsValid(string? role) =>
         !string.IsNullOrWhiteSpace(role) && AllAllowed.Contains(role, StringComparer.OrdinalIgnoreCase);
@@ -23,6 +24,7 @@ public static class IsmPolicies
     public const string UserManagement = "UserManagement";
     public const string RestaurantManagerOrAbove = "RestaurantManagerOrAbove";
     public const string RestaurantAnyUser = "RestaurantAnyUser";
+    public const string RestaurantOrderOperator = "RestaurantOrderOperator";
 }
 
 public interface ICurrentUser

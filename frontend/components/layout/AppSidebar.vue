@@ -80,6 +80,7 @@ const userRoleFormatted = computed(() => {
   if (role === "Manager") return "Gerente";
   if (role === "Chef") return "Chef Executivo";
   if (role === "Waiter") return "Atendimento";
+  if (role === "Cashier") return "Caixa";
   return role;
 });
 

@@ -305,8 +305,8 @@ public sealed class AuthService : IAuthService
 
     private bool CanManageRole(string role) =>
         _currentUser.Role == IsmRoles.Admin
-            ? role is IsmRoles.Manager or IsmRoles.Chef or IsmRoles.Waiter
-            : role is IsmRoles.Chef or IsmRoles.Waiter;
+            ? role is IsmRoles.Manager or IsmRoles.Chef or IsmRoles.Waiter or IsmRoles.Cashier
+            : role is IsmRoles.Chef or IsmRoles.Waiter or IsmRoles.Cashier;
 
     private string GenerateJwtToken(User user, DateTime expires, string sessionId)
     {

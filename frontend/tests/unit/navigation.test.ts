@@ -29,6 +29,15 @@ const waiterUser: User = {
   restaurantName: "Restaurante Teste"
 };
 
+const cashierUser: User = {
+  id: "4",
+  name: "Caixa Teste",
+  email: "caixa@teste.com",
+  role: "Cashier",
+  restaurantId: 10,
+  restaurantName: "Restaurante Teste"
+};
+
 const superAdminUser: User = {
   id: "99",
   name: "Super Admin",
@@ -42,6 +51,7 @@ const superAdminUser: User = {
 assert.equal(homeForUser(managerUser), "/", "Manager deve ser direcionado para '/' (Dashboard)");
 assert.equal(homeForUser(chefUser), "/chef", "Chef deve ser direcionado para '/chef'");
 assert.equal(homeForUser(waiterUser), "/garcom", "Waiter deve ser direcionado para '/garcom'");
+assert.equal(homeForUser(cashierUser), "/caixa", "Cashier deve ser direcionado para '/caixa'");
 assert.equal(homeForUser(superAdminUser), "/", "SuperAdmin sem tenant é direcionado para '/'");
 assert.equal(homeForUser(null), "/login", "Usuário não autenticado deve ir para '/login'");
 
@@ -103,7 +113,7 @@ assert.deepEqual(
 const managerNav = navigationForUser(managerUser).map((item) => item.route);
 assert.deepEqual(
   managerNav,
-  ["/", "/financeiro", "/caixa", "/pedidos", "/cardapio", "/estoque", "/fornecedores", "/funcionarios", "/integracoes", "/configuracoes"],
+  ["/", "/financeiro", "/pedidos", "/cardapio", "/estoque", "/fornecedores", "/funcionarios", "/integracoes", "/configuracoes"],
   "Manager deve ver somente a navegação administrativa reorganizada"
 );
 assert.equal(managerNav.includes("/atendimento"), false, "Atendimento não deve aparecer no menu administrativo");
@@ -116,14 +126,20 @@ assert.deepEqual(
   "Waiter deve ter estritamente as rotas operacionais de atendimento, pedidos e cardápio na barra lateral"
 );
 
+const cashierNav = navigationForUser(cashierUser).map((item) => item.route);
+assert.deepEqual(cashierNav, ["/caixa"], "Cashier deve ter somente a tela de caixa na barra lateral");
+assert.equal(canAccessRoute(cashierUser, "/caixa"), true, "Cashier pode acessar /caixa");
+assert.equal(canAccessRoute(cashierUser, "/pedidos"), false, "Cashier não pode acessar /pedidos");
+assert.equal(canAccessRoute(cashierUser, "/estoque"), false, "Cashier não pode acessar /estoque");
+
 console.log("Todos os testes de autorização e navegação de perfis passaram com sucesso!");
 
 const platformAdmin = { id: 100, name: "Plataforma", email: "platform@test.local", role: "Admin", restaurantId: null } as User;
 assert.equal(canAccessRoute(platformAdmin, "/configuracoes"), true, "Administrador da plataforma pode configurar o remetente compartilhado");
 assert.equal(canAccessRoute(platformAdmin, "/estoque"), false, "Configurações não concedem acesso a operações de restaurante");
 
-assert.equal(canAccessRoute(managerUser, "/caixa"), true);
+assert.equal(canAccessRoute(managerUser, "/caixa"), false);
 assert.equal(canAccessRoute(chefUser, "/caixa"), false);
 assert.equal(canAccessRoute(waiterUser, "/caixa"), false);
 assert.equal(canAccessRoute(platformAdmin, "/caixa"), false);
-assert.equal(canAccessRoute({ ...platformAdmin, restaurantId: 10 }, "/caixa"), true);
+assert.equal(canAccessRoute({ ...platformAdmin, restaurantId: 10 }, "/caixa"), false);
