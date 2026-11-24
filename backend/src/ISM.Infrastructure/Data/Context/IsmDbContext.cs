@@ -460,12 +460,16 @@ public sealed class IsmDbContext : DbContext
             builder.ToTable("assistant_threads");
             builder.HasKey(t => t.Id);
             builder.Property(t => t.OriginType).HasMaxLength(40).IsRequired();
+            builder.Property(t => t.SpecialistId).HasMaxLength(30).IsRequired();
+            builder.Property(t => t.SourceView).HasMaxLength(80);
+            builder.Property(t => t.SubjectEntityType).HasMaxLength(50);
             builder.Property(t => t.Subject).HasMaxLength(150).IsRequired();
             builder.Property(t => t.ContextSnapshotJson).HasMaxLength(12000).IsRequired();
             builder.Property(t => t.LastMessageAtUtc).HasColumnType("datetime(6)").IsRequired();
             builder.Property(t => t.CreatedAtUtc).HasColumnType("datetime(6)").IsRequired();
             builder.HasIndex(t => new { t.RestaurantId, t.UserId, t.LastMessageAtUtc });
             builder.HasIndex(t => new { t.RestaurantId, t.OriginAlertId });
+            builder.HasIndex(t => new { t.RestaurantId, t.UserId, t.SpecialistId, t.LastMessageAtUtc });
             builder.HasOne<Restaurant>().WithMany().HasForeignKey(t => t.RestaurantId).OnDelete(DeleteBehavior.Cascade);
             builder.HasOne<SystemAlert>().WithMany().HasForeignKey(t => t.OriginAlertId).OnDelete(DeleteBehavior.SetNull);
             builder.ApplyTenantQueryFilter(this);

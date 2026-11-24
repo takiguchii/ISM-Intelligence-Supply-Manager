@@ -40,6 +40,10 @@ public sealed record AssistantThreadResponse(
     int? ParentThreadId,
     int? OriginAlertId,
     string OriginType,
+    string SpecialistId,
+    string? SourceView,
+    string? SubjectEntityType,
+    int? SubjectEntityId,
     string Subject,
     AssistantContextResponse? Context,
     DateTime CreatedAtUtc,
@@ -56,7 +60,11 @@ public sealed record AssistantMessageResponse(
 public sealed record AssistantCreateThreadRequest(
     int? OriginAlertId = null,
     int? ParentThreadId = null,
-    string? Subject = null);
+    string? Subject = null,
+    string? SpecialistId = null,
+    string? SourceView = null,
+    string? SubjectEntityType = null,
+    int? SubjectEntityId = null);
 
 public sealed record AssistantSendMessageRequest(
     [Required, StringLength(1000, MinimumLength = 1)] string Message);

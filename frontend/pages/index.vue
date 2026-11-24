@@ -45,7 +45,7 @@ const converseAboutInsight = (insight: typeof selectedInsight.value) => {
   const alert = alertForInsight(insight);
   selectedInsight.value = null;
   if (alert) assistantUi.openChat(alert);
-  else assistantUi.openGeneralChat();
+  else if (insight) assistantUi.openSpecialistChat(insight.agent, { sourceView: "dashboard", subject: `${insight.label} — consulta sem alerta` });
 };
 
 const handleRefreshAll = () => {

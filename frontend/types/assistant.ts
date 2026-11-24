@@ -66,6 +66,10 @@ export interface AssistantThread {
   parentThreadId: number | null;
   originAlertId: number | null;
   originType: string;
+  specialistId: "stock" | "pricing" | "suppliers" | "finance" | "general";
+  sourceView: string | null;
+  subjectEntityType: string | null;
+  subjectEntityId: number | null;
   subject: string;
   context: AssistantContext | null;
   createdAtUtc: string;

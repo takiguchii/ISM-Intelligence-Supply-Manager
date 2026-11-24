@@ -3,7 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
 import { useAssistantUi } from "~/composables/useAssistantUi";
 import { useAssistantChat } from "~/composables/useAssistantChat";
 import AgentMascot2D from "~/components/assistant/AgentMascot2D.vue";
-import { agentForAlert, moodForAlert, type AgentMood } from "~/types/agentExperience";
+import { moodForAlert, type AgentMood } from "~/types/agentExperience";
 
 const ui = useAssistantUi();
 const chat = useAssistantChat();
@@ -13,9 +13,9 @@ const requestedOrigin = computed(() => ui.requestedAlert.value?.id ?? null);
 const contextLabel = computed(() => chat.context.value?.entityName || null);
 const contextFacts = computed(() => Object.entries(chat.context.value?.facts || {}).slice(0, 5));
 const chatAgent = computed(() => {
-  const context = chat.context.value;
-  return context ? agentForAlert(context) : "general";
+  return chat.currentThread.value?.specialistId || ui.requestedSpecialist.value;
 });
+const chatAgentLabel = computed(() => ({ stock: "Estoque", pricing: "Precificação", suppliers: "Fornecedores", finance: "Financeiro", general: "Assistente geral" }[chatAgent.value]));
 const chatMood = computed<AgentMood>(() => {
   if (chat.pending.value || chat.loadingHistory.value) return "thinking";
   if (chat.error.value) return "error";
@@ -69,7 +69,14 @@ const openCamera = () => cameraInputRef.value?.click();
 const prepare = async (request: number) => {
   draft.value = ui.requestedDraft.value;
   clearAttachment();
-  const preparation = chat.ensureReady(requestedOrigin.value);
+  const preparation = chat.ensureReady({
+    originAlertId: requestedOrigin.value,
+    specialistId: ui.requestedSpecialist.value,
+    sourceView: ui.requestedSourceView.value,
+    subjectEntityType: ui.requestedSubjectEntityType.value,
+    subjectEntityId: ui.requestedSubjectEntityId.value,
+    subject: ui.requestedSubject.value
+  });
   await nextTick();
   if (ui.chatOpen.value && request === ui.openRequest.value) dialogRef.value?.focus();
   await preparation;
@@ -118,7 +125,7 @@ onBeforeUnmount(() => { window.removeEventListener("keydown", handleKeydown); re
         <aside ref="dialogRef" class="assistant-chat-panel absolute inset-y-0 right-0 flex w-full max-w-[480px] flex-col border-l border-zinc-200/80 bg-white/95 shadow-2xl shadow-zinc-950/20 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/95" role="dialog" aria-modal="true" aria-labelledby="assistant-chat-title" tabindex="-1">
           <header class="border-b border-zinc-200/80 px-5 pb-4 pt-[calc(1.25rem+env(safe-area-inset-top))] dark:border-zinc-800">
             <div class="flex items-center justify-between gap-4">
-              <div class="flex min-w-0 items-center gap-3"><div class="flex h-12 w-14 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-400/10"><AgentMascot2D :agent="chatAgent" :mood="chatMood" size="sm" /></div><div class="min-w-0"><p class="text-[10px] font-semibold uppercase tracking-[.18em] text-indigo-600 dark:text-indigo-300">Assistente ISM</p><h2 id="assistant-chat-title" class="mt-0.5 truncate text-lg font-semibold tracking-tight text-zinc-900 dark:text-white">Como posso ajudar?</h2><p class="mt-1 truncate text-xs text-zinc-500">{{ chat.status.value?.providerReachable ? `Conectado · ${chat.status.value.model}` : chat.status.value?.enabled ? 'Modelo local indisponível' : 'Conversação local desativada' }}</p></div></div>
+              <div class="flex min-w-0 items-center gap-3"><div class="flex h-12 w-14 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-400/10"><AgentMascot2D :agent="chatAgent" :mood="chatMood" size="sm" /></div><div class="min-w-0"><p class="text-[10px] font-semibold uppercase tracking-[.18em] text-indigo-600 dark:text-indigo-300">{{ chatAgentLabel }}</p><h2 id="assistant-chat-title" class="mt-0.5 truncate text-lg font-semibold tracking-tight text-zinc-900 dark:text-white">Como posso ajudar?</h2><p class="mt-1 truncate text-xs text-zinc-500">{{ chat.status.value?.providerReachable ? `Conectado · ${chat.status.value.model}` : chat.status.value?.enabled ? 'Modelo local indisponível' : 'Conversação local desativada' }}</p></div></div>
               <button type="button" class="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-xl text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:hover:bg-zinc-800 dark:hover:text-white" aria-label="Fechar chat" @click="ui.closeChat">×</button>
             </div>
             <div class="mt-4 flex gap-2"><select class="min-w-0 flex-1 rounded-xl border border-zinc-200 bg-zinc-50/70 px-3 py-2.5 text-xs text-zinc-700 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300" aria-label="Histórico de conversas" :value="chat.currentThread.value?.id || ''" @change="selectHistory($event)"><option value="" disabled>{{ chat.threads.value.length ? "Selecione uma conversa" : "Sem histórico" }}</option><option v-for="thread in chat.threads.value" :key="thread.id" :value="thread.id">{{ thread.subject }}</option></select><button type="button" class="shrink-0 rounded-xl border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-600 transition hover:border-indigo-300 hover:bg-indigo-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800" @click="ui.openGeneralChat()">Nova conversa</button></div>

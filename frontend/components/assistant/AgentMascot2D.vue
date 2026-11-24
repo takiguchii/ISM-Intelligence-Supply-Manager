@@ -35,7 +35,7 @@ const isSad = computed(() => ["sad", "offline"].includes(props.mood));
 const isSurprised = computed(() => props.mood === "surprised");
 const isThinking = computed(() => props.mood === "thinking");
 const showRays = computed(() => props.attentionLevel === "warning" || props.attentionLevel === "critical" || isHappy.value || isSurprised.value);
-const palette = computed(() => ({ stock: ["#FF8587", "#F45D67"], pricing: ["#FFF08A", "#FFD84D"], suppliers: ["#C9A6FF", "#8B5CE6"], general: ["#FFFFFF", "#DCE6F5"] }[props.agent]));
+const palette = computed(() => ({ stock: ["#FF8587", "#F45D67"], pricing: ["#FFF08A", "#FFD84D"], suppliers: ["#C9A6FF", "#8B5CE6"], finance: ["#FFE0A3", "#F59E0B"], general: ["#FFFFFF", "#DCE6F5"] }[props.agent]));
 const accent = computed(() => palette.value[1]);
 const sizeClass = computed(() => ({ xs: "ism-mascot-xs", sm: "ism-mascot-sm", md: "ism-mascot-md", lg: "ism-mascot-lg" }[props.size]));
 const moodLabel = computed(() => ({ idle: "em repouso", curious: "observando", happy: "recuperado", worried: "em atenção", sad: "em situação crítica", surprised: "novo alerta", thinking: "analisando", speaking: "respondendo", "waiting-approval": "aguardando aprovação", success: "operação confirmada", error: "erro", offline: "chat indisponível" }[props.mood]));

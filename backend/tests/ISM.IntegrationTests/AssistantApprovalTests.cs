@@ -444,6 +444,47 @@ public sealed class AssistantApprovalTests : IClassFixture<FoundationWebApplicat
     }
 
     [Fact]
+    public async Task Thread_PersistsSpecialistIdentity_AndRejectsCrossSpecialistIntent()
+    {
+        const int restaurantId = 9971;
+        var alertId = await SeedStockAlertAsync(restaurantId, 2m, 8m);
+        using var client = CreateClient(IsmRoles.Manager, restaurantId);
+
+        var created = await client.PostAsJsonAsync("/api/assistant/threads", new
+        {
+            originAlertId = alertId,
+            specialistId = "stock",
+            sourceView = "dashboard",
+            subjectEntityType = "Product"
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.OK);
+        var conversation = await created.Content.ReadFromJsonAsync<AssistantConversationResponse>();
+        conversation!.Thread.SpecialistId.Should().Be("stock");
+        conversation.Thread.SourceView.Should().Be("dashboard");
+        conversation.Thread.SubjectEntityType.Should().Be("Product");
+
+        var denied = await client.PostAsJsonAsync($"/api/assistant/threads/{conversation.Thread.Id}/messages", new { message = "Qual foi meu faturamento?" });
+        denied.StatusCode.Should().Be(HttpStatusCode.OK);
+        var updated = await denied.Content.ReadFromJsonAsync<AssistantConversationResponse>();
+        updated!.Messages.Last().Content.Should().Contain("vinculada ao especialista");
+        updated.Thread.SpecialistId.Should().Be("stock");
+
+        var reloaded = await client.GetFromJsonAsync<AssistantConversationResponse>($"/api/assistant/threads/{conversation.Thread.Id}");
+        reloaded!.Thread.SpecialistId.Should().Be("stock");
+    }
+
+    [Fact]
+    public async Task Thread_RejectsSpecialistThatDoesNotMatchAlert()
+    {
+        const int restaurantId = 9972;
+        var alertId = await SeedStockAlertAsync(restaurantId, 1m, 4m);
+        using var client = CreateClient(IsmRoles.Manager, restaurantId);
+
+        var response = await client.PostAsJsonAsync("/api/assistant/threads", new { originAlertId = alertId, specialistId = "finance" });
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task ContextualThread_DoesNotAcceptAlertFromAnotherRestaurant()
     {
         var alertId = await SeedStockAlertAsync(998, 1m, 4m);

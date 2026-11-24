@@ -6,6 +6,7 @@ using ISM.Application.Interfaces.Assistant;
 using ISM.Application.Interfaces.Finance;
 using ISM.Application.Security;
 using ISM.Domain.Interfaces;
+using ISM.Domain.Modules.Assistant;
 using ISM.Domain.Modules.Assistant.Entities;
 using ISM.Domain.Modules.Assistant.Enums;
 using ISM.Domain.Modules.System.Enums;
@@ -18,6 +19,7 @@ public sealed class AssistantService(
     ISystemAlertRepository alerts,
     IProductRepository products,
     IDishRepository dishes,
+    ISupplierRepository suppliers,
     IFinanceService finance,
     ILlmTextProvider llm,
     ICurrentUser currentUser,
@@ -99,6 +101,7 @@ public sealed class AssistantService(
     public async Task<AssistantConversationResponse?> CreateThreadAsync(AssistantCreateThreadRequest request, CancellationToken cancellationToken = default)
     {
         var restaurantId = RequireRestaurant();
+        var specialistId = NormalizeSpecialist(request.SpecialistId);
         if (request.ParentThreadId.HasValue && await conversations.GetThreadAsync(request.ParentThreadId.Value, restaurantId, currentUser.UserId, cancellationToken) is null)
             return null;
 
@@ -107,7 +110,24 @@ public sealed class AssistantService(
         {
             context = await GetAlertContextAsync(request.OriginAlertId.Value, cancellationToken);
             if (context is null) return null;
+            var alertSpecialist = SpecialistForContext(context);
+            if (request.SpecialistId is null) specialistId = alertSpecialist;
+            else if (!string.Equals(specialistId, alertSpecialist, StringComparison.Ordinal))
+                throw new InvalidOperationException("O especialista solicitado não corresponde ao alerta contextual.");
         }
+
+        var subjectEntityType = request.SubjectEntityType?.Trim();
+        var subjectEntityId = request.SubjectEntityId;
+        if (context is not null)
+        {
+            if (subjectEntityType is null) subjectEntityType = context.ReferenceEntityType;
+            if (!subjectEntityId.HasValue) subjectEntityId = context.ReferenceEntityId;
+            if (request.SubjectEntityType is not null && !string.Equals(subjectEntityType, context.ReferenceEntityType, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("A entidade da thread não corresponde ao alerta contextual.");
+            if (request.SubjectEntityId.HasValue && request.SubjectEntityId != context.ReferenceEntityId)
+                throw new InvalidOperationException("A entidade da thread não corresponde ao alerta contextual.");
+        }
+        await ValidateSubjectAsync(subjectEntityType, subjectEntityId, restaurantId, cancellationToken);
 
         var now = DateTime.UtcNow;
         var thread = await conversations.CreateThreadAsync(new AssistantThread
@@ -117,7 +137,10 @@ public sealed class AssistantService(
             ParentThreadId = request.ParentThreadId,
             OriginAlertId = request.OriginAlertId,
             OriginType = context is null ? "General" : "SystemAlert",
-            SubjectEntityId = context?.ReferenceEntityId,
+            SpecialistId = specialistId,
+            SourceView = Limit(request.SourceView?.Trim(), 80),
+            SubjectEntityType = Limit(subjectEntityType, 50),
+            SubjectEntityId = subjectEntityId,
             Subject = Limit(request.Subject?.Trim(), 150) ?? context?.EntityName ?? "Conversa com o ISM Assist",
             ContextSnapshotJson = context is null ? "{}" : JsonSerializer.Serialize(context),
             LastMessageAtUtc = now,
@@ -195,6 +218,27 @@ public sealed class AssistantService(
             return await BuildConversationAsync(thread, context, cancellationToken);
         }
         var intent = hasImage ? null : intentCoordinator.Resolve(promptMessage, context);
+        if (intent is not null && !IsIntentAllowed(thread.SpecialistId, intent.Specialist))
+        {
+            var denied = new AssistantChatResponse(
+                "deterministic",
+                $"Esta conversa está vinculada ao especialista {SpecialistLabel(thread.SpecialistId)}. Posso responder somente perguntas dentro dessa competência ou encaminhar você para o Assistente geral.",
+                "Política de escopo do ISM",
+                "Nenhuma ferramenta foi executada e nenhuma alteração foi realizada.")
+            {
+                Specialist = thread.SpecialistId,
+                DecisionCode = AgentDecisionCode.Denied
+            };
+            await conversations.AddMessageAsync(new AssistantMessage
+            {
+                RestaurantId = restaurantId, ThreadId = thread.Id, Role = "assistant", Content = denied.Message,
+                Mode = denied.Mode, Source = denied.Source, CreatedAtUtc = DateTime.UtcNow
+            }, cancellationToken);
+            thread.LastMessageAtUtc = DateTime.UtcNow;
+            thread.UpdatedAtUtc = thread.LastMessageAtUtc;
+            await conversations.SaveThreadAsync(thread, cancellationToken);
+            return await BuildConversationAsync(thread, context, cancellationToken);
+        }
         if (intent is not null && await ExecuteIntentAsync(intent, cancellationToken) is { } routed)
         {
             await conversations.AddMessageAsync(new AssistantMessage
@@ -253,6 +297,58 @@ public sealed class AssistantService(
     }
 
     private int RequireRestaurant() => currentUser is { IsManagerOrAbove: true, RestaurantId: > 0 } ? currentUser.RestaurantId.Value : throw new UnauthorizedAccessException("Restaurante gerencial não identificado.");
+
+    private static string NormalizeSpecialist(string? value)
+    {
+        var specialist = string.IsNullOrWhiteSpace(value) ? AssistantSpecialists.General : value.Trim().ToLowerInvariant();
+        if (!AssistantSpecialists.IsKnown(specialist))
+            throw new InvalidOperationException("Especialista de conversa inválido.");
+        return specialist;
+    }
+
+    private static string SpecialistForContext(AssistantContextResponse context)
+    {
+        if (context.AlertType.Contains("Stock", StringComparison.OrdinalIgnoreCase)) return AssistantSpecialists.Stock;
+        if (context.AlertType.Contains("Supplier", StringComparison.OrdinalIgnoreCase)) return AssistantSpecialists.Suppliers;
+        if (context.AlertType.Contains("Dish", StringComparison.OrdinalIgnoreCase) || context.AlertType.Contains("Cmv", StringComparison.OrdinalIgnoreCase)) return AssistantSpecialists.Pricing;
+        return context.ReferenceEntityType switch
+        {
+            "Product" => AssistantSpecialists.Stock,
+            "Dish" => AssistantSpecialists.Pricing,
+            "Supplier" => AssistantSpecialists.Suppliers,
+            _ => AssistantSpecialists.General
+        };
+    }
+
+    private async Task ValidateSubjectAsync(string? entityType, int? entityId, int restaurantId, CancellationToken cancellationToken)
+    {
+        if (entityType is null && entityId is null) return;
+        if (entityType is null || !entityId.HasValue || entityId <= 0)
+            throw new InvalidOperationException("A entidade contextual precisa de tipo e identificador válidos.");
+
+        var exists = entityType switch
+        {
+            "Product" => (await products.GetByIdAsync(entityId.Value, cancellationToken))?.RestaurantId == restaurantId,
+            "Dish" => (await dishes.GetDishByIdAsync(entityId.Value, cancellationToken))?.RestaurantId == restaurantId,
+            "Supplier" => (await suppliers.GetByIdAsync(entityId.Value, cancellationToken))?.RestaurantId == restaurantId,
+            _ => false
+        };
+        if (!exists) throw new InvalidOperationException("A entidade contextual não pertence ao restaurante autenticado.");
+    }
+
+    private static bool IsIntentAllowed(string threadSpecialist, string intentSpecialist)
+        => threadSpecialist == AssistantSpecialists.General
+           || intentSpecialist == threadSpecialist
+           || intentSpecialist == "assistant";
+
+    private static string SpecialistLabel(string specialist) => specialist switch
+    {
+        AssistantSpecialists.Stock => "de estoque",
+        AssistantSpecialists.Pricing => "de precificação",
+        AssistantSpecialists.Suppliers => "de fornecedores",
+        AssistantSpecialists.Finance => "financeiro",
+        _ => "geral"
+    };
 
     private async Task<AssistantChatResponse?> TryCreateAutomationDraftAsync(string message, CancellationToken cancellationToken)
     {
@@ -456,7 +552,7 @@ public sealed class AssistantService(
     }
 
     private AssistantThreadResponse MapThread(AssistantThread thread) => MapThread(thread, DeserializeContext(thread.ContextSnapshotJson));
-    private static AssistantThreadResponse MapThread(AssistantThread thread, AssistantContextResponse? context) => new(thread.Id, thread.ParentThreadId, thread.OriginAlertId, thread.OriginType, thread.Subject, context, thread.CreatedAtUtc, thread.LastMessageAtUtc);
+    private static AssistantThreadResponse MapThread(AssistantThread thread, AssistantContextResponse? context) => new(thread.Id, thread.ParentThreadId, thread.OriginAlertId, thread.OriginType, thread.SpecialistId, thread.SourceView, thread.SubjectEntityType, thread.SubjectEntityId, thread.Subject, context, thread.CreatedAtUtc, thread.LastMessageAtUtc);
     private static AssistantMessageResponse MapMessage(AssistantMessage message) => new(message.Id, message.Role, message.Content, message.Mode, message.Source, message.CreatedAtUtc);
     private static AssistantContextResponse? DeserializeContext(string json) => string.IsNullOrWhiteSpace(json) || json == "{}" ? null : JsonSerializer.Deserialize<AssistantContextResponse>(json);
     private static string ToFactName(string name) => name switch

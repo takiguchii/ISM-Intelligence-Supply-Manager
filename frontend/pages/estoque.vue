@@ -268,7 +268,12 @@ const abrirAssistente = async () => {
   else if (itensCriticos.value[0]?.id) consultarSaldo(itensCriticos.value[0].id)
 }
 const consultarSaldo = (productId: number) =>
-  assistantUi.openGeneralChat(`Qual é o saldo de estoque do produto ${productId}?`)
+  assistantUi.openSpecialistChat("stock", {
+    sourceView: "estoque",
+    subjectEntityType: "Product",
+    subjectEntityId: productId,
+    subject: `Estoque — produto ${productId}`
+  }, `Qual é o saldo de estoque do produto ${productId}?`)
 
 onMounted(() => {
   carregarHistorico()
