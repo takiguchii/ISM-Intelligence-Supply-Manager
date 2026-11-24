@@ -9,7 +9,7 @@
 | Cenário | Resultado |
 |---|---|
 | 20 consultas independentes, 2 etapas cada, fixture determinística | PASS — 1 teste, 40 chamadas, isolamento A/B preservado |
-| `dotnet test backend/ISM.sln --no-restore` | PASS após correção — 308 testes (1 arquitetura, 256 unitários, 51 integração) |
+| `dotnet test backend/ISM.sln --no-restore` | PASS após correção — 309 testes (1 arquitetura, 257 unitários, 51 integração) |
 | `docker compose config` | PASS |
 | Smoke frontend `http://localhost:3000/` | PASS — HTTP 200 |
 | Smoke API `http://localhost:8080/swagger/index.html` | PASS — HTTP 200 |

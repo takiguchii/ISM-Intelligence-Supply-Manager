@@ -14,6 +14,6 @@ Durante a regressão, uma expectativa antiga de origem da resposta financeira de
 |---|---|
 | `dotnet test ... --filter FullyQualifiedName~OrchestrationContractTests` | PASS — 43 casos |
 | `dotnet test ... --filter FullyQualifiedName~AssistantApprovalTests` | PASS — 22 casos |
-| `dotnet test backend/ISM.sln --no-restore` | PASS após correção — 1 arquitetura, 256 unitários, 51 integração |
+| `dotnet test backend/ISM.sln --no-restore` | PASS após correção — 1 arquitetura, 257 unitários, 51 integração |
 
 Nenhum cenário de segurança ou mutação não autorizada ficou aberto.
