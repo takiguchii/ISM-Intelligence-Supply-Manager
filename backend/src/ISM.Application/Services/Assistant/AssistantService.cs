@@ -318,7 +318,9 @@ public sealed class AssistantService(
         var query = new AssistantQueryContext(question, currentUser.UserId, RequireRestaurant(), currentUser.Role,
             SubjectEntityType: context?.ReferenceEntityType, SubjectEntityId: context?.ReferenceEntityId);
         var plan = await orchestrator.PlanAsync(query, cancellationToken);
-        if (plan.Steps.Count == 0) return null;
+        // Consultas de um único domínio preservam o caminho especializado existente;
+        // o orquestrador entra quando há coordenação real entre especialistas.
+        if (plan.Steps.Count < 2) return null;
         var result = await orchestrator.ExecuteAsync(plan, cancellationToken);
         return new("deterministic", result.Answer, "Orquestrador ISM com ferramentas autorizadas", result.Partial ? string.Join(" ", result.Warnings) : null)
         {
