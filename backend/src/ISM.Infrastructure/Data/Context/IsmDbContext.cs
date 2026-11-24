@@ -280,6 +280,7 @@ public sealed class IsmDbContext : DbContext
             builder.Property(c => c.DisplayOrder).IsRequired();
             builder.Property(c => c.CreatedAtUtc).HasColumnType("datetime(6)").IsRequired();
             builder.Property(c => c.UpdatedAtUtc).HasColumnType("datetime(6)");
+            builder.Property(c => c.IFoodCategoryId).HasMaxLength(50);
             builder.HasIndex(c => new { c.RestaurantId, c.Name }).IsUnique();
 
             builder.HasOne(c => c.Restaurant)
@@ -306,6 +307,7 @@ public sealed class IsmDbContext : DbContext
             builder.Property(d => d.DisplayOrder).IsRequired();
             builder.Property(d => d.CreatedAtUtc).HasColumnType("datetime(6)").IsRequired();
             builder.Property(d => d.UpdatedAtUtc).HasColumnType("datetime(6)");
+            builder.Property(d => d.IFoodItemId).HasMaxLength(50);
             builder.HasIndex(d => new { d.RestaurantId, d.Name }).IsUnique();
             builder.HasIndex(d => new { d.RestaurantId, d.CategoryId });
 

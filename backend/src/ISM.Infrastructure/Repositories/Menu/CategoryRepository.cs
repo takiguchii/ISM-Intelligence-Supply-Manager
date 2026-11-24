@@ -64,4 +64,9 @@ public sealed class CategoryRepository : ICategoryRepository
         await _dbContext.SaveChangesAsync(cancellationToken);
         return true;
     }
+    
+    public async Task UpdateIFoodCategoryIdAsync(int categoryId, string ifoodCategoryId, CancellationToken ct)=>
+        await _dbContext.Categories
+            .Where(c => c.Id == categoryId)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(c => c.IFoodCategoryId, ifoodCategoryId), ct);
 }

@@ -20,6 +20,9 @@ public sealed class Dish : BaseEntity
     public string? UrlImage { get; set; }
     public int DisplayOrder { get; set; }
     
+    //vínculo com o ifood
+    public string? IFoodItemId { get; set; }
+    
     public Restaurant? Restaurant { get; set; } 
     public Category? Category { get; set; }
     public ICollection<DishIngredient> Ingredients { get; set; } = new List<DishIngredient>(); //lista de ingredientes

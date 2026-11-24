@@ -14,4 +14,5 @@ public sealed record DishResponse(
     int DisplayOrder,
     DateTime CreatedAtUtc,
     DateTime? UpdatedAtUtc,
-    IReadOnlyCollection<DishIngredientResponse> Ingredients);
+    IReadOnlyCollection<DishIngredientResponse> Ingredients,
+    string? IFoodItemId);

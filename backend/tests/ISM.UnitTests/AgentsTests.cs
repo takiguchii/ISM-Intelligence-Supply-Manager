@@ -55,6 +55,13 @@ public class AgentsTests
             var result = Dishes.Where(d => d.Ingredients.Any(i => i.ProductId == productId)).ToList();
             return Task.FromResult<IReadOnlyCollection<Dish>>(result);
         }
+
+        public Task UpdateIFoodItemIdAsync(int dishId, string ifoodItemId, CancellationToken ct)
+        {
+            var dish = Dishes.FirstOrDefault(d => d.Id == dishId);
+            if (dish != null) dish.IFoodItemId = ifoodItemId;
+            return Task.CompletedTask;
+        }
     }
 
     private class FakeSystemAlertRepository : ISystemAlertRepository

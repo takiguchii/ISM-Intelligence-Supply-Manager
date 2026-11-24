@@ -222,6 +222,10 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient<IIFoodAuthClient, IFoodAuthClient>();
         services.AddScoped<IIFoodConfigService, IFoodConfigService>();
         
+        // Sincronização e atualização de cardápio no IFood
+        services.AddHttpClient<IIFoodCatalogClient, IFoodCatalogClient>();
+        services.AddScoped<IIFoodCatalogSyncService, IFoodCatalogSyncService>();
+        
         // Criação do valor padrão de margem ideal para o preço de um produto
         services.Configure<PricingOptions>(configuration.GetSection(PricingOptions.SectionName));
 

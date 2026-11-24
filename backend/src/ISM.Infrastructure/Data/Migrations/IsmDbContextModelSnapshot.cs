@@ -470,6 +470,10 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.Property<int>("DisplayOrder")
                         .HasColumnType("int");
 
+                    b.Property<string>("IFoodCategoryId")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)");
 
@@ -518,6 +522,10 @@ namespace ISM.Infrastructure.Data.Migrations
 
                     b.Property<bool>("Highlight")
                         .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("IFoodItemId")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)");

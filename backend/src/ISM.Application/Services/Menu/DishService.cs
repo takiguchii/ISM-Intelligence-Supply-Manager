@@ -211,5 +211,6 @@ public sealed class DishService : IDishService
             dish.UpdatedAtUtc,
             dish.Ingredients
                 .Select(ingredient => new DishIngredientResponse(ingredient.ProductId, ingredient.Quantity))
-                .ToArray());
+                .ToArray(),
+            dish.IFoodItemId);
 }

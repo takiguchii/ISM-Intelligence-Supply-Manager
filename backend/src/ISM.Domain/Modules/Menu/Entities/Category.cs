@@ -15,5 +15,8 @@ public sealed class Category : BaseEntity
     public int  DisplayOrder { get; set; }
     public ICollection<Dish> Dishes { get; set; } = new List<Dish>(); 
     
+    //vínculo com o ifood
+    public string? IFoodCategoryId { get; set; }
+    
     public Restaurant? Restaurant { get; set; } 
 }
