@@ -25,6 +25,7 @@ public sealed class AssistantService(
     ICurrentUser currentUser,
     IAgentToolRegistry tools,
     AssistantIntentCoordinator intentCoordinator,
+    ConstrainedOrchestrationService orchestrator,
     IAutomationService automations) : IAssistantService
 {
     public async Task<AssistantStatusResponse> GetStatusAsync(CancellationToken cancellationToken = default)
@@ -80,6 +81,8 @@ public sealed class AssistantService(
         var context = await BuildContextAsync(restaurantId, cancellationToken);
         if (await TryCreateAutomationDraftAsync(message, cancellationToken) is { } automationDraft)
             return automationDraft;
+        if (await TryOrchestrateAsync(message, null, cancellationToken) is { } orchestrated)
+            return orchestrated;
         var intent = intentCoordinator.Resolve(message, null);
         if (intent is not null && await ExecuteIntentAsync(intent, cancellationToken) is { } routed)
             return routed;
@@ -218,6 +221,18 @@ public sealed class AssistantService(
             return await BuildConversationAsync(thread, context, cancellationToken);
         }
         var intent = hasImage ? null : intentCoordinator.Resolve(promptMessage, context);
+        if (!hasImage && thread.SpecialistId == AssistantSpecialists.General && await TryOrchestrateAsync(promptMessage, context, cancellationToken) is { } orchestrated)
+        {
+            await conversations.AddMessageAsync(new AssistantMessage
+            {
+                RestaurantId = restaurantId, ThreadId = thread.Id, Role = "assistant", Content = orchestrated.Message,
+                Mode = orchestrated.Mode, Source = orchestrated.Source, CreatedAtUtc = DateTime.UtcNow
+            }, cancellationToken);
+            thread.LastMessageAtUtc = DateTime.UtcNow;
+            thread.UpdatedAtUtc = thread.LastMessageAtUtc;
+            await conversations.SaveThreadAsync(thread, cancellationToken);
+            return await BuildConversationAsync(thread, context, cancellationToken);
+        }
         if (intent is not null && !IsIntentAllowed(thread.SpecialistId, intent.Specialist))
         {
             var denied = new AssistantChatResponse(
@@ -297,6 +312,21 @@ public sealed class AssistantService(
     }
 
     private int RequireRestaurant() => currentUser is { IsManagerOrAbove: true, RestaurantId: > 0 } ? currentUser.RestaurantId.Value : throw new UnauthorizedAccessException("Restaurante gerencial não identificado.");
+
+    private async Task<AssistantChatResponse?> TryOrchestrateAsync(string question, AssistantContextResponse? context, CancellationToken cancellationToken)
+    {
+        var query = new AssistantQueryContext(question, currentUser.UserId, RequireRestaurant(), currentUser.Role,
+            SubjectEntityType: context?.ReferenceEntityType, SubjectEntityId: context?.ReferenceEntityId);
+        var plan = await orchestrator.PlanAsync(query, cancellationToken);
+        if (plan.Steps.Count == 0) return null;
+        var result = await orchestrator.ExecuteAsync(plan, cancellationToken);
+        return new("deterministic", result.Answer, "Orquestrador ISM com ferramentas autorizadas", result.Partial ? string.Join(" ", result.Warnings) : null)
+        {
+            Specialist = AssistantSpecialists.General,
+            DecisionCode = result.Partial ? AgentDecisionCode.InsufficientData : AgentDecisionCode.CanAct,
+            Evidence = result.Evidence
+        };
+    }
 
     private static string NormalizeSpecialist(string? value)
     {

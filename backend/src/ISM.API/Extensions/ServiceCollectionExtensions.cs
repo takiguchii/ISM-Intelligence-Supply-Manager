@@ -292,6 +292,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAgentToolRegistry, AgentToolRegistry>();
         services.AddScoped<IAgentIntentRouter, AgentIntentRouter>();
         services.AddScoped<AssistantIntentCoordinator>();
+        services.AddScoped<ConstrainedOrchestrationService>();
         services.AddScoped<IAutomationService, AutomationService>();
         services.AddScoped<IAutomationRunner, AutomationRunner>();
         services.AddScoped<IAgentTool, StockProductTool>();
