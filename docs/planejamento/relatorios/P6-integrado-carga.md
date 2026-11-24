@@ -2,7 +2,7 @@
 
 ## Resultado
 
-**PASS parcial / BLOCKED de infraestrutura externa.**
+**PASS em ambiente MySQL isolado e descartável.** O banco compartilhado não foi alterado.
 
 ### Validações executadas
 
@@ -14,6 +14,11 @@
 | Smoke frontend `http://localhost:3000/` | PASS — HTTP 200 |
 | Smoke API `http://localhost:8080/swagger/index.html` | PASS — HTTP 200 |
 | API protegida sem autenticação | PASS — HTTP 401 |
+| Migration completa em MySQL isolado | PASS — última migration `20261124010135_AddAssistantThreadSpecialistIdentity` |
+| Login autenticado de gerente no banco isolado | PASS |
+| Thread geral + consulta composta financeira/estoque | PASS — resposta determinística com evidência |
+| Payload com `restaurantId` no executor de ferramenta | PASS — decisão `Denied` |
+| 10 requisições HTTP autenticadas concorrentes | PASS — 10/10 HTTP 200 |
 
 ### Baseline do notebook
 
@@ -22,8 +27,8 @@
 - Uso observado: backend 345,9 MiB; frontend 416,5 MiB; MySQL 80,65 MiB.
 - Cache Docker liberado com `docker builder prune -f`: 5,408 MiB recuperados.
 
-## Bloqueio real
+## Limitações remanescentes
 
-Não executei fluxo destrutivo ou migration no MySQL compartilhado. O banco isolado/descartável exigido pelo P6 não está configurado no ambiente atual; por isso concorrência HTTP autenticada, atualização real de dataset e aplicação da migration permanecem **BLOCKED**, sem serem declaradas como PASS.
-
-Também não há credenciais seguras de notificação nem provider Ollama ativo configurado para uma carga LLM real. O fallback determinístico e os testes com fixture permanecem disponíveis para a demonstração.
+- O MySQL compartilhado permaneceu sem a migration por segurança. A migration foi validada integralmente no banco isolado, que foi encerrado ao final do teste.
+- A carga foi executada com Ollama desabilitado, usando o caminho determinístico real; não representa throughput de inferência LLM.
+- Não há credenciais seguras de Telegram/Fors configuradas.
