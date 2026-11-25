@@ -25,16 +25,30 @@ public sealed class OrchestrationContractTests
     {
         var service = CreateService((tool, _) => tool == "stock.getProduct"
             ? new AgentToolResult(tool, AgentDecisionCode.InsufficientData, null, [], "Produto não encontrado.", "corr", 1)
-            : new AgentToolResult(tool, AgentDecisionCode.CanAct, new { revenue = 100m }, [new("Finance", "period", 1, DateTime.UtcNow, null, "Fonte financeira")], "Resumo calculado.", "corr", 1));
+            : new AgentToolResult(tool, AgentDecisionCode.CanAct, new { SalesRevenue = 100m, OtherIncome = 0m, Expenses = 0m, AccountsReceivable = 0m, AccountsPayable = 0m }, [new("Finance", "period", 1, DateTime.UtcNow, null, "Fonte financeira")], "Resumo calculado.", "corr", 1));
         var plan = await service.PlanAsync(new("faturamento e saldo do produto 42", 7, 1, "Manager"));
 
         var result = await service.ExecuteAsync(plan);
 
         result.Partial.Should().BeTrue();
         result.Steps.Should().HaveCount(2);
-        result.Answer.Should().Contain("revenue");
+        result.Answer.Should().Contain("Vendas de pedidos pagos");
         result.Warnings.Should().Contain(item => item.Contains("Produto não encontrado", StringComparison.Ordinal));
         result.Evidence.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Executor_does_not_expose_payload_when_tool_schema_is_unexpected()
+    {
+        var service = CreateService((tool, _) => new AgentToolResult(tool, AgentDecisionCode.CanAct,
+            new { secretDiagnostic = "internal" }, [], "Consulta concluída.", "corr", 1));
+        var plan = await service.PlanAsync(new("faturamento", 7, 1, "Manager"));
+
+        var result = await service.ExecuteAsync(plan);
+
+        result.Answer.Should().Contain("fora do formato esperado");
+        result.Answer.Should().NotContain("secretDiagnostic");
+        result.Answer.Should().NotContain("internal");
     }
 
     [Theory]

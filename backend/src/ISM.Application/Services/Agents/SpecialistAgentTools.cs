@@ -109,7 +109,7 @@ public sealed record SupplierComparisonToolOutput(string ProductName, string Uni
 
 public sealed class SupplierComparisonTool(ISupplierProductPriceHistoryRepository historyRepository) : ReadOnlyAgentTool, IAgentTool
 {
-    public AgentToolDescriptor Descriptor { get; } = new("suppliers.compareOffers", "suppliers", "2.0", "Comparar ofertas equivalentes e recentes sem enviar cotação", AgentToolOperation.Read, ["Admin", "Manager"], 20, 5000, false, "medium") { InputSchema = new Dictionary<string, string> { ["productName"] = "non-empty string", ["unit"] = "non-empty string", ["lookbackDays"] = "optional integer 1..365" } };
+    public AgentToolDescriptor Descriptor { get; } = new("suppliers.compareOffers", "suppliers", "2.0", "Comparar histórico de preços de compras registradas; não consulta cotações atuais", AgentToolOperation.Read, ["Admin", "Manager"], 20, 5000, false, "medium") { InputSchema = new Dictionary<string, string> { ["productName"] = "non-empty string", ["unit"] = "non-empty string", ["lookbackDays"] = "optional integer 1..365" } };
 
     public async Task<AgentToolResult> ExecuteAsync(JsonElement input, AgentToolContext context, CancellationToken cancellationToken = default)
     {
@@ -136,7 +136,7 @@ public sealed class SupplierComparisonTool(ISupplierProductPriceHistoryRepositor
             .ToArray();
         if (offers.Length == 0)
             return Result(Descriptor, AgentDecisionCode.InsufficientData, null, "Não há ofertas equivalentes e recentes para comparar.", context);
-        return Result(Descriptor, AgentDecisionCode.CanAct, new SupplierComparisonToolOutput(nameElement.GetString()!.Trim(), normalizedUnit, lookbackDays, offers), "Ofertas equivalentes comparadas; nenhuma cotação foi enviada.", context, [new("SupplierPriceHistory", normalizedProduct, context.RestaurantId, DateTime.UtcNow, DateTime.UtcNow.AddDays(-lookbackDays), "Histórico de preços do tenant, com unidade compatível e validade verificada.")]);
+        return Result(Descriptor, AgentDecisionCode.CanAct, new SupplierComparisonToolOutput(nameElement.GetString()!.Trim(), normalizedUnit, lookbackDays, offers), "Histórico de preços de compras anteriores consultado; estes valores não são cotações atuais.", context, [new("SupplierPriceHistory", normalizedProduct, context.RestaurantId, DateTime.UtcNow, DateTime.UtcNow.AddDays(-lookbackDays), "Histórico de preços do tenant, com unidade compatível e validade verificada.")]);
     }
 }
 

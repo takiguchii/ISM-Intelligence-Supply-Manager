@@ -1,0 +1,131 @@
+{
+  "model": "qwen3.5:4b",
+  "generatedAtUtc": "2026-11-25T00:51:11.0385049Z",
+  "total": 8,
+  "passed": 8,
+  "failed": 0,
+  "bySpecialist": [
+    {
+      "specialist": "suppliers",
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "averageLatencyMs": 15061,
+      "p95LatencyMs": 22376
+    },
+    {
+      "specialist": "finance",
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "averageLatencyMs": 22875,
+      "p95LatencyMs": 24523
+    }
+  ],
+  "cases": [
+    {
+      "Specialist": "suppliers",
+      "Index": 1,
+      "Prompt": "Compare fornecedores do arroz de carga kg",
+      "ExpectedTool": "suppliers.compareOffers",
+      "ExpectedDenied": false,
+      "ActualSource": "Dados do ISM \u00B7 s\u00EDntese local \u00B7 suppliers.compareOffers",
+      "Mode": "llm",
+      "Response": "O hist\u00F3rico de pre\u00E7os recentes indica R$ 5,50/kg do Fornecedor Alpha (\u00FAltima compra em 23/11/2026) e R$ 6,25/kg da Beta (\u00FAltima compra em 22/11/2026).",
+      "LatencyMs": 22360,
+      "Status": "PASS",
+      "FailureClass": ""
+    },
+    {
+      "Specialist": "suppliers",
+      "Index": 2,
+      "Prompt": "Compare o hist\u00F3rico de fornecedores do arroz de carga kg",
+      "ExpectedTool": "suppliers.compareOffers",
+      "ExpectedDenied": false,
+      "ActualSource": "Dados do ISM \u00B7 s\u00EDntese local \u00B7 suppliers.compareOffers",
+      "Mode": "llm",
+      "Response": "O hist\u00F3rico de pre\u00E7os do arroz de carga mostra R$ 5,50/kg no fornecedor Alpha e R$ 6,25/kg no fornecedor Beta (valores referentes \u00E0s \u00FAltimas compras em novembro de 2026). Nenhuma cota\u00E7\u00E3o atual foi enviada para este produto.",
+      "LatencyMs": 22376,
+      "Status": "PASS",
+      "FailureClass": ""
+    },
+    {
+      "Specialist": "suppliers",
+      "Index": 3,
+      "Prompt": "Mostre quem vende arroz de carga em kg",
+      "ExpectedTool": "suppliers.compareOffers",
+      "ExpectedDenied": false,
+      "ActualSource": "Dados do ISM \u00B7 s\u00EDntese local \u00B7 suppliers.compareOffers",
+      "Mode": "llm",
+      "Response": "N\u00E3o foram enviadas novas cota\u00E7\u00F5es nesta consulta e as informa\u00E7\u00F5es baseiam-se apenas no hist\u00F3rico de compras anteriores do fornecedor Alpha (R$ 5,50/kg) e do fornecedor Beta (R$ 6,25/kg). O registro foi observado em 24/11/2026 \u00E0s 21:49.",
+      "LatencyMs": 15502,
+      "Status": "PASS",
+      "FailureClass": ""
+    },
+    {
+      "Specialist": "suppliers",
+      "Index": 4,
+      "Prompt": "Qual foi o faturamento deste m\u00EAs?",
+      "ExpectedTool": null,
+      "ExpectedDenied": true,
+      "ActualSource": "Pol\u00EDtica de escopo do ISM",
+      "Mode": "deterministic",
+      "Response": "Esta conversa \u00E9 do especialista de fornecedores e s\u00F3 pode consultar informa\u00E7\u00F5es dessa \u00E1rea. Abra o Assistente geral para analisar outros assuntos.",
+      "LatencyMs": 7,
+      "Status": "PASS",
+      "FailureClass": ""
+    },
+    {
+      "Specialist": "finance",
+      "Index": 1,
+      "Prompt": "Qual foi o faturamento deste m\u00EAs?",
+      "ExpectedTool": "finance.getPeriodSummary",
+      "ExpectedDenied": false,
+      "ActualSource": "Dados do ISM \u00B7 s\u00EDntese local \u00B7 finance.getPeriodSummary",
+      "Mode": "llm",
+      "Response": "No per\u00EDodo consultado foram realizadas vendas de pedidos pagos no valor total de R$ 70,00. Despesas liquidadas somaram R$ 10,00, gerando um fluxo l\u00EDquido positivo de R$ 60,00. Outras receitas liquidadas n\u00E3o ocorreram neste intervalo.",
+      "LatencyMs": 23930,
+      "Status": "PASS",
+      "FailureClass": ""
+    },
+    {
+      "Specialist": "finance",
+      "Index": 2,
+      "Prompt": "Resuma receitas e despesas dos \u00FAltimos 7 dias",
+      "ExpectedTool": "finance.getPeriodSummary",
+      "ExpectedDenied": false,
+      "ActualSource": "Dados do ISM \u00B7 s\u00EDntese local \u00B7 finance.getPeriodSummary",
+      "Mode": "llm",
+      "Response": "No per\u00EDodo consultado, as vendas de pedidos pagos foram R$ 70,00 e outras receitas liquidadas totalizaram R$ 0,00. As despesas liquidadas somaram R$ 10,00, gerando um fluxo l\u00EDquido positivo de R$ 60,00.",
+      "LatencyMs": 24523,
+      "Status": "PASS",
+      "FailureClass": ""
+    },
+    {
+      "Specialist": "finance",
+      "Index": 3,
+      "Prompt": "Qual foi a receita do m\u00EAs passado?",
+      "ExpectedTool": "finance.getPeriodSummary",
+      "ExpectedDenied": false,
+      "ActualSource": "Dados do ISM \u00B7 s\u00EDntese local \u00B7 finance.getPeriodSummary",
+      "Mode": "llm",
+      "Response": "No per\u00EDodo consultado, as vendas de pedidos pagos e outras receitas liquidadas totalizaram R$ 0,00 cada. As despesas liquidadas foram de R$ 25,00, resultando em um fluxo l\u00EDquido negativo de R$ -25,00.",
+      "LatencyMs": 24211,
+      "Status": "PASS",
+      "FailureClass": ""
+    },
+    {
+      "Specialist": "finance",
+      "Index": 4,
+      "Prompt": "Quais foram as vendas recentes?",
+      "ExpectedTool": "orders.getRecent",
+      "ExpectedDenied": false,
+      "ActualSource": "Dados do ISM \u00B7 s\u00EDntese local \u00B7 orders.getRecent",
+      "Mode": "llm",
+      "Response": "Voc\u00EA tem uma venda de R$ 70,00 registrada nos \u00FAltimos dias consultados (dados observados em 24/11/2026 \u00E0s 21:50). As informa\u00E7\u00F5es foram extra\u00EDdas do m\u00F3dulo Orders e incluem apenas pedidos com pagamento confirmado.",
+      "LatencyMs": 18839,
+      "Status": "PASS",
+      "FailureClass": ""
+    }
+  ]
+}

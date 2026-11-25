@@ -65,7 +65,7 @@ public sealed class ConstrainedOrchestrationService(
             await gate.WaitAsync(budget.Token);
             try
             {
-                var result = await registry.ExecuteAsync(new AgentToolExecuteRequest(step.ToolName, step.Input, plan.CorrelationId), budget.Token);
+                var result = await registry.ExecuteAsync(new AgentToolExecuteRequest(step.ToolName, step.Input, plan.CorrelationId) { Specialist = step.Specialist }, budget.Token);
                 results.Add(new(step, result));
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
@@ -86,7 +86,7 @@ public sealed class ConstrainedOrchestrationService(
             .Select(item => $"{item.Step.Specialist}: {item.Result.Message}").ToList();
         if (steps.Count == 0)
             warnings.Add("Não foi possível identificar uma consulta autorizada com os dados fornecidos.");
-        var lines = successful.Select(item => $"[{item.Step.Specialist}] {item.Result.Message} Dados verificados: {JsonSerializer.Serialize(item.Result.Data)}").ToList();
+        var lines = successful.Select(item => $"• {AssistantService.DescribeToolResult(item.Result)}").ToList();
         if (lines.Count == 0) lines.Add("Não há dados determinísticos suficientes para concluir a análise.");
         var answer = string.Join("\n", lines);
         return new(plan.CorrelationId, steps, answer, warnings.Count > 0, warnings, steps.SelectMany(item => item.Result.Evidence).ToArray());
@@ -104,7 +104,10 @@ public sealed class ConstrainedOrchestrationService(
             || question.Contains("receita", StringComparison.OrdinalIgnoreCase)
             || question.Contains("despesa", StringComparison.OrdinalIgnoreCase)
             || question.Contains("financeir", StringComparison.OrdinalIgnoreCase)
-            || question.Contains("fluxo de caixa", StringComparison.OrdinalIgnoreCase))
+            || question.Contains("fluxo de caixa", StringComparison.OrdinalIgnoreCase)
+            || question.Contains("vendas", StringComparison.OrdinalIgnoreCase)
+            || question.Contains("vendemos", StringComparison.OrdinalIgnoreCase)
+            || question.Contains("pedidos pagos", StringComparison.OrdinalIgnoreCase))
             steps.Add(new("finance-1", "finance", "finance.getRevenueSummary", JsonSerializer.SerializeToElement(new { }), []));
 
         if (TryReadId(question, "produto", out var productId)

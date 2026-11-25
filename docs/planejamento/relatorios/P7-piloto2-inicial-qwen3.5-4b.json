@@ -1,0 +1,131 @@
+{
+  "model": "qwen3.5:4b",
+  "generatedAtUtc": "2026-11-25T00:40:12.7631747Z",
+  "total": 8,
+  "passed": 7,
+  "failed": 1,
+  "bySpecialist": [
+    {
+      "specialist": "suppliers",
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "averageLatencyMs": 19608,
+      "p95LatencyMs": 35247
+    },
+    {
+      "specialist": "finance",
+      "total": 4,
+      "passed": 3,
+      "failed": 1,
+      "averageLatencyMs": 29010,
+      "p95LatencyMs": 38001
+    }
+  ],
+  "cases": [
+    {
+      "Specialist": "suppliers",
+      "Index": 1,
+      "Prompt": "Compare fornecedores do arroz de carga kg",
+      "ExpectedTool": "suppliers.compareOffers",
+      "ExpectedDenied": false,
+      "ActualSource": "Dados do ISM \u00B7 s\u00EDntese local \u00B7 suppliers.compareOffers",
+      "Mode": "llm",
+      "Response": "Nenhum fornecedor enviou novas cota\u00E7\u00F5es hoje; os dados dispon\u00EDveis correspondem apenas ao hist\u00F3rico de compras anteriores, registrado entre 22 e 23/11/2026 (R$ 5,50/kg do Alpha e R$ 6,25/kg do Beta). Os valores atuais n\u00E3o foram recebidos por meio da consulta.",
+      "LatencyMs": 35247,
+      "Status": "PASS",
+      "FailureClass": ""
+    },
+    {
+      "Specialist": "suppliers",
+      "Index": 2,
+      "Prompt": "Compare o hist\u00F3rico de fornecedores do arroz de carga kg",
+      "ExpectedTool": "suppliers.compareOffers",
+      "ExpectedDenied": false,
+      "ActualSource": "Dados do ISM \u00B7 s\u00EDntese local \u00B7 suppliers.compareOffers",
+      "Mode": "llm",
+      "Response": "O hist\u00F3rico de pre\u00E7os registrados n\u00E3o cont\u00E9m informa\u00E7\u00F5es sobre ofertas equivalentes atualmente dispon\u00EDveis, pois nenhuma cota\u00E7\u00E3o foi enviada pelo fornecedor. Os \u00FAnicos valores consultados referem-se \u00E0s \u00FAltimas compras realizadas pelos fornecedores Alpha (R$ 5,50/kg) e Beta (R$ 6,25/kg), conforme dados anteriores do sistema de pre\u00E7os. Dessa forma, n\u00E3o \u00E9 poss\u00EDvel confirmar a exist\u00EAncia ou aus\u00EAncia de ofertas ativas no momento.",
+      "LatencyMs": 25983,
+      "Status": "PASS",
+      "FailureClass": ""
+    },
+    {
+      "Specialist": "suppliers",
+      "Index": 3,
+      "Prompt": "Mostre quem vende arroz de carga em kg",
+      "ExpectedTool": "suppliers.compareOffers",
+      "ExpectedDenied": false,
+      "ActualSource": "Dados do ISM \u00B7 s\u00EDntese local \u00B7 suppliers.compareOffers",
+      "Mode": "llm",
+      "Response": "N\u00E3o foram encontradas novas ofertas atuais ou envios de cota\u00E7\u00F5es por Alpha e Beta neste momento (informa\u00E7\u00F5es baseiam-se no hist\u00F3rico da \u00FAltima compra). As compras anteriores registram R$ 5,50/kg na Alpha em 23/11/2026 e R$ 6,25/kg na Beta em 22/11/2026.",
+      "LatencyMs": 17196,
+      "Status": "PASS",
+      "FailureClass": ""
+    },
+    {
+      "Specialist": "suppliers",
+      "Index": 4,
+      "Prompt": "Qual foi o faturamento deste m\u00EAs?",
+      "ExpectedTool": null,
+      "ExpectedDenied": true,
+      "ActualSource": "Pol\u00EDtica de escopo do ISM",
+      "Mode": "deterministic",
+      "Response": "Esta conversa \u00E9 do especialista de fornecedores e s\u00F3 pode consultar informa\u00E7\u00F5es dessa \u00E1rea. Abra o Assistente geral para analisar outros assuntos.",
+      "LatencyMs": 7,
+      "Status": "PASS",
+      "FailureClass": ""
+    },
+    {
+      "Specialist": "finance",
+      "Index": 1,
+      "Prompt": "Qual foi o faturamento deste m\u00EAs?",
+      "ExpectedTool": "finance.getPeriodSummary",
+      "ExpectedDenied": false,
+      "ActualSource": "Dados do ISM \u00B7 s\u00EDntese local \u00B7 finance.getPeriodSummary",
+      "Mode": "llm",
+      "Response": "Nos per\u00EDodos de 2026-11-01T00:00:00Z at\u00E9 2026-11-25T00:38:16.7155301Z, suas vendas de pedidos pagos foram de R$ 70,00 e suas despesas liquidadas totalizaram R$ 10,00, resultando em um fluxo l\u00EDquido de R$ 60,00. As outras receitas liquidadas para este per\u00EDodo observadas no dia 24/11/2026 \u00E0s 21:38 foram de valor zero (R$ 0,00).",
+      "LatencyMs": 38001,
+      "Status": "PASS",
+      "FailureClass": ""
+    },
+    {
+      "Specialist": "finance",
+      "Index": 2,
+      "Prompt": "Resuma receitas e despesas dos \u00FAltimos 7 dias",
+      "ExpectedTool": "finance.getPeriodSummary",
+      "ExpectedDenied": false,
+      "ActualSource": "Dados determin\u00EDsticos do ISM \u00B7 finance.getPeriodSummary",
+      "Mode": "deterministic",
+      "Response": "Per\u00EDodo: 2026-11-18T00:38:54.7172194Z a 2026-11-25T00:38:54.7172194Z\n\u2022 Vendas de pedidos pagos: R$ 70,00\n\u2022 Outras receitas liquidadas: R$ 0,00\n\u2022 Despesas liquidadas: R$ 10,00\n\u2022 Fluxo l\u00EDquido: R$ 60,00\nResumo financeiro calculado por per\u00EDodo e fonte efetiva. Fonte: FinancePeriod, observado em 24/11/2026 21:38.",
+      "LatencyMs": 31428,
+      "Status": "FAIL",
+      "FailureClass": "s\u00EDntese local/fallback"
+    },
+    {
+      "Specialist": "finance",
+      "Index": 3,
+      "Prompt": "Qual foi a receita do m\u00EAs passado?",
+      "ExpectedTool": "finance.getPeriodSummary",
+      "ExpectedDenied": false,
+      "ActualSource": "Dados do ISM \u00B7 s\u00EDntese local \u00B7 finance.getPeriodSummary",
+      "Mode": "llm",
+      "Response": "O relat\u00F3rio mostra saldo zero nas vendas de pedidos pagos e outras receitas liquidadas no per\u00EDodo de 2026-10-01T00:00:00Z at\u00E9 2026-10-31T23:59:59.9999999Z, com despesas totais de R$ 25,00 resultando em um fluxo l\u00EDquido negativo da mesma quantia.",
+      "LatencyMs": 28077,
+      "Status": "PASS",
+      "FailureClass": ""
+    },
+    {
+      "Specialist": "finance",
+      "Index": 4,
+      "Prompt": "Quais foram as vendas recentes?",
+      "ExpectedTool": "orders.getRecent",
+      "ExpectedDenied": false,
+      "ActualSource": "Dados do ISM \u00B7 s\u00EDntese local \u00B7 orders.getRecent",
+      "Mode": "llm",
+      "Response": "Sua venda recente totaliza R$ 70,00, composta por pedidos que foram completamente pagos e confirmados no dia 24 de novembro de 2026 \u00E0s 21:39. Esta informa\u00E7\u00E3o est\u00E1 baseada estritamente nos registros dispon\u00EDveis do sistema ISM para esse per\u00EDodo espec\u00EDfico.",
+      "LatencyMs": 18537,
+      "Status": "PASS",
+      "FailureClass": ""
+    }
+  ]
+}

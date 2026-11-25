@@ -43,4 +43,40 @@ public sealed class AgentIntentRouterTests
         intent.Input.GetProperty("productId").GetInt32().Should().Be(42);
         _router.Resolve("faça algo criativo").Should().BeNull();
     }
+
+    [Theory]
+    [InlineData("qual foi o último pedido?", "orders.getLatest")]
+    [InlineData("qual foi o dia do último pedido feito?", "orders.getLatest")]
+    [InlineData("como estão as vendas?", "orders.getRecent")]
+    [InlineData("e os outros itens como estão?", "stock.getOverview")]
+    [InlineData("como está a situação financeira do restaurante?", "finance.getRevenueSummary")]
+    [InlineData("me mostre todos os pratos", "pricing.getDishOverview")]
+    public void Resolve_Routes_practical_and_follow_up_questions(string question, string expectedTool)
+    {
+        var intent = _router.Resolve(question);
+        intent.Should().NotBeNull();
+        intent!.ToolName.Should().Be(expectedTool);
+    }
+
+    [Theory]
+    [InlineData("analise a reposição do produto 42", "stock.analyzeReplenishment")]
+    [InlineData("quais itens estão abaixo do mínimo no estoque?", "stock.getOverview")]
+    [InlineData("simule o preço sugerido para o prato 12", "pricing.simulateDishPrice")]
+    [InlineData("compare fornecedores do arroz kg", "suppliers.compareOffers")]
+    [InlineData("mostre quem vende arroz em kg", "suppliers.compareOffers")]
+    [InlineData("qual fornecedor tem o menor preço do arroz kg", "suppliers.compareOffers")]
+    [InlineData("resumo financeiro dos últimos 7 dias", "finance.getPeriodSummary")]
+    [InlineData("calcule o consumo e os dias restantes do produto 42", "stock.analyzeReplenishment")]
+    [InlineData("mostre a margem do prato 12", "pricing.getDishCost")]
+    [InlineData("liste os pratos ativos do restaurante", "pricing.getDishOverview")]
+    [InlineData("quais pratos estão cadastrados no cardápio?", "pricing.getDishOverview")]
+    [InlineData("tem alguma cotação recente de arroz de carga kg?", "suppliers.compareOffers")]
+    [InlineData("confira os preços recentes de arroz de carga kg", "suppliers.compareOffers")]
+    [InlineData("quanto vendemos nos pedidos pagos recentes?", "orders.getRecent")]
+    public void Resolve_Selects_domain_tool_for_actionable_questions(string question, string expectedTool)
+    {
+        var intent = _router.Resolve(question);
+        intent.Should().NotBeNull();
+        intent!.ToolName.Should().Be(expectedTool);
+    }
 }

@@ -39,7 +39,13 @@ public sealed class OrchestrationConcurrencyTests
             Interlocked.Increment(ref _calls);
             await Task.Delay(1, cancellationToken);
             var restaurantId = request.Input.TryGetProperty("productId", out var product) && product.TryGetInt32(out var id) ? id % 2 == 0 ? 2 : 1 : 1;
-            return new(request.ToolName, AgentDecisionCode.CanAct, new { ok = true }, [new("Fixture", request.ToolName, restaurantId, DateTime.UtcNow, null, "fixture")], "ok", request.CorrelationId ?? "corr", 1);
+            object data = request.ToolName switch
+            {
+                "finance.getRevenueSummary" => new { SalesRevenue = 100m, OtherIncome = 0m, Expenses = 0m, AccountsReceivable = 0m, AccountsPayable = 0m },
+                "stock.getProduct" => new { Name = $"Produto {restaurantId}", CurrentQuantity = 10m, MinimumQuantity = 2m, AverageCost = 5m, IsCritical = false },
+                _ => new { }
+            };
+            return new(request.ToolName, AgentDecisionCode.CanAct, data, [new("Fixture", request.ToolName, restaurantId, DateTime.UtcNow, null, "fixture")], "ok", request.CorrelationId ?? "corr", 1);
         }
     }
 

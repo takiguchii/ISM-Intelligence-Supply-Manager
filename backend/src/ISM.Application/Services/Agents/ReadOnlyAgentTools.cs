@@ -87,3 +87,57 @@ public sealed class AlertContextTool(ISystemAlertRepository alerts) : ReadOnlyAg
         return Result(Descriptor, AgentDecisionCode.CanAct, new AlertContextToolOutput(alert.Id, alert.Title, alert.Message, alert.Severity.ToString(), alert.AlertType.ToString(), alert.GeneratedAtUtc), "Alerta consultado.", context, [new("SystemAlert", alert.Id.ToString(), context.RestaurantId, DateTime.UtcNow, alert.GeneratedAtUtc, "Alerta persistido e escopado ao restaurante.")]);
     }
 }
+
+public sealed record LatestOrderOutput(int OrderId, string Status, DateTime CreatedAtUtc, DateTime? PaidAtUtc, decimal Total, IReadOnlyList<string> Items);
+public sealed class LatestOrderTool(IOrderRepository orders) : ReadOnlyAgentTool, IAgentTool
+{
+    public AgentToolDescriptor Descriptor { get; } = new("orders.getLatest", "assistant", "1.0", "Consultar o pedido mais recente do restaurante", AgentToolOperation.Read, ["Admin", "Manager"], 1, 5000, false, "low");
+    public async Task<AgentToolResult> ExecuteAsync(JsonElement input, AgentToolContext context, CancellationToken cancellationToken = default)
+    {
+        var latest = (await orders.GetAllAsync(context.RestaurantId, cancellationToken)).OrderByDescending(order => order.CreatedAtUtc).ThenByDescending(order => order.Id).FirstOrDefault();
+        if (latest is null) return Result(Descriptor, AgentDecisionCode.InsufficientData, null, "Ainda não há pedidos registrados neste restaurante.", context);
+        var output = new LatestOrderOutput(latest.Id, latest.Status.ToString(), latest.CreatedAtUtc, latest.PaidAtUtc, latest.Items.Sum(item => item.Quantity * item.UnitPrice), latest.Items.Select(item => $"{item.Quantity}x {item.DishName}").ToArray());
+        return Result(Descriptor, AgentDecisionCode.CanAct, output, "Pedido mais recente consultado.", context, [new("Order", latest.Id.ToString(), context.RestaurantId, DateTime.UtcNow, latest.CreatedAtUtc, "Pedido persistido no restaurante autenticado.")]);
+    }
+}
+
+public sealed record RecentOrdersOutput(int Count, decimal PaidSales, IReadOnlyList<LatestOrderOutput> Orders);
+public sealed class RecentOrdersTool(IOrderRepository orders) : ReadOnlyAgentTool, IAgentTool
+{
+    public AgentToolDescriptor Descriptor { get; } = new("orders.getRecent", "finance", "1.0", "Consultar pedidos recentes e vendas pagas", AgentToolOperation.Read, ["Admin", "Manager"], 10, 5000, false, "low");
+    public async Task<AgentToolResult> ExecuteAsync(JsonElement input, AgentToolContext context, CancellationToken cancellationToken = default)
+    {
+        var recent = (await orders.GetAllAsync(context.RestaurantId, cancellationToken)).OrderByDescending(order => order.CreatedAtUtc).ThenByDescending(order => order.Id).Take(10).ToArray();
+        if (recent.Length == 0) return Result(Descriptor, AgentDecisionCode.InsufficientData, null, "Ainda não há pedidos registrados neste restaurante.", context);
+        var mapped = recent.Select(order => new LatestOrderOutput(order.Id, order.Status.ToString(), order.CreatedAtUtc, order.PaidAtUtc, order.Items.Sum(item => item.Quantity * item.UnitPrice), order.Items.Select(item => $"{item.Quantity}x {item.DishName}").ToArray())).ToArray();
+        return Result(Descriptor, AgentDecisionCode.CanAct, new RecentOrdersOutput(mapped.Length, mapped.Where(order => order.Status == "Paid").Sum(order => order.Total), mapped), "Pedidos recentes consultados; vendas consideram apenas pedidos pagos.", context, [new("Orders", string.Join(',', mapped.Select(order => order.OrderId)), context.RestaurantId, DateTime.UtcNow, null, "Até dez pedidos mais recentes do restaurante autenticado.")]);
+    }
+}
+
+public sealed record StockOverviewItem(string Name, decimal Current, decimal Minimum, string Unit, decimal AverageCost, bool Critical);
+public sealed record StockOverviewOutput(int ProductCount, int CriticalCount, IReadOnlyList<StockOverviewItem> Products);
+public sealed class StockOverviewTool(IProductRepository products) : ReadOnlyAgentTool, IAgentTool
+{
+    public AgentToolDescriptor Descriptor { get; } = new("stock.getOverview", "stock", "1.0", "Consultar visão geral e itens críticos do estoque", AgentToolOperation.Read, ["Admin", "Manager"], 50, 5000, false, "low");
+    public async Task<AgentToolResult> ExecuteAsync(JsonElement input, AgentToolContext context, CancellationToken cancellationToken = default)
+    {
+        var (rows, count) = await products.GetPagedAsync(context.RestaurantId, 1, 50, cancellationToken: cancellationToken);
+        if (count == 0) return Result(Descriptor, AgentDecisionCode.InsufficientData, null, "Não há produtos cadastrados no estoque deste restaurante.", context);
+        var mapped = rows.Select(product => new StockOverviewItem(product.Name, product.CurrentQuantity, product.MinimumQuantity, product.Unit, product.AverageCost, product.CurrentQuantity <= product.MinimumQuantity)).ToArray();
+        return Result(Descriptor, AgentDecisionCode.CanAct, new StockOverviewOutput(count, mapped.Count(item => item.Critical), mapped), $"Consulta concluída: {count} produtos, {mapped.Count(item => item.Critical)} abaixo do mínimo; exibindo até 50.", context, [new("Products", $"restaurant:{context.RestaurantId}", context.RestaurantId, DateTime.UtcNow, null, "Produtos consultados com filtro do restaurante autenticado.")]);
+    }
+}
+
+public sealed record DishOverviewItem(string Name, decimal Price, decimal Cost, decimal CmvPercent, decimal? TargetMarginPercent);
+public sealed record DishOverviewOutput(int DishCount, IReadOnlyList<DishOverviewItem> Dishes);
+public sealed class DishOverviewTool(IDishRepository dishes) : ReadOnlyAgentTool, IAgentTool
+{
+    public AgentToolDescriptor Descriptor { get; } = new("pricing.getDishOverview", "pricing", "1.0", "Consultar preços, custos e CMV dos pratos", AgentToolOperation.Read, ["Admin", "Manager"], 50, 5000, false, "low");
+    public async Task<AgentToolResult> ExecuteAsync(JsonElement input, AgentToolContext context, CancellationToken cancellationToken = default)
+    {
+        var rows = (await dishes.GetAllDishesAsync(context.RestaurantId, cancellationToken: cancellationToken)).Where(dish => dish.IsActive).ToArray();
+        if (rows.Length == 0) return Result(Descriptor, AgentDecisionCode.InsufficientData, null, "Não há pratos ativos cadastrados neste restaurante.", context);
+        var mapped = rows.Take(50).Select(dish => new DishOverviewItem(dish.Name, dish.Price, dish.Cost, dish.Price > 0 ? decimal.Round(dish.Cost / dish.Price * 100m, 2) : 0m, dish.TargetMarginPercent)).ToArray();
+        return Result(Descriptor, AgentDecisionCode.CanAct, new DishOverviewOutput(rows.Length, mapped), $"Consulta concluída: {rows.Length} pratos ativos; exibindo até 50.", context, [new("Dishes", $"restaurant:{context.RestaurantId}", context.RestaurantId, DateTime.UtcNow, null, "Pratos ativos consultados com filtro do restaurante autenticado.")]);
+    }
+}

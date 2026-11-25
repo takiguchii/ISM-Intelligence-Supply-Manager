@@ -188,11 +188,12 @@ public sealed class AssistantApprovalTests : IClassFixture<FoundationWebApplicat
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var chat = await response.Content.ReadFromJsonAsync<AssistantChatResponse>();
         chat!.Mode.Should().Be("deterministic");
-        chat.Source.Should().Be("Dados financeiros do ISM");
+        chat.Source.Should().Contain("finance.getPeriodSummary");
         chat.Message.Should().Contain("pedidos pagos");
-        chat.ToolName.Should().Be("finance.getRevenueSummary");
+        chat.ToolName.Should().Be("finance.getPeriodSummary");
         chat.Specialist.Should().Be("finance");
-        chat.DecisionCode.Should().Be(AgentDecisionCode.CanAct);
+        chat.DecisionCode.Should().Be(AgentDecisionCode.InsufficientData);
+        chat.Message.Should().ContainEquivalentOf("dados");
     }
 
     [Fact]
@@ -326,7 +327,7 @@ public sealed class AssistantApprovalTests : IClassFixture<FoundationWebApplicat
         var tools = await response.Content.ReadFromJsonAsync<List<AgentToolDescriptor>>();
         tools.Should().NotBeNullOrEmpty();
         tools!.Should().OnlyContain(tool => tool.Operation == AgentToolOperation.Read && !tool.RequiresApproval);
-        tools!.Select(tool => tool.ToolName).Should().Contain(["stock.getProduct", "finance.getRevenueSummary", "pricing.getDishCost", "assistant.getAlertContext"]);
+        tools!.Select(tool => tool.ToolName).Should().Contain(["stock.getProduct", "stock.getOverview", "finance.getRevenueSummary", "pricing.getDishCost", "pricing.getDishOverview", "orders.getLatest", "orders.getRecent", "assistant.getAlertContext"]);
     }
 
     [Fact]
@@ -343,8 +344,11 @@ public sealed class AssistantApprovalTests : IClassFixture<FoundationWebApplicat
         }
 
         using var client = CreateClient(IsmRoles.Manager, restaurantB);
+        var threadResponse = await client.PostAsJsonAsync("/api/assistant/threads", new { specialistId = "stock" });
+        var thread = await threadResponse.Content.ReadFromJsonAsync<AssistantConversationResponse>();
         var crossTenant = await client.PostAsJsonAsync("/api/assistant/tools/execute", new
         {
+            threadId = thread!.Thread.Id,
             toolName = "stock.getProduct",
             input = new { productId }
         });
@@ -354,12 +358,22 @@ public sealed class AssistantApprovalTests : IClassFixture<FoundationWebApplicat
 
         var promptTenant = await client.PostAsJsonAsync("/api/assistant/tools/execute", new
         {
+            threadId = thread.Thread.Id,
             toolName = "stock.getProduct",
             input = new { productId, restaurantId = restaurantA }
         });
         var promptDenied = await promptTenant.Content.ReadFromJsonAsync<AgentToolResult>();
         promptDenied!.Code.Should().Be(AgentDecisionCode.Denied);
         promptDenied.Message.Should().Contain("tenant");
+
+        using var otherRestaurantClient = CreateClient(IsmRoles.Manager, restaurantA);
+        var foreignThread = await otherRestaurantClient.PostAsJsonAsync("/api/assistant/tools/execute", new
+        {
+            threadId = thread.Thread.Id,
+            toolName = "stock.getProduct",
+            input = new { productId }
+        });
+        foreignThread.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -375,8 +389,12 @@ public sealed class AssistantApprovalTests : IClassFixture<FoundationWebApplicat
         }
 
         using var client = CreateClient(IsmRoles.Manager, restaurantId);
+        var threadResponse = await client.PostAsJsonAsync("/api/assistant/threads", new { specialistId = "stock" });
+        var thread = await threadResponse.Content.ReadFromJsonAsync<AssistantConversationResponse>();
         var response = await client.PostAsJsonAsync("/api/assistant/tools/execute", new
         {
+            threadId = thread!.Thread.Id,
+            specialist = "finance",
             toolName = "stock.getProduct",
             correlationId = "p1-test-correlation",
             input = new { productId }
@@ -387,6 +405,42 @@ public sealed class AssistantApprovalTests : IClassFixture<FoundationWebApplicat
         result.CorrelationId.Should().Be("p1-test-correlation");
         result.Evidence.Should().ContainSingle().Which.SourceType.Should().Be("Product");
         result.DurationMilliseconds.Should().BeGreaterThanOrEqualTo(0);
+    }
+
+    [Fact]
+    public async Task Assistant_ToolExecution_RejectsToolFromAnotherSpecialist()
+    {
+        using var client = CreateClient(IsmRoles.Manager, 9984);
+        var threadResponse = await client.PostAsJsonAsync("/api/assistant/threads", new { specialistId = "stock" });
+        var thread = await threadResponse.Content.ReadFromJsonAsync<AssistantConversationResponse>();
+        var response = await client.PostAsJsonAsync("/api/assistant/tools/execute", new
+        {
+            threadId = thread!.Thread.Id,
+            toolName = "finance.getRevenueSummary",
+            input = new { }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = await response.Content.ReadFromJsonAsync<AgentToolResult>();
+        result!.Code.Should().Be(AgentDecisionCode.Denied);
+        result.Data.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Assistant_StockThread_RejectsFinancialQuestionWithoutReturningFinancialFacts()
+    {
+        using var client = CreateClient(IsmRoles.Manager, 9986);
+        var created = await client.PostAsJsonAsync("/api/assistant/threads", new { specialistId = "stock" });
+        created.StatusCode.Should().Be(HttpStatusCode.OK);
+        var thread = await created.Content.ReadFromJsonAsync<AssistantConversationResponse>();
+
+        var response = await client.PostAsJsonAsync($"/api/assistant/threads/{thread!.Thread.Id}/messages", new { message = "Qual foi o faturamento deste mês?" });
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var conversation = await response.Content.ReadFromJsonAsync<AssistantConversationResponse>();
+        var answer = conversation!.Messages.Last(message => message.Role == "assistant");
+        answer.Content.Should().Contain("só pode consultar informações dessa área");
+        answer.Content.Should().NotContain("R$");
+        answer.Source.Should().Be("Política de escopo do ISM");
     }
 
     [Fact]
@@ -466,7 +520,7 @@ public sealed class AssistantApprovalTests : IClassFixture<FoundationWebApplicat
         var denied = await client.PostAsJsonAsync($"/api/assistant/threads/{conversation.Thread.Id}/messages", new { message = "Qual foi meu faturamento?" });
         denied.StatusCode.Should().Be(HttpStatusCode.OK);
         var updated = await denied.Content.ReadFromJsonAsync<AssistantConversationResponse>();
-        updated!.Messages.Last().Content.Should().Contain("vinculada ao especialista");
+        updated!.Messages.Last().Content.Should().Contain("especialista de estoque");
         updated.Thread.SpecialistId.Should().Be("stock");
 
         var reloaded = await client.GetFromJsonAsync<AssistantConversationResponse>($"/api/assistant/threads/{conversation.Thread.Id}");

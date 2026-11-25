@@ -303,6 +303,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAgentTool, DishPriceSimulationTool>();
         services.AddScoped<IAgentTool, SupplierComparisonTool>();
         services.AddScoped<IAgentTool, FinancePeriodTool>();
+        services.AddScoped<IAgentTool, LatestOrderTool>();
+        services.AddScoped<IAgentTool, RecentOrdersTool>();
+        services.AddScoped<IAgentTool, StockOverviewTool>();
+        services.AddScoped<IAgentTool, DishOverviewTool>();
         services.AddScoped<IAssistantService, AssistantService>();
         services.AddHostedService<AgentsBackgroundScheduler>();
         services.AddHostedService<NotificationDeliveryWorker>();

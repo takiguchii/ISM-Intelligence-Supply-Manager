@@ -2,8 +2,11 @@ using ISM.Application.Agents;
 using ISM.Application.DTOs.Assistant;
 using ISM.Application.Interfaces.Assistant;
 using ISM.Application.Security;
+using ISM.Domain.Modules.Assistant;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 
 namespace ISM.API.Controllers.Assistant;
 
@@ -84,8 +87,28 @@ public sealed class AssistantController(IAssistantService service, IAgentToolReg
     public ActionResult<IReadOnlyCollection<AgentToolDescriptor>> Tools() => Ok(tools.List());
 
     [HttpPost("tools/execute")]
-    public async Task<ActionResult<AgentToolResult>> ExecuteTool([FromBody] AgentToolExecuteRequest request, CancellationToken cancellationToken)
-        => Ok(await tools.ExecuteAsync(request, cancellationToken));
+    public async Task<ActionResult<AgentToolResult>> ExecuteTool([FromBody] ExecuteAgentToolRequest request, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid) return ValidationProblem(ModelState);
+        var conversation = await service.GetThreadAsync(request.ThreadId, cancellationToken);
+        if (conversation is null) return NotFound();
+
+        var tool = tools.List().FirstOrDefault(item => string.Equals(item.ToolName, request.ToolName, StringComparison.OrdinalIgnoreCase));
+        var threadSpecialist = conversation.Thread.SpecialistId;
+        if (threadSpecialist != AssistantSpecialists.General && tool is not null
+            && !string.Equals(threadSpecialist, tool.Specialist, StringComparison.OrdinalIgnoreCase))
+        {
+            return Ok(await tools.ExecuteAsync(new AgentToolExecuteRequest(request.ToolName, request.Input, request.CorrelationId)
+            {
+                Specialist = threadSpecialist
+            }, cancellationToken));
+        }
+
+        return Ok(await tools.ExecuteAsync(new AgentToolExecuteRequest(request.ToolName, request.Input, request.CorrelationId)
+        {
+            Specialist = tool?.Specialist ?? threadSpecialist
+        }, cancellationToken));
+    }
 
     [HttpGet("threads")]
     public Task<IReadOnlyList<AssistantThreadResponse>> Threads([FromQuery] int page = 1, [FromQuery] int limit = 20, CancellationToken cancellationToken = default)
@@ -141,3 +164,9 @@ public sealed class AssistantController(IAssistantService service, IAgentToolReg
     private static bool IsSupportedImage(string? contentType)
         => contentType is "image/png" or "image/jpeg" or "image/webp";
 }
+
+public sealed record ExecuteAgentToolRequest(
+    [Range(1, int.MaxValue)] int ThreadId,
+    [Required, StringLength(100)] string ToolName,
+    JsonElement Input,
+    string? CorrelationId = null);
