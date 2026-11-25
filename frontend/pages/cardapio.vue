@@ -32,6 +32,7 @@ interface Dish {
   ingredients?: Ingredient[]
   createdAtUtc?: string
   updatedAtUtc?: string
+  iFoodItemId?: string | null
 }
 
 interface ApiError {
@@ -1167,6 +1168,11 @@ onMounted(loadPage)
                 <span v-if="dish.highlight"
                   class="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-amber-950/80 text-amber-300 border border-amber-800/60 backdrop-blur-md">
                   Destaque
+                </span>
+
+                <span v-if="dish.iFoodItemId"
+                  class="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider backdrop-blur-md border bg-emerald-950/80 text-emerald-300 border-emerald-800/60">
+                  No iFood
                 </span>
               </div>
             </div>

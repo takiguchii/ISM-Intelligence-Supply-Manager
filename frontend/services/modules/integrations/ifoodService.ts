@@ -21,6 +21,19 @@ export interface TestIFoodConfigResultDto {
   latencyMs: number;
 }
 
+// Espelha ISM.Application.DTOs.Menu.IFoodCatalogDtos (backend)
+export interface IFoodCatalogStatusDto {
+  totalCategories: number;
+  categoriesSynced: number;
+  totalDishes: number;
+  dishesSynced: number;
+}
+
+export interface IFoodCatalogSyncResultDto {
+  categoriesSynced: number;
+  itemsSynced: number;
+}
+
 const BASE_URL = "/api/me/restaurant/ifood-config";
 
 export const ifoodService = {
@@ -28,5 +41,12 @@ export const ifoodService = {
   updateConfig: (dto: UpdateIFoodConfigDto) =>
     apiClientWithAuth<void>(BASE_URL, { method: "PUT", body: dto }),
   testConfig: () =>
-    apiClientWithAuth<TestIFoodConfigResultDto>(`${BASE_URL}/test`, { method: "POST" })
+    apiClientWithAuth<TestIFoodConfigResultDto>(`${BASE_URL}/test`, { method: "POST" }),
+
+  async syncCatalog(): Promise<IFoodCatalogSyncResultDto> {
+    return apiClientWithAuth<IFoodCatalogSyncResultDto>("/api/menu/ifood-catalog/sync", { method: "POST" });
+  },
+  async getCatalogStatus(): Promise<IFoodCatalogStatusDto> {
+    return apiClientWithAuth<IFoodCatalogStatusDto>("/api/menu/ifood-catalog/status");
+  }
 };

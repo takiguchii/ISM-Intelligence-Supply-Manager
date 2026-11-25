@@ -42,6 +42,8 @@ export interface DishDto {
   ingredients?: DishIngredientDto[];
   createdAtUtc?: string;
   updatedAtUtc?: string;
+  // Preenchido pelo backend após a sincronização com o iFood (DishResponse.IFoodItemId)
+  iFoodItemId?: string | null;
 }
 
 export interface CreateDishRequest {
