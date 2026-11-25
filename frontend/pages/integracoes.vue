@@ -6,7 +6,7 @@ import { apiClientWithAuth } from "~/services/api/client";
 import { useAuthStore } from "~/stores/auth";
 import ImportConfirmationStep from "~/components/import/ImportConfirmationStep.vue";
 import ImportHistoryStep from "~/components/import/ImportHistoryStep.vue";
-import { ifoodService, type IFoodConfigDto, type TestIFoodConfigResultDto } from "~/services/modules/integrations/ifoodService";
+import { ifoodService, type IFoodConfigDto, type TestIFoodConfigResultDto, type IFoodCatalogStatusDto } from "~/services/modules/integrations/ifoodService";
 
 
 const runtimeConfig = useRuntimeConfig();
@@ -155,6 +155,17 @@ async function testIFoodConfig() {
   ifoodTesting.value = true;
   try { ifoodTestResult.value = await ifoodService.testConfig(); }
   finally { ifoodTesting.value = false; }
+}
+
+const ifoodSyncing = ref(false);
+const ifoodCatalogStatus = ref<IFoodCatalogStatusDto | null>(null);
+
+async function syncCatalog() {
+  ifoodSyncing.value = true;
+  try {
+    await ifoodService.syncCatalog();
+    ifoodCatalogStatus.value = await ifoodService.getCatalogStatus();
+  } finally { ifoodSyncing.value = false; }
 }
 
 const handleLogout = () => {
@@ -457,6 +468,16 @@ onMounted(async () => {
           <p v-if="ifoodTestResult" :class="ifoodTestResult.success ? 'text-emerald-400' : 'text-red-400'" class="text-xs">
             {{ ifoodTestResult.success ? "Conectado com sucesso!" : ifoodTestResult.errorMessage }}
           </p>
+          <div v-if="ifoodConfig?.hasCredentials" class="pt-4 border-t border-zinc-800 space-y-2">
+            <button @click="syncCatalog" :disabled="ifoodSyncing"
+              class="w-full px-4 py-2 rounded-lg border border-zinc-700 text-xs font-semibold text-zinc-200 disabled:opacity-50">
+              Sincronizar cardápio
+            </button>
+            <p v-if="ifoodCatalogStatus" class="text-xs text-zinc-400">
+              {{ ifoodCatalogStatus.dishesSynced }}/{{ ifoodCatalogStatus.totalDishes }} pratos ·
+              {{ ifoodCatalogStatus.categoriesSynced }}/{{ ifoodCatalogStatus.totalCategories }} categorias
+            </p>
+          </div>
         </div>
       </div>
 
