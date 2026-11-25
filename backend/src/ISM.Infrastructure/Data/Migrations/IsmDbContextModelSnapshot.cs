@@ -388,6 +388,68 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.ToTable("suppliers", (string)null);
                 });
 
+            modelBuilder.Entity("ISM.Domain.Entities.TelegramConnection", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("AlertsEnabled")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<long?>("ChatId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("CodeExpiresAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("CodeHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<long?>("ExpectedUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("LastMessageAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<long>("LastUpdateId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("RestaurantId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ThreadId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.HasKey("UserId");
+
+                    b.HasIndex("ChatId")
+                        .IsUnique();
+
+                    b.HasIndex("CodeHash")
+                        .IsUnique();
+
+                    b.ToTable("telegram_connections", (string)null);
+                });
+
+            modelBuilder.Entity("ISM.Domain.Entities.TelegramPollingCursor", b =>
+                {
+                    b.Property<string>("BotUsername")
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<long>("Offset")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("BotUsername");
+
+                    b.ToTable("telegram_polling_cursors", (string)null);
+                });
+
             modelBuilder.Entity("ISM.Domain.Entities.TmpAuthorization", b =>
                 {
                     b.Property<int>("Id")
@@ -1691,6 +1753,15 @@ namespace ISM.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Restaurant");
+                });
+
+            modelBuilder.Entity("ISM.Domain.Entities.TelegramConnection", b =>
+                {
+                    b.HasOne("ISM.Domain.Entities.User", null)
+                        .WithOne()
+                        .HasForeignKey("ISM.Domain.Entities.TelegramConnection", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ISM.Domain.Entities.TmpAuthorization", b =>

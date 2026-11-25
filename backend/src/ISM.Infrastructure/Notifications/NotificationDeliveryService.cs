@@ -1,3 +1,4 @@
+using ISM.Application.Interfaces.Telegram;
 using ISM.Application.DTOs.Notifications;
 using ISM.Application.Services.Notifications;
 using ISM.Application.Interfaces.Notifications;
@@ -11,9 +12,9 @@ namespace ISM.Infrastructure.Notifications;
 
 public sealed class NotificationDeliveryService(IsmDbContext db, INotificationTransport transport,
     IOptions<SmtpOptions> smtp, IOptions<WhatsAppOptions> whatsapp,
-    ILogger<NotificationDeliveryService> logger) : INotificationDeliveryService
+    ILogger<NotificationDeliveryService> logger, ITelegramTransport? telegram = null, IOptions<TelegramOptions>? telegramOptions = null) : INotificationDeliveryService
 {
-    public NotificationChannelsStatus GetChannelsStatus() => new(smtp.Value.IsConfigured, whatsapp.Value.IsConfigured);
+    public NotificationChannelsStatus GetChannelsStatus() => new(smtp.Value.IsConfigured, whatsapp.Value.IsConfigured, telegramOptions?.Value.IsConfigured == true);
 
     public async Task<NotificationScenarioCatalog> GetScenariosAsync(int userId, CancellationToken ct = default)
     {
@@ -58,8 +59,11 @@ public sealed class NotificationDeliveryService(IsmDbContext db, INotificationTr
         var user = await RequireUserAsync(userId, ct);
         var message = await PreviewAsync(userId, channel, scenario, alertId, ct);
         var channels = GetChannelsStatus();
+        var telegramLink = channel == "telegram" ? await db.Set<TelegramConnection>().AsNoTracking()
+            .FirstOrDefaultAsync(t => t.UserId == userId && t.RestaurantId == user.RestaurantId && t.AlertsEnabled && t.ChatId != null, ct) : null;
         var recipient = channel switch
         {
+            "telegram" when channels.TelegramConfigured && telegramLink?.ChatId != null => telegramLink.ChatId.Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
             "email" when channels.EmailConfigured && user.EmailNotificationsEnabled => user.NotificationEmailAddress ?? user.Email,
             "whatsapp" when channels.WhatsAppConfigured && user.WhatsAppNotificationsEnabled && user.WhatsAppPhone != null => user.WhatsAppPhone,
             _ => throw new InvalidOperationException("Configure o canal, salve suas preferências e ative o recebimento antes de enviar um teste.")
@@ -100,11 +104,15 @@ public sealed class NotificationDeliveryService(IsmDbContext db, INotificationTr
             if (delivery.Status is not ("Pending" or "Sending") ||
                 (delivery.Status == "Sending" && delivery.LeaseExpiresAtUtc > DateTime.UtcNow)) continue;
             var user = await db.Users.IgnoreQueryFilters().AsNoTracking().FirstOrDefaultAsync(u => u.Id == delivery.UserId, ct);
+            var telegramLink = delivery.Channel == "telegram" ? await db.Set<TelegramConnection>().AsNoTracking()
+                .FirstOrDefaultAsync(t => t.UserId == delivery.UserId, ct) : null;
             var enabled = user is { IsActive: true } && user.RestaurantId == delivery.RestaurantId &&
                 user.Role is "Admin" or "Manager" &&
                 (delivery.Alert == null || (!delivery.Alert.IsDismissed && NotificationPolicy.CanReceive(user, delivery.Alert))) &&
                 (delivery.Channel == "email" ? user.EmailNotificationsEnabled && delivery.Recipient == (user.NotificationEmailAddress ?? user.Email)
-                    : user.WhatsAppNotificationsEnabled && delivery.Recipient == user.WhatsAppPhone);
+                    : delivery.Channel == "whatsapp" ? user.WhatsAppNotificationsEnabled && delivery.Recipient == user.WhatsAppPhone
+                    : delivery.Channel == "telegram" && telegramLink is { AlertsEnabled: true, ChatId: not null } &&
+                      telegramLink.RestaurantId == delivery.RestaurantId && delivery.Recipient == telegramLink.ChatId.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
             if (!enabled)
             {
                 delivery.Status = "Cancelled";
@@ -113,7 +121,7 @@ public sealed class NotificationDeliveryService(IsmDbContext db, INotificationTr
                 continue;
             }
             var channels = GetChannelsStatus();
-            if (delivery.Channel == "email" ? !channels.EmailConfigured : !channels.WhatsAppConfigured)
+            if (delivery.Channel == "email" ? !channels.EmailConfigured : delivery.Channel == "whatsapp" ? !channels.WhatsAppConfigured : !channels.TelegramConfigured)
             {
                 delivery.Status = "Pending";
                 delivery.LeaseExpiresAtUtc = null;
@@ -136,7 +144,9 @@ public sealed class NotificationDeliveryService(IsmDbContext db, INotificationTr
             try
             {
                 if (delivery.Channel == "email") await transport.SendEmailAsync(delivery, ct);
-                else await transport.SendWhatsAppAsync(delivery, ct);
+                else if (delivery.Channel == "whatsapp") await transport.SendWhatsAppAsync(delivery, ct);
+                else if (telegram != null) await telegram.SendAsync(long.Parse(delivery.Recipient, System.Globalization.CultureInfo.InvariantCulture), delivery.Body, ct);
+                else throw new InvalidOperationException("Telegram indisponível.");
                 delivery.Status = "Sent";
                 delivery.SentAtUtc = DateTime.UtcNow;
                 delivery.LastError = null;
@@ -147,6 +157,7 @@ public sealed class NotificationDeliveryService(IsmDbContext db, INotificationTr
                 delivery.Status = delivery.Attempts >= 3 ? "Failed" : "Pending";
                 delivery.LastError = delivery.Channel == "email"
                     ? "O servidor SMTP não confirmou o envio. Confira conexão, autenticação e remetente."
+                    : delivery.Channel == "telegram" ? "O Telegram não confirmou o envio. Confira a conexão com o bot."
                     : "O WhatsApp não confirmou o envio. Confira a conexão do número e o destinatário.";
                 delivery.NextAttemptAtUtc = DateTime.UtcNow.AddSeconds(30 * delivery.Attempts);
                 logger.LogWarning("Falha na notificação {DeliveryId}, tentativa {Attempt}, tipo {ErrorType}",

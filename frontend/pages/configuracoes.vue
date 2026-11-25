@@ -1228,6 +1228,7 @@ onMounted(async () => {
         <!-- Seção Notificações -->
         <section v-else-if="activeSectionId === 'notifications'" class="space-y-6">
           <NotificationSettings />
+          <NuxtLink to="/integracoes#telegram" class="mt-5 block rounded-xl border border-indigo-200 p-4 text-sm font-semibold text-indigo-700 dark:border-indigo-900 dark:text-indigo-300">Configurar Telegram em Integrações →</NuxtLink>
         </section>
 
         <!-- Seção Segurança -->

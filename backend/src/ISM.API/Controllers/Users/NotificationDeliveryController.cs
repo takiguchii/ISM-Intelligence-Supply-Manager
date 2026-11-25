@@ -44,6 +44,6 @@ public sealed class TestNotificationRequest
     public string Scenario { get; set; } = "connectivity";
     [Range(1, int.MaxValue)]
     public int? AlertId { get; set; }
-    [Required, RegularExpression("^(email|whatsapp)$")]
+    [Required, RegularExpression("^(email|whatsapp|telegram)$")]
     public string Channel { get; set; } = string.Empty;
 }

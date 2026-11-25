@@ -503,6 +503,23 @@ public sealed class IsmDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+        modelBuilder.Entity<TelegramConnection>(builder =>
+        {
+            builder.ToTable("telegram_connections");
+            builder.HasKey(x => x.UserId);
+            builder.HasIndex(x => x.ChatId).IsUnique();
+            builder.HasIndex(x => x.CodeHash).IsUnique();
+            builder.Property(x => x.CodeHash).HasMaxLength(64);
+            builder.Property(x => x.Version).IsConcurrencyToken();
+            builder.HasOne<User>().WithOne().HasForeignKey<TelegramConnection>(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<TelegramPollingCursor>(builder =>
+        {
+            builder.ToTable("telegram_polling_cursors");
+            builder.HasKey(x => x.BotUsername);
+            builder.Property(x => x.BotUsername).HasMaxLength(32);
+        });
+
         modelBuilder.Entity<User>(builder =>
         {
             builder.ToTable("users");

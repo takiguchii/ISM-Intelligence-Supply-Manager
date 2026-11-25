@@ -64,6 +64,12 @@ public static class ServiceCollectionExtensions
                     PermitLimit = 30, Window = TimeSpan.FromMinutes(1), QueueLimit = 0
                 }));
         });
+        services.Configure<ISM.Application.Interfaces.Telegram.TelegramOptions>(configuration.GetSection("Telegram"));
+        services.AddScoped<TelegramUserContext>();
+        services.AddScoped<ISM.Domain.Interfaces.ITelegramRepository, ISM.Infrastructure.Repositories.Telegram.TelegramRepository>();
+        services.AddScoped<ISM.Application.Interfaces.Telegram.ITelegramService, ISM.Application.Services.Telegram.TelegramService>();
+        services.AddSingleton<ISM.Application.Interfaces.Telegram.ITelegramTransport, ISM.Infrastructure.Telegram.TelegramTransport>();
+        services.AddHostedService<TelegramWorker>();
         services.AddHttpContextAccessor();
         services.AddHttpClient();
         services.AddSingleton(TimeProvider.System);

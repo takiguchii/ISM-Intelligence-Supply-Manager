@@ -5,7 +5,7 @@ namespace ISM.Application.Interfaces.Notifications;
 
 public sealed record NotificationDeliveryView(long Id, string Channel, string Status, string Subject,
     int Attempts, DateTime CreatedAtUtc, DateTime? SentAtUtc, string? LastError, bool IsTest = false, string? Scenario = null, int? SourceAlertId = null);
-public sealed record NotificationChannelsStatus(bool EmailConfigured, bool WhatsAppConfigured);
+public sealed record NotificationChannelsStatus(bool EmailConfigured, bool WhatsAppConfigured, bool TelegramConfigured = false);
 
 public interface INotificationDeliveryService
 {
