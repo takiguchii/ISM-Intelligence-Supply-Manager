@@ -606,7 +606,9 @@ public sealed class AssistantService(
             return new("deterministic_fallback", result.Message, "Dados determinísticos do ISM", "Nenhuma ação foi executada.") { Specialist = intent.Specialist, ToolName = intent.ToolName, DecisionCode = result.Code, Evidence = result.Evidence };
 
         var formatted = DescribeToolResult(result);
-        var synthesized = await SynthesizeAnswerAsync(result.Message, formatted, cancellationToken, intent.ToolName, question);
+        var synthesized = intent.ToolName == "sales.getDishInsights"
+            ? new LlmTextResult(false, null, "Ranking, lucro e previsão usam formatação determinística para preservar valores e contexto.")
+            : await SynthesizeAnswerAsync(result.Message, formatted, cancellationToken, intent.ToolName, question);
         var warning = result.Code == AgentDecisionCode.CanAct ? null : "A resposta foi limitada pela disponibilidade ou qualidade dos dados; nenhuma ação foi executada.";
         var source = synthesized.Success ? $"Dados do ISM · síntese local · {intent.ToolName}" : $"Dados determinísticos do ISM · {intent.ToolName}";
         var answer = EnsureEntityNames(synthesized.Text ?? formatted, GetEntityNames(result));
@@ -668,7 +670,15 @@ public sealed class AssistantService(
             : string.Empty;
         var systemPrompt = generalInstructions + domainInstructions;
         var prompt = $"Resultado da consulta: {toolResult}\nFatos verificados e referência de formatação: {factualAnswer}\n\nEscreva a resposta final para o cliente.";
-        var result = await llm.CompleteAsync(systemPrompt, prompt, cancellationToken);
+        LlmTextResult result;
+        try
+        {
+            result = await llm.CompleteAsync(systemPrompt, prompt, cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return new(false, null, $"Síntese indisponível; usando fatos determinísticos. {ex.Message}");
+        }
         if (!result.Success || string.IsNullOrWhiteSpace(result.Text)) return new(false, null, result.Error);
         var response = result.Text.Trim();
         if (response.Length > 1800) return new(false, null, "Resposta excede o limite para síntese.");
@@ -804,8 +814,10 @@ public sealed class AssistantService(
             "suppliers.compareOffers" => FormatSupplierResult(root, result.Message),
             "finance.getPeriodSummary" => $"Período: {Text("StartUtc")} a {Text("EndUtc")}\n• Vendas de pedidos pagos: R$ {Money("PaidSalesRevenue")}\n• Outras receitas liquidadas: R$ {Money("SettledOtherIncome")}\n• Despesas liquidadas: R$ {Money("SettledExpenses")}\n• Fluxo líquido: R$ {Money("NetCashFlow")}\n{result.Message}",
             "finance.getRevenueSummary" => $"Resumo financeiro do mês\n• Vendas de pedidos pagos: R$ {Money("SalesRevenue")}\n• Outras receitas liquidadas: R$ {Money("OtherIncome")}\n• Despesas liquidadas: R$ {Money("Expenses")}\n• Contas a receber: R$ {Money("AccountsReceivable")}\n• Contas a pagar: R$ {Money("AccountsPayable")}",
+            "sales.getDishInsights" => FormatSalesInsights(root, result.Message),
+            "finance.forecastRevenue" => $"Estimativa de faturamento para os próximos 7 dias: R$ {Money("Next7DaysEstimate")}\n• Últimos 7 dias: R$ {Money("Last7Days")}\n• 7 dias anteriores: R$ {Money("Previous7Days")}\n• Variação observada: {Text("WeeklyChangePercent")}%\n{Text("Method")}\n{result.Message}",
             "stock.getProduct" => $"{Text("Name")}\n• Saldo atual: {Text("CurrentQuantity")} {Text("Unit")}\n• Mínimo: {Text("MinimumQuantity")} {Text("Unit")}\n• Custo médio: R$ {Money("AverageCost")}\n• Situação: {(root.GetProperty("IsCritical").GetBoolean() ? "abaixo do mínimo" : "acima do mínimo")}\n{result.Message}",
-            "pricing.getDishCost" => $"{Text("Name")}\n• Preço atual: R$ {Money("Price")}\n• Custo cadastrado: R$ {Money("Cost")}\n• Margem alvo: {Text("TargetMarginPercent")}%\n{result.Message}",
+            "pricing.getDishCost" => $"{Text("Name")}\n• Preço atual: R$ {Money("Price")}\n• Custo pela ficha técnica: R$ {Money("Cost")}\n• Margem bruta estimada: {Text("GrossMarginPercent")}%\n• Margem alvo cadastrada: {(Text("TargetMarginPercent") is "" or "null" ? "não definida" : $"{Text("TargetMarginPercent")}%")}\n{result.Message}",
             "assistant.getAlertContext" => $"Alerta: {Text("Title")}. {Text("Message")}. {result.Message}",
             "orders.getLatest" => FormatOrderResult(root, result.Message),
             "orders.getRecent" => $"Vendas dos pedidos pagos consultados: R$ {Money("PaidSales")}\n{result.Message}",
@@ -828,15 +840,36 @@ public sealed class AssistantService(
             "pricing.simulateDishPrice" => Has("DishName", "CurrentCmvPercent", "VerifiedCost", "CurrentPrice", "SuggestedPrice"),
             "suppliers.compareOffers" => Has("ProductName", "Unit", "Offers") && root.GetProperty("Offers").ValueKind == JsonValueKind.Array,
             "finance.getPeriodSummary" => Has("StartUtc", "EndUtc", "PaidSalesRevenue", "SettledOtherIncome", "SettledExpenses", "NetCashFlow"),
+            "sales.getDishInsights" => Has("Ranking", "PaidOrders", "Metric", "IsForecast") && root.GetProperty("Ranking").ValueKind == JsonValueKind.Array,
+            "finance.forecastRevenue" => Has("Next7DaysEstimate", "Last7Days", "Previous7Days", "WeeklyChangePercent", "Method"),
             "finance.getRevenueSummary" => Has("SalesRevenue", "OtherIncome", "Expenses", "AccountsReceivable", "AccountsPayable"),
             "stock.getProduct" => Has("Name", "CurrentQuantity", "MinimumQuantity", "AverageCost", "IsCritical"),
-            "pricing.getDishCost" => Has("Name", "Price", "Cost", "TargetMarginPercent"),
+            "pricing.getDishCost" => Has("Name", "Price", "Cost", "GrossMarginPercent", "TargetMarginPercent"),
             "orders.getLatest" => Has("OrderId", "Status", "Total", "Items"),
             "orders.getRecent" => Has("PaidSales"),
             "stock.getOverview" => Has("ProductCount", "CriticalCount", "Products") && root.GetProperty("Products").ValueKind == JsonValueKind.Array,
             "pricing.getDishOverview" => Has("DishCount", "Dishes") && root.GetProperty("Dishes").ValueKind == JsonValueKind.Array,
             _ => true
         };
+    }
+
+    private static string FormatSalesInsights(JsonElement root, string message)
+    {
+        var isForecast = root.GetProperty("IsForecast").GetBoolean();
+        var isProfit = root.GetProperty("Metric").GetString() == "profit";
+        string Row(JsonElement item) => isProfit
+            ? $"{item.GetProperty("Dish").GetString()} — lucro bruto R$ {item.GetProperty("Profit").GetDecimal().ToString("N2", CultureInfo.GetCultureInfo("pt-BR"))} ({item.GetProperty("Quantity")} unidades)"
+            : $"{item.GetProperty("Dish").GetString()} — {item.GetProperty("Quantity")} unidades, R$ {item.GetProperty("Revenue").GetDecimal().ToString("N2", CultureInfo.GetCultureInfo("pt-BR"))} em vendas";
+        var ranking = root.GetProperty("Ranking").EnumerateArray().ToArray();
+        var title = isForecast ? "Estimativa de pratos para os próximos 7 dias" : isProfit ? "Pratos com maior lucro bruto no período" : "Pratos mais vendidos no período";
+        var rows = ranking.Select((item, index) => $"{index + 1}. {Row(item)}");
+        if (root.TryGetProperty("LeastSold", out var least) && least.ValueKind == JsonValueKind.Array && least.GetArrayLength() > 0)
+        {
+            var tied = string.Join(", ", least.EnumerateArray().Select(item => item.GetProperty("Dish").GetString()));
+            rows = rows.Append($"Menos vendido{(least.GetArrayLength() > 1 ? "s" : string.Empty)}: {tied} ({least[0].GetProperty("Quantity")} unidades cada)");
+        }
+        var note = root.TryGetProperty("ForecastNote", out var forecastNote) && forecastNote.ValueKind == JsonValueKind.String ? $"\n{forecastNote.GetString()}" : string.Empty;
+        return $"{title} ({root.GetProperty("PaidOrders")} pedidos pagos consultados):\n{string.Join("\n", rows)}{note}\n{message}";
     }
 
     private static string FormatOrderResult(JsonElement root, string message)

@@ -73,10 +73,22 @@ public sealed class AgentIntentRouterTests
     [InlineData("tem alguma cotação recente de arroz de carga kg?", "suppliers.compareOffers")]
     [InlineData("confira os preços recentes de arroz de carga kg", "suppliers.compareOffers")]
     [InlineData("quanto vendemos nos pedidos pagos recentes?", "orders.getRecent")]
+    [InlineData("quais pratos mais venderam este mês?", "sales.getDishInsights")]
+    [InlineData("previsão de vendas para a próxima semana", "sales.getDishInsights")]
+    [InlineData("previsão de faturamento para a próxima semana", "finance.forecastRevenue")]
+    [InlineData("o que mais nos deu lucro nessa última semana?", "sales.getDishInsights")]
+    [InlineData("qual prato foi mais vendido e menos vendido na semana?", "sales.getDishInsights")]
+    [InlineData("qual prato você acha que vai ter uma boa previsão com base nos nossos dados?", "sales.getDishInsights")]
     public void Resolve_Selects_domain_tool_for_actionable_questions(string question, string expectedTool)
     {
         var intent = _router.Resolve(question);
         intent.Should().NotBeNull();
         intent!.ToolName.Should().Be(expectedTool);
+        if (question.Contains("lucro", StringComparison.OrdinalIgnoreCase))
+            intent.Input.GetProperty("profit").GetBoolean().Should().BeTrue();
+        if (question.Contains("menos vendido", StringComparison.OrdinalIgnoreCase))
+            intent.Input.GetProperty("includeLeast").GetBoolean().Should().BeTrue();
+        if (question.Contains("boa previsão", StringComparison.OrdinalIgnoreCase))
+            intent.Input.GetProperty("forecast").GetBoolean().Should().BeTrue();
     }
 }

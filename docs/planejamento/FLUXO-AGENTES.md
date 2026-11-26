@@ -48,7 +48,13 @@ flowchart TD
 | `finance` | Resumo mensal; receitas, despesas e fluxo de período; pedidos recentes e vendas pagas | “Quanto entrou de receita neste mês?”, “Quanto pagamos de despesas?”, “Quanto vendemos nos pedidos pagos recentes?” |
 | `general` | Consulta simples encaminhada ao domínio apropriado ou coordenação de consultas de leitura entre domínios | “Como está o estoque do produto 1 e qual foi o faturamento do mês?” |
 
-As ferramentas expostas no registry são `stock.getProduct`, `stock.analyzeReplenishment`, `stock.getOverview`, `pricing.getDishCost`, `pricing.simulateDishPrice`, `pricing.getDishOverview`, `suppliers.compareOffers`, `finance.getRevenueSummary`, `finance.getPeriodSummary`, `orders.getRecent`, `orders.getLatest` e `assistant.getAlertContext`. O catálogo retornado pela API é a fonte atual da lista e dos metadados de ferramenta.
+As ferramentas expostas no registry são `stock.getProduct`, `stock.analyzeReplenishment`, `stock.getOverview`, `pricing.getDishCost`, `pricing.simulateDishPrice`, `pricing.getDishOverview`, `suppliers.compareOffers`, `finance.getRevenueSummary`, `finance.getPeriodSummary`, `finance.forecastRevenue`, `sales.getDishInsights`, `orders.getRecent`, `orders.getLatest` e `assistant.getAlertContext`. O catálogo retornado pela API é a fonte atual da lista e dos metadados de ferramenta.
+
+### Ranking e previsão de vendas
+
+`sales.getDishInsights` agrega quantidades, receita e lucro bruto realizado por prato em pedidos pagos e permite consultar períodos de até 366 dias. O lucro é a soma de `(preço no pedido - custo registrado no item) × quantidade`; sem custo confiável registrado, o resultado não representa lucro líquido contábil. O roteador entende perguntas de mais/menos vendidos, lucro por prato e formulações naturais de previsão. Para previsão, usa o volume dos últimos sete dias como estimativa de referência para os próximos sete, supondo padrão semelhante; não é um modelo sazonal e não considera feriados, eventos, clima ou estoque de ingredientes. Use o Assistente geral ou o especialista financeiro. A análise não efetua compras.
+
+`finance.forecastRevenue` compara a receita paga das duas últimas janelas semanais e projeta a seguinte usando a variação observada, limitada a +/-50%. Requer pedidos pagos nas janelas analisadas; com histórico insuficiente, informa que não é possível estimar. É uma projeção simples, sem sazonalidade ou garantia de resultado.
 
 ### Limite dos dados de fornecedores
 
@@ -83,6 +89,12 @@ No chat do ISM, abra uma conversa geral ou selecione o especialista adequado e p
 - Fornecedores: “Liste o histórico de compras do arroz de carga em kg.”
 - Financeiro: “Quanto entrou de receita e quanto saiu em despesas este mês?”
 - Geral: “Compare o custo do prato 1 com o faturamento do mês.”
+- Vendas: “Quais pratos mais venderam este mês?” ou “Quais foram os mais vendidos hoje?”
+- Lucro: “O que mais nos deu lucro na última semana?”
+- Comparação: “Qual foi nosso prato mais vendido e menos vendido?”
+- Previsão: “Com base na última semana, quais pratos devem vender mais na próxima semana?”
+- Previsão natural: “Qual prato você acha que vai ter uma boa previsão com base nos nossos dados?”
+- Financeiro: “Qual é a previsão de faturamento para a próxima semana?”
 
 Se uma thread de especialista recusar uma pergunta de outro domínio, inicie a conversa no Assistente geral. Uma resposta de fornecedores sobre compras anteriores não deve ser tratada como cotação atual.
 

@@ -173,3 +173,74 @@ public sealed class FinancePeriodTool(IFinanceEntryRepository entries, IOrderRep
         return input.ValueKind == JsonValueKind.Object && input.TryGetProperty(property, out var element) && element.ValueKind == JsonValueKind.String && DateTime.TryParse(element.GetString(), null, global::System.Globalization.DateTimeStyles.AdjustToUniversal, out value);
     }
 }
+
+public sealed record SalesRankingItem(string Dish, int Quantity, decimal Revenue, decimal Profit);
+public sealed record SalesInsightsOutput(DateTime StartUtc, DateTime EndUtc, int PaidOrders, IReadOnlyList<SalesRankingItem> Ranking, IReadOnlyList<SalesRankingItem> LeastSold, string Metric, bool IsForecast, string? ForecastNote);
+
+public sealed class SalesInsightsTool(IOrderRepository orders) : ReadOnlyAgentTool, IAgentTool
+{
+    public AgentToolDescriptor Descriptor { get; } = new("sales.getDishInsights", "finance", "2.0", "Consultar pratos mais/menos vendidos, lucro realizado por prato ou estimar demanda com base em pedidos pagos", AgentToolOperation.Read, ["Admin", "Manager"], 20, 5000, false, "medium") { InputSchema = new Dictionary<string, string> { ["startUtc"] = "ISO-8601 UTC datetime", ["endUtc"] = "ISO-8601 UTC datetime", ["forecast"] = "boolean", ["profit"] = "boolean", ["includeLeast"] = "boolean" } };
+
+    public async Task<AgentToolResult> ExecuteAsync(JsonElement input, AgentToolContext context, CancellationToken cancellationToken = default)
+    {
+        if (!IsSafeObject(input) || !TryDate(input, "startUtc", out var start) || !TryDate(input, "endUtc", out var end) || end <= start || (end-start).TotalDays > 366)
+            return Result(Descriptor, AgentDecisionCode.InsufficientData, null, "Informe um período UTC válido de até 366 dias.", context);
+        var forecast = input.TryGetProperty("forecast", out var forecastElement) && forecastElement.ValueKind == JsonValueKind.True;
+        var profit = input.TryGetProperty("profit", out var profitElement) && profitElement.ValueKind == JsonValueKind.True;
+        var includeLeast = input.TryGetProperty("includeLeast", out var leastElement) && leastElement.ValueKind == JsonValueKind.True;
+        var all = await orders.GetAllAsync(context.RestaurantId, cancellationToken);
+        var paid = all.Where(o => o.Status == OrderStatus.Paid && o.PaidAtUtc.HasValue && o.PaidAtUtc.Value >= start && o.PaidAtUtc.Value <= end).ToArray();
+        if (paid.Length == 0) return Result(Descriptor, AgentDecisionCode.InsufficientData, null, "Não há pedidos pagos no período informado.", context);
+        var ranked = paid.SelectMany(o => o.Items).GroupBy(i => i.DishName).Select(g => new SalesRankingItem(g.Key, g.Sum(i => i.Quantity), g.Sum(i => i.Quantity * i.UnitPrice), g.Sum(i => i.Quantity * (i.UnitPrice - i.UnitCost)))).ToArray();
+        var minQuantity = ranked.Min(i => i.Quantity);
+        var leastSold = includeLeast ? ranked.Where(i => i.Quantity == minQuantity).ToArray() : [];
+        var note = forecast ? "Estimativa de referência: repete o volume observado nos últimos 7 dias para os próximos 7, assumindo padrão semelhante; não modela sazonalidade, eventos ou mudanças futuras." : null;
+        if (forecast)
+        {
+            var recentStart = end.AddDays(-7);
+            var recent = paid.Where(o => o.PaidAtUtc >= recentStart).SelectMany(o => o.Items).GroupBy(i => i.DishName)
+                .ToDictionary(g => g.Key, g => new { Units = g.Sum(i => i.Quantity), Revenue = g.Sum(i => i.Quantity * i.UnitPrice), Profit = g.Sum(i => i.Quantity * (i.UnitPrice - i.UnitCost)) });
+            ranked = recent.Select(pair => new SalesRankingItem(pair.Key,
+                pair.Value.Units, decimal.Round(pair.Value.Revenue, 2), decimal.Round(pair.Value.Profit, 2))).ToArray();
+        }
+        var ordered = (profit ? ranked.OrderByDescending(i => i.Profit) : ranked.OrderByDescending(i => i.Quantity)).Take(10).ToArray();
+        if (forecast) leastSold = [];
+        var output = new SalesInsightsOutput(start, end, paid.Length, ordered, leastSold, profit ? "profit" : "quantity", forecast, note);
+        var message = forecast ? "Estimativa de demanda baseada nos itens de pedidos pagos recentes." : profit ? "Lucro bruto realizado calculado como preço vendido menos custo registrado nos itens pagos." : "Ranking de quantidades e receita dos itens de pedidos pagos.";
+        return Result(Descriptor, AgentDecisionCode.CanAct, output, message, context, [new("PaidOrders", $"{start:O}/{end:O}", context.RestaurantId, DateTime.UtcNow, end, "Itens agregados por prato em pedidos pagos do restaurante autenticado.")]);
+    }
+    private static bool TryDate(JsonElement input, string key, out DateTime value)
+    {
+        value = default;
+        return input.TryGetProperty(key, out var e) && e.ValueKind == JsonValueKind.String && DateTime.TryParse(e.GetString(), null, global::System.Globalization.DateTimeStyles.AdjustToUniversal, out value);
+    }
+}
+
+public sealed record RevenueForecastOutput(decimal Last7Days, decimal Previous7Days, decimal WeeklyChangePercent, decimal Next7DaysEstimate, int PaidOrdersLast28Days, string Method);
+
+public sealed class RevenueForecastTool(IOrderRepository orders) : ReadOnlyAgentTool, IAgentTool
+{
+    public AgentToolDescriptor Descriptor { get; } = new("finance.forecastRevenue", "finance", "1.0", "Estimar receita de pedidos pagos para os próximos sete dias usando comparação semanal", AgentToolOperation.Read, ["Admin", "Manager"], 1, 5000, false, "medium");
+
+    public async Task<AgentToolResult> ExecuteAsync(JsonElement input, AgentToolContext context, CancellationToken cancellationToken = default)
+    {
+        if (!IsSafeObject(input)) return Result(Descriptor, AgentDecisionCode.Denied, null, "Entrada inválida.", context);
+        var end = DateTime.UtcNow.Date;
+        var start = end.AddDays(-28);
+        var ordersInRange = (await orders.GetAllAsync(context.RestaurantId, cancellationToken))
+            .Where(o => o.Status == OrderStatus.Paid && o.PaidAtUtc >= start && o.PaidAtUtc < end).ToArray();
+        var daily = ordersInRange.SelectMany(o => o.Items.Select(i => (Date: o.PaidAtUtc!.Value.Date, Revenue: i.Quantity * i.UnitPrice)))
+            .GroupBy(i => i.Date).ToDictionary(g => g.Key, g => g.Sum(i => i.Revenue));
+        decimal SumDays(DateTime from, int days) => Enumerable.Range(0, days).Sum(i => daily.GetValueOrDefault(from.AddDays(i)));
+        var last = SumDays(end.AddDays(-7), 7);
+        var previous = SumDays(end.AddDays(-14), 7);
+        if (ordersInRange.Length == 0 || last + previous <= 0m)
+            return Result(Descriptor, AgentDecisionCode.InsufficientData, null, "Não há vendas pagas suficientes nos últimos 14 dias para projetar o faturamento.", context);
+        var change = previous > 0m ? (last - previous) / previous * 100m : 0m;
+        var estimate = Math.Max(0m, last * (1m + Math.Clamp(change, -50m, 50m) / 100m));
+        var output = new RevenueForecastOutput(decimal.Round(last, 2), decimal.Round(previous, 2), decimal.Round(change, 2), decimal.Round(estimate, 2), ordersInRange.Length,
+            "Compara duas janelas de sete dias e aplica a variação observada, limitada a +/-50%; não modela sazonalidade.");
+        return Result(Descriptor, AgentDecisionCode.CanAct, output, "Estimativa informativa baseada nas vendas pagas recentes; não é garantia de resultado.", context,
+            [new("PaidOrders", $"{start:yyyy-MM-dd}/{end:yyyy-MM-dd}", context.RestaurantId, DateTime.UtcNow, end, "Receita dos itens de pedidos pagos nos últimos 28 dias." )]);
+    }
+}

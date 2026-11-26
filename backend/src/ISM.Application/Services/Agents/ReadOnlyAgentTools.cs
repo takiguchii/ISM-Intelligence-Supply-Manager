@@ -56,7 +56,7 @@ public sealed class FinanceSummaryTool(IFinanceService finance) : ReadOnlyAgentT
     }
 }
 
-public sealed record DishCostToolOutput(int Id, string Name, decimal Price, decimal Cost, decimal? TargetMarginPercent, int PriceRevision);
+public sealed record DishCostToolOutput(int Id, string Name, decimal Price, decimal Cost, decimal GrossMarginPercent, decimal? TargetMarginPercent, int PriceRevision);
 
 public sealed class DishCostTool(IDishRepository dishes) : ReadOnlyAgentTool, IAgentTool
 {
@@ -68,7 +68,9 @@ public sealed class DishCostTool(IDishRepository dishes) : ReadOnlyAgentTool, IA
         var dish = await dishes.GetDishByIdAsync(dishId, cancellationToken);
         if (dish is null) return Result(Descriptor, AgentDecisionCode.InsufficientData, null, "Prato não encontrado.", context);
         if (dish.RestaurantId != context.RestaurantId) return Result(Descriptor, AgentDecisionCode.Denied, null, "Prato fora do tenant autenticado.", context);
-        return Result(Descriptor, AgentDecisionCode.CanAct, new DishCostToolOutput(dish.Id, dish.Name, dish.Price, dish.Cost, dish.TargetMarginPercent, dish.PriceRevision), "Custo do prato consultado.", context, [new("Dish", dish.Id.ToString(), context.RestaurantId, DateTime.UtcNow, dish.UpdatedAtUtc, "Preço, custo e revisão atuais do prato.")]);
+        var cost = dish.Ingredients.Count > 0 ? dish.Ingredients.Sum(i => i.Quantity * (i.Product?.AverageCost ?? 0m)) : dish.Cost;
+        var grossMargin = dish.Price > 0m ? decimal.Round((dish.Price - cost) / dish.Price * 100m, 2) : 0m;
+        return Result(Descriptor, AgentDecisionCode.CanAct, new DishCostToolOutput(dish.Id, dish.Name, dish.Price, decimal.Round(cost, 2), grossMargin, dish.TargetMarginPercent, dish.PriceRevision), "Custo e margem calculados com base na ficha técnica atual.", context, [new("Dish", dish.Id.ToString(), context.RestaurantId, DateTime.UtcNow, dish.UpdatedAtUtc, "Preço, ficha técnica e custos médios atuais dos insumos.")]);
     }
 }
 

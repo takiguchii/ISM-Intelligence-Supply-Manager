@@ -11,6 +11,8 @@ public sealed class AgentIntentRouter : IAgentIntentRouter
         {
             ["finance.getRevenueSummary"] = ("finance", Array.Empty<string>()),
             ["finance.getPeriodSummary"] = ("finance", ["startUtc", "endUtc"]),
+            ["sales.getDishInsights"] = ("finance", ["startUtc", "endUtc", "forecast", "profit", "includeLeast"]),
+            ["finance.forecastRevenue"] = ("finance", Array.Empty<string>()),
             ["stock.getProduct"] = ("stock", ["productId"]),
             ["stock.analyzeReplenishment"] = ("stock", ["productId"]),
             ["pricing.getDishCost"] = ("pricing", ["dishId"]),
@@ -27,6 +29,22 @@ public sealed class AgentIntentRouter : IAgentIntentRouter
     {
         if (string.IsNullOrWhiteSpace(message)) return null;
         var normalized = message.Trim().ToLowerInvariant();
+        if (new[] { "previsão de faturamento", "previsao de faturamento", "previsão de receita", "previsao de receita", "estimar o faturamento", "estime a receita" }.Any(normalized.Contains))
+            return Intent("finance", "finance.forecastRevenue", new { }, 0.96);
+        var asksDishSales = new[] { "mais vendido", "mais vendidos", "menos vendido", "menos vendidos", "mais vendeu", "mais venderam", "ranking de vendas", "lucro por prato", "lucro dos pratos", "deu lucro", "deu mais lucro", "previsão de vendas", "previsao de vendas", "previsão da semana", "previsao da semana", "próxima semana", "proxima semana" }.Any(normalized.Contains);
+        var asksNaturalDishForecast = (normalized.Contains("prato") || normalized.Contains("pratos"))
+            && new[] { "previs", "acha", "vai vender", "vender mais", "boa previsão", "boa previsao" }.Any(normalized.Contains);
+        if (asksDishSales || asksNaturalDishForecast)
+        {
+            var end = DateTime.UtcNow; var start = end.AddDays(-7);
+            if (normalized.Contains("mês") || normalized.Contains("mes")) start = new DateTime(end.Year, end.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            else if (normalized.Contains("dia") || normalized.Contains("hoje")) start = end.Date;
+            else if (normalized.Contains("semana") && !normalized.Contains("próxima") && !normalized.Contains("proxima")) start = end.AddDays(-7);
+            var forecast = normalized.Contains("previs") || normalized.Contains("próxima semana") || normalized.Contains("proxima semana") || normalized.Contains("vai vender");
+            var profit = new[] { "lucro", "lucrativo", "lucratividade", "ganho" }.Any(normalized.Contains);
+            var includeLeast = normalized.Contains("menos vendido") || normalized.Contains("menos vendidos") || normalized.Contains("menos lucr");
+            return Intent("finance", "sales.getDishInsights", new { startUtc = start, endUtc = end, forecast, profit, includeLeast }, 0.97);
+        }
         if (TryReadId(normalized, "produto", out var replenishmentProductId)
             && new[] { "repor", "reposição", "reposicao", "ruptura", "consumo médio", "consumo medio", "dias restantes", "consumo e os dias" }.Any(normalized.Contains))
             return Intent("stock", "stock.analyzeReplenishment", new { productId = replenishmentProductId }, 0.98);
@@ -114,6 +132,8 @@ public sealed class AgentIntentRouter : IAgentIntentRouter
     private static bool IsValidArgument(string name, JsonElement value)
         => name is "productId" or "dishId" or "alertId"
             ? value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var id) && id > 0
+            : name is "forecast" or "profit" or "includeLeast" ? value.ValueKind is JsonValueKind.True or JsonValueKind.False
+            : name is "startUtc" or "endUtc" ? value.ValueKind == JsonValueKind.String && DateTime.TryParse(value.GetString(), out _)
             : value.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(value.GetString());
 
     private static AgentIntent Intent(string specialist, string toolName, object input, double confidence)
