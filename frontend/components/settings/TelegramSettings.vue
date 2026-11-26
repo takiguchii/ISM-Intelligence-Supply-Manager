@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { telegramService, type TelegramStatus, type TelegramLink } from '~/services/modules/telegram/telegramService';
+const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false });
+const emit = defineEmits<{ connection: [connected: boolean] }>();
 const status = ref<TelegramStatus | null>(null);
 const link = ref<TelegramLink | null>(null);
 const busy = ref(false);
@@ -15,6 +17,7 @@ async function refresh() {
   const result = await telegramService.status();
   if (disposed) return;
   status.value = result;
+  emit('connection', result.connected);
   if (!botId.value && result.botId) botId.value = String(result.botId);
   if (result.telegramUserId) telegramUserId.value = String(result.telegramUserId);
   if (result.connected) { link.value = null; stopPolling(); }
@@ -59,8 +62,8 @@ onBeforeUnmount(() => { disposed = true; stopPolling(); });
 </script>
 
 <template>
-  <section class="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900/40 sm:p-6" aria-labelledby="telegram-title">
-    <div class="flex flex-wrap items-center justify-between gap-3">
+  <section :class="props.embedded ? 'space-y-4' : 'rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900/40 sm:p-6'" :aria-label="props.embedded ? 'Configuração do Telegram' : undefined" :aria-labelledby="props.embedded ? undefined : 'telegram-title'">
+    <div v-if="!props.embedded" class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h2 id="telegram-title" class="text-lg font-semibold">Telegram</h2>
         <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Converse com o assistente, consulte pedidos e cardápio e receba alertas do seu restaurante.</p>

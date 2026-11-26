@@ -6,6 +6,7 @@ import { apiClientWithAuth } from "~/services/api/client";
 import { useAuthStore } from "~/stores/auth";
 import ImportConfirmationStep from "~/components/import/ImportConfirmationStep.vue";
 import TelegramSettings from "~/components/settings/TelegramSettings.vue";
+import ImportUploadPanel from "~/components/integrations/ImportUploadPanel.vue";
 import IntegrationIcon from "~/components/integrations/IntegrationIcon.vue";
 import ImportHistoryStep from "~/components/import/ImportHistoryStep.vue";
 
@@ -40,9 +41,6 @@ watch(targetRestaurantId, () => {
 });
 
 // ===== Upload de Arquivo / Dropzone State =====
-const fileInput = ref<HTMLInputElement | null>(null);
-const ACCEPT_FORMATS = ".csv,.xlsx,.xls,.xml,.json,.txt,image/*,.pdf";
-const dragging = ref(false);
 const analyzing = ref(false);
 const uploadError = ref<string | null>(null);
 const lastFileName = ref<string | null>(null);
@@ -50,12 +48,6 @@ const lastFileName = ref<string | null>(null);
 const isPhotoFile = (file: File) =>
   file.type.startsWith("image/") || file.type === "application/pdf" ||
   /\.(jpe?g|png|webp|gif|pdf)$/i.test(file.name);
-
-function triggerFileSelect() {
-  if (fileInput.value) {
-    fileInput.value.click();
-  }
-}
 
 async function handleFile(file: File) {
   uploadError.value = null;
@@ -88,21 +80,6 @@ async function handleFile(file: File) {
   }
 }
 
-function onDrop(evt: DragEvent) {
-  evt.preventDefault();
-  dragging.value = false;
-  const files = evt.dataTransfer?.files;
-  if (files && files.length > 0) handleFile(files[0]);
-}
-
-function onFileChange(evt: Event) {
-  const input = evt.target as HTMLInputElement;
-  if (input.files && input.files.length > 0) {
-    handleFile(input.files[0]);
-  }
-  input.value = "";
-}
-
 function onConfirmed(results: ImportResultDto[]) {
   lastResults.value = results;
   currentPreview.value = null;
@@ -120,15 +97,24 @@ interface IntegrationSkill {
 }
 
 const skills: IntegrationSkill[] = [
+  { id: "telegram", name: "Telegram", description: "Assistente, agentes e alertas do seu restaurante.", icon: "telegram" },
   { id: "ifood", name: "iFood", description: "Integração de pedidos e cardápio.", icon: "ifood" },
-  { id: "99food", name: "99 Food", description: "Integração de vendas e entregas.", icon: "99food" },
+  { id: "99food", name: "99Food", description: "Integração de vendas e entregas.", icon: "99food" },
   { id: "planilhas", name: "Planilhas", description: "Importação manual de arquivos.", icon: "sheet" },
   { id: "cardapio_digital", name: "Cardápio Digital", description: "Integração de itens e preços.", icon: "menu" },
   { id: "stone", name: "Stone", description: "Integração de recebíveis e taxas.", icon: "stone" },
   { id: "fornecedores", name: "Fornecedores", description: "Integração de catálogos e pedidos.", icon: "supplier" }
 ];
 
-function openImport() { activeTab.value = "importar"; }
+const integrations = computed(() => [skills.find(s => s.id === 'telegram')!, skills.find(s => s.id === 'planilhas')!, ...skills.filter(s => !['telegram', 'planilhas'].includes(s.id))]);
+const expandedIntegration = ref<string | null>(null);
+const telegramConnected = ref(false);
+function integrationStatus(id: string) { return id === 'telegram' ? (telegramConnected.value ? 'Conectado' : 'Configurar') : id === 'planilhas' ? 'Disponível' : 'Indisponível'; }
+function onIntegrationToggle(event: Event, id: string) {
+  const open = (event.currentTarget as HTMLDetailsElement).open;
+  if (open) expandedIntegration.value = id;
+  else if (expandedIntegration.value === id) expandedIntegration.value = null;
+}
 const tabs = computed(() => [
   { id: "conexoes" as MainTab, label: "Conexões" },
   { id: "importar" as MainTab, label: "Importar dados" },
@@ -145,7 +131,7 @@ function moveTab(event: KeyboardEvent, index: number) {
 
 onMounted(async () => {
   authStore.initFromStorage();
-  if (route.hash === "#telegram") activeTab.value = "conexoes";
+  if (route.hash === "#telegram") { activeTab.value = "conexoes"; expandedIntegration.value = "telegram"; }
   if (!authStore.isAuthenticated) {
     router.push("/login");
     return;
@@ -182,26 +168,29 @@ onMounted(async () => {
     <nav role="tablist" aria-label="Áreas de integrações" class="flex flex-wrap gap-1 border-b border-zinc-200 dark:border-zinc-800">
       <button v-for="(tab, index) in tabs" :id="`integration-tab-${tab.id}`" :key="tab.id" role="tab" :aria-selected="activeTab === tab.id" :aria-controls="`integration-panel-${tab.id}`" :tabindex="activeTab === tab.id ? 0 : -1" class="shrink-0 border-b-2 px-4 py-3 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-indigo-500" :class="activeTab === tab.id ? 'border-indigo-500 text-indigo-700 dark:text-indigo-300' : 'border-transparent text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'" @click="activeTab = tab.id" @keydown="moveTab($event, index)">{{ tab.label }}</button>
     </nav>
-    <section v-if="activeTab === 'conexoes'" id="integration-panel-conexoes" role="tabpanel" aria-labelledby="integration-tab-conexoes" class="space-y-6">
-      <TelegramSettings v-if="!isSuperAdmin" />
-      <div v-else class="rounded-xl border border-zinc-200 p-5 text-sm dark:border-zinc-800">A conexão do Telegram é pessoal. Entre com uma conta gerencial do restaurante para configurar.</div>
-      <article class="flex flex-col gap-4 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900/40 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex items-center gap-4"><span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-200 dark:border-zinc-700"><IntegrationIcon icon="sheet" /></span><div><h2 class="font-semibold">Importação de arquivos</h2><p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Traga dados de planilhas, documentos ou fotos. Revise antes de salvar.</p></div></div>
-        <el-button @click="openImport">Importar dados</el-button>
-      </article>
-      <details class="rounded-xl border border-zinc-200 dark:border-zinc-800">
-        <summary class="cursor-pointer px-5 py-4 text-sm font-semibold focus-visible:outline focus-visible:outline-indigo-500">Outras integrações <span class="ml-2 font-normal text-zinc-600 dark:text-zinc-400">Em breve</span></summary>
-        <ul class="divide-y divide-zinc-100 px-5 pb-2 dark:divide-zinc-800"><li v-for="skill in skills.filter(s => s.id !== 'planilhas')" :key="skill.id" class="flex items-center gap-3 py-4"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-900"><IntegrationIcon :icon="skill.icon" /></span><div><h3 class="text-sm font-medium">{{ skill.name }}</h3><p class="text-xs text-zinc-600 dark:text-zinc-400">{{ skill.description }}</p></div><span class="ml-auto text-xs text-zinc-600 dark:text-zinc-400">Indisponível</span></li></ul>
-      </details>
+    <section v-if="activeTab === 'conexoes'" id="integration-panel-conexoes" role="tabpanel" aria-labelledby="integration-tab-conexoes">
+      <div class="overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/30">
+        <details v-for="integration in integrations" :key="integration.id" name="ism-integrations" :open="expandedIntegration === integration.id" class="integration-disclosure group border-b border-zinc-200 last:border-b-0 dark:border-zinc-800" @toggle="onIntegrationToggle($event, integration.id)">
+          <summary class="flex min-h-24 cursor-pointer list-none items-center gap-4 px-4 py-5 transition hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-indigo-500 dark:hover:bg-zinc-800/40 sm:px-6">
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-100 ring-1 ring-zinc-200 dark:bg-zinc-800/60 dark:ring-zinc-700/50"><IntegrationIcon :icon="integration.icon" /></span>
+            <span class="min-w-0 flex-1"><span class="block text-sm font-semibold sm:text-base">{{ integration.name }}</span><span class="mt-1 block text-xs leading-relaxed text-zinc-600 dark:text-zinc-400 sm:text-sm">{{ integration.description }}</span><span class="mt-1 block text-xs text-zinc-600 dark:text-zinc-400 sm:hidden">{{ integrationStatus(integration.id) }}</span></span>
+            <span class="hidden shrink-0 rounded-full px-2.5 py-1 text-xs sm:inline-block" :class="integration.id === 'telegram' && telegramConnected ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' : 'text-zinc-500 dark:text-zinc-400'">{{ integrationStatus(integration.id) }}</span>
+            <svg aria-hidden="true" class="h-4 w-4 shrink-0 text-zinc-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          </summary>
+          <div class="border-t border-zinc-100 bg-zinc-50/50 px-4 py-5 dark:border-zinc-800 dark:bg-zinc-950/30 sm:px-6">
+            <template v-if="integration.id === 'telegram'">
+              <TelegramSettings v-if="!isSuperAdmin" embedded @connection="telegramConnected = $event" />
+              <p v-else class="text-sm text-zinc-600 dark:text-zinc-400">Entre com uma conta gerencial do restaurante para conectar seu Telegram.</p>
+            </template>
+            <ImportUploadPanel v-else-if="integration.id === 'planilhas'" :analyzing="analyzing" :disabled="!targetRestaurantId" :file-name="lastFileName" :error="uploadError" @file="handleFile" />
+            <div v-else class="space-y-2 text-sm"><p class="font-medium">{{ integration.name }} ainda não está disponível.</p><p class="text-zinc-600 dark:text-zinc-400">Não há um conector ativo para este serviço. Quando estiver disponível, as opções de conexão aparecerão aqui.</p></div>
+          </div>
+        </details>
+      </div>
     </section>
     <section v-else-if="activeTab === 'importar'" id="integration-panel-importar" role="tabpanel" aria-labelledby="integration-tab-importar" class="space-y-5">
       <div><h2 class="text-xl font-semibold">Importar dados</h2><p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Escolha um arquivo. Você poderá revisar os dados antes de confirmar a importação.</p></div>
-      <div class="rounded-2xl border-2 border-dashed p-8 text-center sm:p-12" :class="dragging ? 'border-indigo-500 bg-indigo-500/5' : 'border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-900/40'" @dragover.prevent="dragging = true" @dragleave.prevent="dragging = false" @drop.prevent="!analyzing && onDrop($event)">
-        <div v-if="analyzing" role="status" aria-live="polite"><span class="mx-auto mb-4 block h-8 w-8 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" aria-hidden="true" /><p class="font-semibold">Analisando arquivo…</p><p class="mt-2 break-all text-sm text-zinc-600 dark:text-zinc-400">{{ lastFileName }}</p></div>
-        <template v-else><span class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-500/10"><IntegrationIcon icon="sheet" /></span><p class="font-semibold">Arraste um arquivo até aqui</p><p class="mb-5 mt-2 text-sm text-zinc-600 dark:text-zinc-400">Planilhas, documentos, PDFs e fotos.</p><el-button type="primary" :disabled="!targetRestaurantId" @click="triggerFileSelect">Selecionar arquivo</el-button></template>
-        <input ref="fileInput" type="file" :accept="ACCEPT_FORMATS" class="sr-only" tabindex="-1" aria-label="Arquivo para importar" :disabled="analyzing" @change="onFileChange" />
-      </div>
-      <el-alert v-if="uploadError" role="alert" :title="uploadError" type="error" show-icon :closable="false" />
+      <ImportUploadPanel :analyzing="analyzing" :disabled="!targetRestaurantId" :file-name="lastFileName" :error="uploadError" @file="handleFile" />
     </section>
     <section v-else-if="activeTab === 'confirmacao'" id="integration-panel-confirmacao" role="tabpanel" aria-labelledby="integration-tab-confirmacao"><ImportConfirmationStep v-if="currentPreview && currentFile" :preview="currentPreview" :file="currentFile" :is-photo="currentIsPhoto" :restaurant-id="targetRestaurantId" @back="activeTab = 'importar'" @confirmed="onConfirmed" /></section>
     <section v-else-if="activeTab === 'historico'" id="integration-panel-historico" role="tabpanel" aria-labelledby="integration-tab-historico" class="space-y-5">
@@ -211,3 +200,7 @@ onMounted(async () => {
     </section>
   </main>
 </template>
+
+<style scoped>
+.integration-disclosure > summary::-webkit-details-marker { display: none; }
+</style>

@@ -90,7 +90,7 @@ Execute `dotnet test backend/ISM.sln`, incluindo `TelegramIntegrationTests`, e `
 
 Referências: [Bot API](https://core.telegram.org/bots/api), [deep links de bots](https://core.telegram.org/bots/features#deep-linking).
 
-A tela de Integrações separa Conexões, Importar dados, Revisar importação (quando existe prévia) e Histórico. Conexões indisponíveis ficam recolhidas em Em breve; os ícones e a paleta Zinc/Indigo são preservados. As abas suportam navegação por setas, Home e End.
+A tela de Integrações separa Conexões, Importar dados, Revisar importação (quando existe prévia) e Histórico. As conexões aparecem como linhas expansíveis: clicar abre a configuração e clicar novamente recolhe. Apenas um serviço fica aberto por vez. Telegram e importação abrem seus controles na própria lista; serviços indisponíveis mostram uma explicação, sem simular conexão. As marcas de iFood, 99Food e Telegram usam arquivos locais; a paleta Zinc/Indigo é preservada. As abas suportam navegação por setas, Home e End.
 
 A conversa do Telegram usa `IAssistantService.SendMessageAsync`, que passa por `AssistantIntentCoordinator`, `IAgentIntentRouter` e `IAgentToolRegistry`. Nenhum endereço de agente local é fixado no canal Telegram; mover o transporte dos agentes para a nuvem deve preservar esses contratos. Perguntas financeiras recebem apresentação em tópicos e moeda brasileira, mantendo os valores retornados pelo agente.
 
@@ -102,3 +102,9 @@ A conversa do Telegram usa `IAssistantService.SendMessageAsync`, que passa por `
 - Alertas reais gerados a partir de um produto temporário chegaram pelo bot, além da mensagem de teste. O produto foi removido, os alertas de teste dispensados e o vínculo demo revogado.
 - Nova tela: revisão de CSV de demonstração sem confirmar gravação, histórico, navegação por teclado e largura de celular.
 - Token real permaneceu no `.env`, fora do Git. Os registros de conversa e entregas do teste permanecem no histórico da conta de demonstração.
+
+### Revisão visual e regressão — 26/11/2026
+
+A lista foi organizada em painéis expansíveis, com apenas um serviço aberto por vez. Telegram e Planilhas abrem suas opções na própria linha. Recolhimento por segundo clique e por Enter, troca de serviço, prévia do CSV de demonstração e estados no celular foram conferidos em tela. As quatro marcas locais carregaram corretamente e o navegador não registrou erros no fluxo observado.
+
+Stone passou a usar sua marca; Planilhas, Cardápio Digital e Fornecedores mantêm símbolos genéricos em superfícies coloridas consistentes. Nenhum conector indisponível foi apresentado como ativo. A regressão repetiu os 278 testes do backend, 32 do frontend, navegação e build de produção, todos aprovados.
