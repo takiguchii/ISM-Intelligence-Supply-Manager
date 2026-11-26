@@ -92,8 +92,8 @@ public sealed class AssistantService(
             "Você é o ISM Assist. Responda em português, seja conciso e não invente dados. Nunca altere preços, estoque ou fornecedores; explique que qualquer alteração exige aprovação do gerente. Use somente o contexto fornecido.",
             $"Contexto autorizado do restaurante:\n{context}\n\nPergunta: {message.Trim()}", cancellationToken);
         return result.Success
-            ? new("llm", result.Text!.Trim(), "Ollama local", null)
-            : new("deterministic_fallback", "A conversação com o modelo local está indisponível no momento. Não tenho dados suficientes para concluir isso; revise os alertas determinísticos do ISM.", "Dados determinísticos do ISM", "Tente novamente quando o Ollama estiver disponível; nenhuma ação foi executada.");
+            ? new("llm", result.Text!.Trim(), "ISM Assist · IA", null)
+            : new("deterministic_fallback", "O provedor de IA configurado está indisponível no momento. Não tenho dados suficientes para concluir isso; revise os alertas determinísticos do ISM.", "Dados determinísticos do ISM", "Verifique a conexão do provedor configurado; nenhuma ação foi executada.");
     }
 
     public async Task<IReadOnlyList<AssistantThreadResponse>> GetThreadsAsync(int page, int limit, CancellationToken cancellationToken = default)
@@ -311,8 +311,8 @@ public sealed class AssistantService(
                 ? await llm.CompleteWithImageAsync(systemPrompt, userPrompt, imageBytes!, imageContentType!, cancellationToken)
                 : await llm.CompleteAsync(systemPrompt, userPrompt, cancellationToken);
             response = result.Success
-                ? new("llm", Limit(result.Text!.Trim(), 5000)!, "Ollama local", null)
-                : new("deterministic_fallback", "A conversação com o modelo local está indisponível no momento. Não tenho dados suficientes para concluir isso além dos fatos exibidos nesta conversa.", "Dados determinísticos do ISM", "Tente novamente quando o Ollama estiver disponível; nenhuma ação foi executada.");
+                ? new("llm", Limit(result.Text!.Trim(), 5000)!, "ISM Assist · IA", null)
+                : new("deterministic_fallback", "O provedor de IA configurado está indisponível no momento. Não tenho dados suficientes para concluir isso além dos fatos exibidos nesta conversa.", "Dados determinísticos do ISM", "Verifique a conexão do provedor configurado; nenhuma ação foi executada.");
         }
 
         await conversations.AddMessageAsync(new AssistantMessage

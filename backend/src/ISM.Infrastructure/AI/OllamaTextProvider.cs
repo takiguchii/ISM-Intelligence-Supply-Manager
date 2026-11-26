@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using ISM.Application.Interfaces.Assistant;
@@ -10,6 +9,7 @@ using Microsoft.Extensions.Options;
 
 namespace ISM.Infrastructure.AI;
 
+/// <summary>Cliente de texto/visão do modelo configurado para o restaurante.</summary>
 public sealed class OllamaTextProvider(
     HttpClient httpClient,
     IOptions<AssistantAiOptions> options,
@@ -26,37 +26,43 @@ public sealed class OllamaTextProvider(
     {
         var configuration = await ResolveConfigurationAsync(cancellationToken);
         if (!configuration.Enabled)
-            return new(false, false, configuration.Provider, configuration.Model, "Conversação local desabilitada.");
+            return new(false, false, configuration.Provider, configuration.Model, "Conversação por IA desativada.");
 
         try
         {
-            using var request = new HttpRequestMessage(
-                HttpMethod.Get,
-                configuration.Provider == "Ollama" ? $"{configuration.Endpoint}/api/tags" : configuration.Endpoint);
-            ApplyAuthorization(request, configuration);
-            using var response = await httpClient.SendAsync(request, cancellationToken);
-            if (!response.IsSuccessStatusCode)
-                return new(true, false, configuration.Provider, configuration.Model, $"HTTP {(int)response.StatusCode}");
-            if (configuration.Provider == "Ollama" && !await OllamaModelIsAvailableAsync(response, configuration.Model, cancellationToken))
-                return new(true, false, configuration.Provider, configuration.Model, $"Modelo '{configuration.Model}' não está instalado no Ollama.");
-            return new(true, true, configuration.Provider, configuration.Model, null);
+            if (configuration.Provider == "Ollama")
+            {
+                using var ollamaRequest = new HttpRequestMessage(HttpMethod.Get, $"{configuration.Endpoint}/api/tags");
+                using var ollamaResponse = await httpClient.SendAsync(ollamaRequest, cancellationToken);
+                if (!ollamaResponse.IsSuccessStatusCode)
+                    return new(true, false, configuration.Provider, configuration.Model, $"HTTP {(int)ollamaResponse.StatusCode}");
+                var installed = await OllamaModelIsAvailableAsync(ollamaResponse, configuration.Model, cancellationToken);
+                return new(true, installed, configuration.Provider, configuration.Model, installed ? null : $"Modelo '{configuration.Model}' não instalado no Ollama.");
+            }
+
+            using var externalRequest = CreateExternalRequest(configuration, "Responda somente pong.", "ping");
+            using var externalResponse = await httpClient.SendAsync(externalRequest, cancellationToken);
+            if (!externalResponse.IsSuccessStatusCode)
+                return new(true, false, configuration.Provider, configuration.Model, $"HTTP {(int)externalResponse.StatusCode}");
+            var text = await AiProviderCatalog.ExtractTextAsync(externalResponse, configuration.Provider, cancellationToken);
+            return new(true, !string.IsNullOrWhiteSpace(text), configuration.Provider, configuration.Model, string.IsNullOrWhiteSpace(text) ? "Resposta vazia." : null);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return new(true, false, configuration.Provider, configuration.Model, "Timeout");
+            return new(true, false, configuration.Provider, configuration.Model, "Tempo esgotado.");
         }
         catch (Exception ex)
         {
             logger.LogDebug(ex, "Provider de IA indisponível para o ISM Assist");
-            return new(true, false, configuration.Provider, configuration.Model, "Provider indisponível");
+            return new(true, false, configuration.Provider, configuration.Model, "Provider indisponível.");
         }
     }
 
-    public async Task<LlmTextResult> CompleteAsync(string systemPrompt, string userPrompt, CancellationToken cancellationToken = default)
-        => await CompleteCoreAsync(systemPrompt, userPrompt, null, null, cancellationToken);
+    public Task<LlmTextResult> CompleteAsync(string systemPrompt, string userPrompt, CancellationToken cancellationToken = default)
+        => CompleteCoreAsync(systemPrompt, userPrompt, null, null, cancellationToken);
 
-    public async Task<LlmTextResult> CompleteWithImageAsync(string systemPrompt, string userPrompt, byte[] imageBytes, string contentType, CancellationToken cancellationToken = default)
-        => await CompleteCoreAsync(systemPrompt, userPrompt, imageBytes, contentType, cancellationToken);
+    public Task<LlmTextResult> CompleteWithImageAsync(string systemPrompt, string userPrompt, byte[] imageBytes, string contentType, CancellationToken cancellationToken = default)
+        => CompleteCoreAsync(systemPrompt, userPrompt, imageBytes, contentType, cancellationToken);
 
     private async Task<LlmTextResult> CompleteCoreAsync(string systemPrompt, string userPrompt, byte[]? imageBytes, string? contentType, CancellationToken cancellationToken)
     {
@@ -65,18 +71,25 @@ public sealed class OllamaTextProvider(
 
         try
         {
-            using var request = BuildRequest(configuration, systemPrompt, userPrompt, imageBytes, contentType);
+            using var request = configuration.Provider == "Ollama"
+                ? CreateOllamaRequest(configuration, systemPrompt, userPrompt, imageBytes)
+                : CreateExternalRequest(configuration, systemPrompt, userPrompt, imageBytes, contentType);
             using var response = await httpClient.SendAsync(request, cancellationToken);
-            if (!response.IsSuccessStatusCode) return new(false, null, $"HTTP {(int)response.StatusCode}");
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                logger.LogWarning("Falha no provedor {Provider}: HTTP {Status}. Resposta: {Body}", configuration.Provider, (int)response.StatusCode, body.Length > 400 ? body[..400] : body);
+                return new(false, null, $"HTTP {(int)response.StatusCode}");
+            }
 
-            var content = await ExtractTextAsync(response, configuration.Provider, cancellationToken);
-            return string.IsNullOrWhiteSpace(content)
-                ? new(false, null, "Resposta vazia")
-                : new(true, content.Trim(), null);
+            var content = configuration.Provider == "Ollama"
+                ? ExtractOllamaText(body)
+                : AiProviderCatalog.ExtractText(configuration.Provider, body);
+            return string.IsNullOrWhiteSpace(content) ? new(false, null, "Resposta vazia") : new(true, content.Trim(), null);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return new(false, null, "Timeout");
+            return new(false, null, "Tempo esgotado");
         }
         catch (Exception ex)
         {
@@ -85,101 +98,76 @@ public sealed class OllamaTextProvider(
         }
     }
 
-    private HttpRequestMessage BuildRequest(RuntimeConfiguration configuration, string systemPrompt, string userPrompt, byte[]? imageBytes, string? contentType)
-    {
-        var request = new HttpRequestMessage(HttpMethod.Post, configuration.Provider switch
-        {
-            "Ollama" => $"{configuration.Endpoint}/api/chat",
-            "Anthropic Claude" => $"{configuration.Endpoint}/messages",
-            _ => $"{configuration.Endpoint}/chat/completions"
-        });
-        ApplyAuthorization(request, configuration);
+    private HttpRequestMessage CreateExternalRequest(RuntimeConfiguration configuration, string systemPrompt, string userPrompt, byte[]? imageBytes = null, string? contentType = null)
+        => AiProviderCatalog.CreateRequest(configuration.Provider, configuration.Model, configuration.ApiKey, systemPrompt, userPrompt, _options.MaxOutputTokens, imageBytes, contentType, sessionId: $"ses_ism_{currentUser.RestaurantId ?? 0}_{currentUser.UserId}");
 
-        var encodedImage = imageBytes is null ? null : Convert.ToBase64String(imageBytes);
-        object payload = configuration.Provider switch
+    private static HttpRequestMessage CreateOllamaRequest(RuntimeConfiguration configuration, string systemPrompt, string userPrompt, byte[]? imageBytes)
+    {
+        var messages = imageBytes is null
+            ? new object[] { new { role = "system", content = systemPrompt }, new { role = "user", content = userPrompt } }
+            : new object[] { new { role = "system", content = systemPrompt }, new { role = "user", content = userPrompt, images = new[] { Convert.ToBase64String(imageBytes) } } };
+        var request = new HttpRequestMessage(HttpMethod.Post, $"{configuration.Endpoint}/api/chat")
         {
-            "Ollama" => new
-            {
-                model = configuration.Model,
-                stream = false,
-                think = false,
-                messages = encodedImage is null
-                    ? new object[] { new { role = "system", content = systemPrompt }, new { role = "user", content = userPrompt } }
-                    : new object[] { new { role = "system", content = systemPrompt }, new { role = "user", content = userPrompt, images = new[] { encodedImage } } },
-                options = new { num_predict = _options.MaxOutputTokens }
-            },
-            "Anthropic Claude" => new
-            {
-                model = configuration.Model,
-                max_tokens = _options.MaxOutputTokens,
-                system = systemPrompt,
-                messages = encodedImage is null
-                    ? new object[] { new { role = "user", content = userPrompt } }
-                    : new object[] { new { role = "user", content = new object[] { new { type = "image", source = new { type = "base64", media_type = contentType, data = encodedImage } }, new { type = "text", text = userPrompt } } } }
-            },
-            _ => new
-            {
-                model = configuration.Model,
-                max_tokens = _options.MaxOutputTokens,
-                messages = encodedImage is null
-                    ? new object[] { new { role = "system", content = systemPrompt }, new { role = "user", content = userPrompt } }
-                    : new object[] { new { role = "system", content = systemPrompt }, new { role = "user", content = new object[] { new { type = "text", text = userPrompt }, new { type = "image_url", image_url = new { url = $"data:{contentType};base64,{encodedImage}" } } } } }
-            }
+            Content = new StringContent(JsonSerializer.Serialize(new { model = configuration.Model, stream = false, think = false, messages, options = new { num_predict = 512 } }), Encoding.UTF8, "application/json")
         };
-        request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
         return request;
     }
 
-    private static async Task<string?> ExtractTextAsync(HttpResponseMessage response, string provider, CancellationToken cancellationToken)
+    private async Task<RuntimeConfiguration> ResolveConfigurationAsync(CancellationToken cancellationToken)
     {
-        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-        if (provider == "Ollama" && document.RootElement.TryGetProperty("message", out var message) && message.TryGetProperty("content", out var ollamaText))
-            return ollamaText.GetString();
-        if (provider == "Anthropic Claude" && document.RootElement.TryGetProperty("content", out var content) && content.ValueKind == JsonValueKind.Array && content.GetArrayLength() > 0 && content[0].TryGetProperty("text", out var anthropicText))
-            return anthropicText.GetString();
-        if (document.RootElement.TryGetProperty("choices", out var choices) && choices.ValueKind == JsonValueKind.Array && choices.GetArrayLength() > 0 && choices[0].TryGetProperty("message", out var choiceMessage) && choiceMessage.TryGetProperty("content", out var openAiText))
-            return openAiText.GetString();
-        return null;
+        var endpoint = _options.OllamaBaseUrl.TrimEnd('/');
+        var model = _options.Model;
+        var provider = "Ollama";
+        string? apiKey = null;
+        var enabled = _options.Enabled;
+
+        if (currentUser.RestaurantId is > 0 && await restaurants.GetRestaurantByIdAsync(currentUser.RestaurantId.Value, cancellationToken) is { } restaurant)
+        {
+            provider = InferProvider(restaurant.AgentProvider, restaurant.AgentApiEndpoint, restaurant.AgentModel);
+            endpoint = provider == "Ollama" ? (string.IsNullOrWhiteSpace(restaurant.AgentApiEndpoint) ? endpoint : restaurant.AgentApiEndpoint.TrimEnd('/')) : AiProviderCatalog.Endpoint(provider);
+            model = string.IsNullOrWhiteSpace(restaurant.AgentModel) ? AiProviderCatalog.DefaultModel(provider) : restaurant.AgentModel;
+            apiKey = restaurant.AgentApiKey;
+            enabled = enabled || !string.IsNullOrWhiteSpace(apiKey);
+        }
+
+        return new(enabled, endpoint, model, apiKey, provider);
+    }
+
+    private static string InferProvider(string? provider, string? endpoint, string? model)
+    {
+        if (!string.IsNullOrWhiteSpace(provider)) return AiProviderCatalog.Normalize(provider);
+        var modelName = model?.Trim();
+        if (modelName?.StartsWith("gemini-", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.Gemini;
+        if (modelName?.StartsWith("claude-", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.Anthropic;
+        if (modelName?.StartsWith("gpt-", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.OpenAI;
+        if (modelName?.StartsWith("deepseek-v4.", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.OpenCodeGo;
+        if (modelName?.StartsWith("deepseek-", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.DeepSeek;
+        if (modelName?.StartsWith("llama-", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.Groq;
+        if (modelName?.StartsWith("mistral-", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.Mistral;
+        if (modelName?.StartsWith("openai/", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.OpenRouter;
+        if (modelName?.Contains(':') == true) return "Ollama";
+        if (endpoint?.Contains("opencode.ai", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.OpenCodeGo;
+        if (endpoint?.Contains("generativelanguage.googleapis.com", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.Gemini;
+        if (endpoint?.Contains("anthropic.com", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.Anthropic;
+        if (endpoint?.Contains("api.openai.com", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.OpenAI;
+        if (endpoint?.Contains("api.deepseek.com", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.DeepSeek;
+        if (endpoint?.Contains("openrouter.ai", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.OpenRouter;
+        if (endpoint?.Contains("api.groq.com", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.Groq;
+        if (endpoint?.Contains("api.mistral.ai", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.Mistral;
+        return "Ollama";
     }
 
     private static async Task<bool> OllamaModelIsAvailableAsync(HttpResponseMessage response, string model, CancellationToken cancellationToken)
     {
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-        if (!document.RootElement.TryGetProperty("models", out var models) || models.ValueKind != JsonValueKind.Array)
-            return false;
-        return models.EnumerateArray().Any(item => item.TryGetProperty("name", out var name) && string.Equals(name.GetString(), model, StringComparison.OrdinalIgnoreCase));
+        return document.RootElement.TryGetProperty("models", out var models) && models.ValueKind == JsonValueKind.Array &&
+               models.EnumerateArray().Any(item => item.TryGetProperty("name", out var name) && string.Equals(name.GetString(), model, StringComparison.OrdinalIgnoreCase));
     }
 
-    private static void ApplyAuthorization(HttpRequestMessage request, RuntimeConfiguration configuration)
+    private static string? ExtractOllamaText(string body)
     {
-        if (configuration.Provider == "Ollama" || string.IsNullOrWhiteSpace(configuration.ApiKey)) return;
-        if (configuration.Provider == "Anthropic Claude")
-        {
-            request.Headers.Add("x-api-key", configuration.ApiKey);
-            request.Headers.Add("anthropic-version", "2023-06-01");
-            return;
-        }
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", configuration.ApiKey);
-    }
-
-    private async Task<RuntimeConfiguration> ResolveConfigurationAsync(CancellationToken cancellationToken)
-    {
-        var endpoint = _options.OllamaBaseUrl;
-        var model = _options.Model;
-        string? apiKey = null;
-
-        if (currentUser.RestaurantId is > 0 && await restaurants.GetRestaurantByIdAsync(currentUser.RestaurantId.Value, cancellationToken) is { } restaurant)
-        {
-            endpoint = string.IsNullOrWhiteSpace(restaurant.AgentApiEndpoint) ? endpoint : restaurant.AgentApiEndpoint;
-            model = string.IsNullOrWhiteSpace(restaurant.AgentModel) ? model : restaurant.AgentModel;
-            apiKey = restaurant.AgentApiKey;
-        }
-
-        endpoint = endpoint.TrimEnd('/');
-        var provider = endpoint.Contains("11434", StringComparison.OrdinalIgnoreCase)
-            ? "Ollama"
-            : endpoint.Contains("anthropic.com", StringComparison.OrdinalIgnoreCase) ? "Anthropic Claude" : "API compatível";
-        return new(_options.Enabled, endpoint, model, apiKey, provider);
+        using var document = JsonDocument.Parse(body);
+        return document.RootElement.TryGetProperty("message", out var message) && message.TryGetProperty("content", out var content) ? content.GetString() : null;
     }
 
     private sealed record RuntimeConfiguration(bool Enabled, string Endpoint, string Model, string? ApiKey, string Provider);

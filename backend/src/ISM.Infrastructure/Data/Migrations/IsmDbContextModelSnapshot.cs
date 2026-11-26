@@ -248,6 +248,10 @@ namespace ISM.Infrastructure.Data.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("varchar(128)");
 
+                    b.Property<string>("AgentProvider")
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)");
+
                     b.Property<string>("CNPJ")
                         .IsRequired()
                         .HasMaxLength(14)
@@ -307,6 +311,10 @@ namespace ISM.Infrastructure.Data.Migrations
 
                     b.Property<string>("PhotoImportModel")
                         .HasColumnType("longtext");
+
+                    b.Property<string>("PhotoImportProvider")
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)");
 
                     b.Property<int?>("PlanId")
                         .HasColumnType("int");
