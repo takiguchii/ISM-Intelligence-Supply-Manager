@@ -37,7 +37,7 @@ public sealed class ConstrainedOrchestrationService(
         AddDomainIntents(steps, question);
         if (steps.Count == 0) AddIntent(steps, intentRouter.Resolve(question));
         AddSubjectIntent(steps, query);
-        AddSupplierIntent(steps, query, question);
+        AddSupplierIntent(steps, question);
 
         var distinct = steps
             .GroupBy(step => step.ToolName, StringComparer.OrdinalIgnoreCase)
@@ -147,13 +147,14 @@ public sealed class ConstrainedOrchestrationService(
         }
     }
 
-    private static void AddSupplierIntent(List<OrchestrationPlanStep> steps, AssistantQueryContext query, string question)
+    private void AddSupplierIntent(List<OrchestrationPlanStep> steps, string question)
     {
         if (!question.Contains("fornecedor", StringComparison.OrdinalIgnoreCase) && !question.Contains("cotação", StringComparison.OrdinalIgnoreCase) && !question.Contains("cotacao", StringComparison.OrdinalIgnoreCase)) return;
-        var parts = question.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var unit = parts.FirstOrDefault(item => item is "kg" or "un" or "l" or "g") ?? "un";
-        var product = query.SubjectEntityType?.Equals("Product", StringComparison.OrdinalIgnoreCase) == true ? "produto contextual" : null;
-        if (product is not null)
-            steps.Add(new("suppliers-context", "suppliers", "suppliers.compareOffers", JsonSerializer.SerializeToElement(new { productName = product, unit }), []));
+        // Só planeja a comparação quando a pergunta identifica produto e unidade.
+        // O contexto do chat contém o ID da entidade, mas não o nome necessário
+        // para a ferramenta; inventar um nome produziria uma consulta sem valor.
+        var intent = intentRouter.Resolve(question);
+        if (intent?.ToolName != "suppliers.compareOffers") return;
+        steps.Add(new("suppliers-context", intent.Specialist, intent.ToolName, intent.Input, []));
     }
 }

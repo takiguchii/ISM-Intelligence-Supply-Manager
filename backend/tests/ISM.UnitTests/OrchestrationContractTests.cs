@@ -21,6 +21,28 @@ public sealed class OrchestrationContractTests
     }
 
     [Fact]
+    public async Task Planner_does_not_invent_supplier_product_from_context()
+    {
+        var service = CreateService();
+        var plan = await service.PlanAsync(new("analise o financeiro e compare fornecedores", 7, 1, "Manager",
+            SubjectEntityType: "Product", SubjectEntityId: 42));
+
+        plan.Steps.Select(step => step.ToolName).Should().Contain("finance.getRevenueSummary");
+        plan.Steps.Should().NotContain(step => step.ToolName == "suppliers.compareOffers");
+    }
+
+    [Fact]
+    public async Task Planner_uses_supplier_product_and_unit_resolved_from_question()
+    {
+        var service = CreateService();
+        var plan = await service.PlanAsync(new("analise o financeiro e compare fornecedores do arroz kg", 7, 1, "Manager"));
+
+        var supplierStep = plan.Steps.Should().ContainSingle(step => step.ToolName == "suppliers.compareOffers").Subject;
+        supplierStep.Input.GetProperty("productName").GetString().Should().Be("arroz");
+        supplierStep.Input.GetProperty("unit").GetString().Should().Be("kg");
+    }
+
+    [Fact]
     public async Task Executor_synthesizes_evidence_and_marks_partial_failure()
     {
         var service = CreateService((tool, _) => tool == "stock.getProduct"

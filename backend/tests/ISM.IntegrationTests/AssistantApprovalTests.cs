@@ -166,7 +166,7 @@ public sealed class AssistantApprovalTests : IClassFixture<FoundationWebApplicat
 
         var initial = await client.GetAsync("/api/me/restaurant/agent-config");
         initial.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await initial.Content.ReadFromJsonAsync<RestaurantAgentConfigDto>())!.Model.Should().Be("gemma3:270m");
+        (await initial.Content.ReadFromJsonAsync<RestaurantAgentConfigDto>())!.Model.Should().Be("deepseek-v4.1-flash");
 
         var update = await client.PutAsJsonAsync("/api/me/restaurant/agent-config", new
         {
