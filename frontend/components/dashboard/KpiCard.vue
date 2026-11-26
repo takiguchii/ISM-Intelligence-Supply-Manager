@@ -11,6 +11,7 @@ const props = defineProps<{
 }>();
 
 const isUp = computed(() => props.trend === "up");
+const hasComparison = computed(() => props.delta.trim() !== "" && props.delta.trim() !== "—");
 </script>
 
 <template>
@@ -28,7 +29,7 @@ const isUp = computed(() => props.trend === "up");
         <p class="text-2xl font-bold text-zinc-900 dark:text-white">{{ value }}</p>
 
         <div class="flex items-center gap-2 flex-wrap">
-            <span class="inline-flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded-full border" :class="isUp
+            <span v-if="hasComparison" class="inline-flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded-full border" :class="isUp
                 ? 'text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-400/30 bg-emerald-50 dark:bg-emerald-400/10'
                 : 'text-red-700 dark:text-red-400 border-red-300 dark:border-red-400/30 bg-red-50 dark:bg-red-400/10'">
                 <el-icon :size="10">

@@ -264,6 +264,22 @@ public sealed class TelegramIntegrationTests
         var message = await db.AssistantMessages.IgnoreQueryFilters().SingleAsync(m => m.Source == "Dados financeiros do ISM");
         message.Mode.Should().Be("deterministic"); message.RestaurantId.Should().Be(10);
     }
+    [Fact] public async Task Conversation_FormatsStockQuantitiesWithoutAmbiguousDecimalSeparators()
+    {
+        using var f = new Fixture(); await f.ConnectAsync();
+        using (var scope = f.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<IsmDbContext>();
+            db.Products.Add(new ISM.Domain.Modules.Stock.Entities.Product
+            {
+                Id = 5, RestaurantId = 10, Name = "Salmão", Unit = "kg",
+                CurrentQuantity = 6.125m, MinimumQuantity = 15.000m
+            });
+            await db.SaveChangesAsync();
+        }
+        var response = await f.MessageAsync("Qual é o saldo do produto 5?", 2);
+        response.Should().Contain("saldo atual 6,125 e mínimo 15 kg").And.Contain("Fonte: Product");
+    }
     [Fact] public void ResponseFormatting_EscapesHtmlAndKeepsSupportedEmphasis()
     {
         var formatted = ISM.Infrastructure.Telegram.TelegramTransport.FormatText("# Resumo\n**Estoque**\n<script>alert(1)</script>\n- Produto");

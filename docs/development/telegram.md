@@ -107,4 +107,6 @@ A conversa do Telegram usa `IAssistantService.SendMessageAsync`, que passa por `
 
 A lista foi organizada em painéis expansíveis, com apenas um serviço aberto por vez. Telegram e Planilhas abrem suas opções na própria linha. Recolhimento por segundo clique e por Enter, troca de serviço, prévia do CSV de demonstração e estados no celular foram conferidos em tela. As quatro marcas locais carregaram corretamente e o navegador não registrou erros no fluxo observado.
 
+As quantidades das consultas de estoque pelo assistente usam vírgula decimal e até três casas, sem zeros finais desnecessários, evitando confundir `6.000` com seis mil. A regressão posterior passou com 279 testes de backend (213 unitários, 65 de integração e 1 de arquitetura), incluindo 16 casos de Telegram, e os 32 testes do frontend mais o build. Uma nova sessão real confirmou financeiro via orquestrador, estoque com fonte, cardápio, pedidos, detalhe de pedido, conversa pelo Ollama e entrega de notificação com opt-in. O vínculo de teste deve sempre ser encerrado após a conferência.
+
 Stone passou a usar sua marca; Planilhas, Cardápio Digital e Fornecedores mantêm símbolos genéricos em superfícies coloridas consistentes. Nenhum conector indisponível foi apresentado como ativo. A regressão repetiu os 278 testes do backend, 32 do frontend, navegação e build de produção, todos aprovados.

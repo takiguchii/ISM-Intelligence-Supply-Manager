@@ -424,14 +424,16 @@ public sealed class AssistantService(
         using var document = JsonDocument.Parse(JsonSerializer.Serialize(result.Data));
         var root = document.RootElement;
         string Text(string name) => root.TryGetProperty(name, out var value) ? value.ToString() : string.Empty;
+        string Quantity(string name) => root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetDecimal(out var number)
+            ? number.ToString("0.###", CultureInfo.GetCultureInfo("pt-BR")) : Text(name);
         var description = result.ToolName switch
         {
-            "stock.analyzeReplenishment" => $"{Text("ProductName")}: saldo {Text("CurrentQuantity")}, consumo médio {Text("DailyConsumption")}/dia e aproximadamente {Text("DaysRemaining")} dias restantes. {result.Message}",
+            "stock.analyzeReplenishment" => $"{Text("ProductName")}: saldo {Quantity("CurrentQuantity")}, consumo médio {Quantity("DailyConsumption")}/dia e aproximadamente {Quantity("DaysRemaining")} dias restantes. {result.Message}",
             "pricing.simulateDishPrice" => $"{Text("DishName")}: CMV atual {Text("CurrentCmvPercent")}%, custo verificado R$ {Text("VerifiedCost")} e preço simulado R$ {Text("SuggestedPrice")}. {result.Message}",
             "suppliers.compareOffers" => $"Encontrei {root.GetProperty("Offers").GetArrayLength()} ofertas recentes e compatíveis para {Text("ProductName")} ({Text("Unit")}). {result.Message}",
             "finance.getPeriodSummary" => $"Período consultado: receita de pedidos pagos R$ {Text("PaidSalesRevenue")}, outras entradas R$ {Text("SettledOtherIncome")}, despesas R$ {Text("SettledExpenses")} e fluxo líquido R$ {Text("NetCashFlow")}. {result.Message}",
             "finance.getRevenueSummary" => $"Faturamento do mês, baseado em pedidos pagos: R$ {Text("SalesRevenue")}. Outras receitas liquidadas: R$ {Text("OtherIncome")}. Despesas liquidadas: R$ {Text("Expenses")}. Contas a receber: R$ {Text("AccountsReceivable")}. Contas a pagar: R$ {Text("AccountsPayable")}.",
-            "stock.getProduct" => $"{Text("Name")}: saldo atual {Text("CurrentQuantity")} e mínimo {Text("MinimumQuantity")} {Text("Unit")}. {result.Message}",
+            "stock.getProduct" => $"{Text("Name")}: saldo atual {Quantity("CurrentQuantity")} e mínimo {Quantity("MinimumQuantity")} {Text("Unit")}. {result.Message}",
             "pricing.getDishCost" => $"{Text("Name")}: preço R$ {Text("Price")}, custo R$ {Text("Cost")}. {result.Message}",
             "assistant.getAlertContext" => $"Alerta: {Text("Title")}. {Text("Message")}. {result.Message}",
             _ => result.Message
