@@ -17,9 +17,9 @@ const assistantUi = useAssistantUi();
 const alertCenter = useSystemAlertCenter();
 const supplierInsight = computed(() => aggregateAgentCards(alertCenter.alerts.value).find(card => card.agent === "suppliers"));
 const supplierAlert = computed(() => alertCenter.alerts.value.find(alert => alert.id === supplierInsight.value?.alertId));
-const discussSupplierAlert = () => {
-  if (supplierAlert.value) assistantUi.openChat(supplierAlert.value, `Explique o alerta ${supplierAlert.value.id}.`);
-};
+const discussSupplier = () => supplierAlert.value
+  ? assistantUi.openChat(supplierAlert.value, `Explique o alerta ${supplierAlert.value.id}.`)
+  : assistantUi.openSpecialistChat("suppliers", { sourceView: "fornecedores", subject: "Análise de fornecedores" }, "Quais fornecedores e ofertas históricas devo analisar?");
 
 // State UI
 const isSidebarOpen = ref(false);
@@ -279,8 +279,7 @@ onMounted(async () => {
           <h2 class="font-semibold text-zinc-900 dark:text-zinc-100">Cocou Fornecedores</h2>
           <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-300">{{ supplierAlert?.title ?? 'Nenhum alerta de fornecedor disponível na central.' }}</p>
         </div>
-        <button v-if="supplierAlert" type="button" class="rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-600 dark:bg-violet-300 dark:text-zinc-950 dark:hover:bg-violet-200" @click="discussSupplierAlert">Entender alerta</button>
-        <a v-else href="#lista-de-fornecedores" class="rounded-xl border border-violet-200 px-4 py-2.5 text-sm font-semibold text-violet-800 hover:bg-violet-100 dark:border-violet-400/30 dark:text-violet-200 dark:hover:bg-violet-400/10">Ver fornecedores</a>
+        <button type="button" class="rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-600 dark:bg-violet-300 dark:text-zinc-950 dark:hover:bg-violet-200" @click="discussSupplier">{{ supplierAlert ? 'Entender alerta' : 'Conversar com o agente' }}</button>
       </section>
 
       <!-- SPLIT VIEW LAYOUT -->

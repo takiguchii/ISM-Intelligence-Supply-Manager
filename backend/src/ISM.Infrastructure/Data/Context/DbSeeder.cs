@@ -5,6 +5,8 @@ using ISM.Domain.Modules.Finance;
 using ISM.Domain.Modules.Menu.Entities;
 using ISM.Domain.Modules.Orders;
 using ISM.Domain.Modules.Stock.Entities;
+using ISM.Domain.Modules.Stock.Enums;
+using ISM.Domain.Modules.Suppliers.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace ISM.Infrastructure.Data.Context;
@@ -873,6 +875,79 @@ public static class DbSeeder
             }
             currentMonthExpenses = currentMonthExpenses.Where(expense => expense.SettledAtUtc.HasValue).ToArray();
             await context.FinanceEntries.AddRangeAsync(currentMonthExpenses);
+            await context.SaveChangesAsync();
+        }
+
+        // Histórico operacional demonstrativo: mantém o estoque atual e adiciona trilha para análises.
+        if (!await context.StockMovements.AnyAsync(m => m.RestaurantId == restaurant.Id))
+        {
+            var products = await context.Products.Where(p => p.RestaurantId == restaurant.Id && p.IsActive).OrderBy(p => p.Id).ToListAsync();
+            var movements = new List<StockMovement>();
+            for (var day = 30; day >= 1; day--)
+            foreach (var product in products)
+            {
+                var date = DateTime.UtcNow.Date.AddDays(-day).AddHours(10);
+                var usage = Math.Max(0.1m, Math.Round(product.MinimumQuantity / 45m, 2));
+                movements.Add(new StockMovement { RestaurantId = restaurant.Id, ProductId = product.Id, MovementType = StockMovementType.ManualDecrease, QuantityDelta = -usage, UnitCostSnapshot = product.AverageCost, CreatedAtUtc = date });
+                if (day % 7 == 0)
+                    movements.Add(new StockMovement { RestaurantId = restaurant.Id, ProductId = product.Id, MovementType = StockMovementType.Import, QuantityDelta = usage * 5m, UnitCostSnapshot = product.AverageCost, CreatedAtUtc = date.AddHours(2) });
+            }
+            await context.StockMovements.AddRangeAsync(movements);
+            await context.SaveChangesAsync();
+        }
+
+        // Histórico de compras recente por fornecedor para comparação de preços (não são cotações atuais).
+        if (!await context.SupplierProductPriceHistories.AnyAsync(h => h.RestaurantId == restaurant.Id))
+        {
+            var suppliers = await context.Suppliers.Where(s => s.RestaurantId == restaurant.Id).OrderBy(s => s.Id).ToListAsync();
+            var priceHistory = new List<SupplierProductPriceHistory>();
+            var products = await context.Products.Where(p => p.RestaurantId == restaurant.Id).ToListAsync();
+            foreach (var product in products.Take(6))
+            foreach (var supplier in suppliers.Take(3))
+            {
+                var date = DateTime.UtcNow.AddDays(-7 - supplier.Id % 20);
+                priceHistory.Add(new SupplierProductPriceHistory
+                {
+                    RestaurantId = restaurant.Id, SupplierId = supplier.Id, SupplierRawName = supplier.Name,
+                    ProductRawName = product.Name, Unit = product.Unit,
+                    UnitPrice = decimal.Round(product.AverageCost * (0.96m + supplier.Id % 5 * 0.02m), 2),
+                    QuantityPurchased = 10m + supplier.Id % 4 * 5m, PurchasedAtUtc = date, CreatedAtUtc = date
+                });
+            }
+            await context.SupplierProductPriceHistories.AddRangeAsync(priceHistory);
+            await context.SaveChangesAsync();
+        }
+
+        // Corrige fichas incompletas somente no restaurante de demonstração conhecido.
+        var demoDishIds = await context.Dishes.Where(d => d.RestaurantId == restaurant.Id).Select(d => d.Id).ToListAsync();
+        if (restaurant.Name == "Maki Sushi Bar & Cozinha Oriental"
+            && !await context.DishIngredients.AnyAsync(i => demoDishIds.Contains(i.DishId)))
+        {
+            var dishes = await context.Dishes.Where(d => d.RestaurantId == restaurant.Id).ToListAsync();
+            var products = await context.Products.Where(p => p.RestaurantId == restaurant.Id).ToDictionaryAsync(p => p.Name);
+            var recipes = new Dictionary<string, (decimal Cost, (string Product, decimal Quantity)[] Ingredients)>
+            {
+                ["Filé Mignon ao Molho Madeira"] = (28.50m, [("Filé Mignon Bovino", .25m), ("Arroz Agulhinha Tipo 1", .15m), ("Azeite de Oliva Extra Virgem", .03m)]),
+                ["Salmão Nobre Grelhado"] = (35m, [("Salmão Fresco em Filé", .25m), ("Azeite de Oliva Extra Virgem", .04m)]),
+                ["Prato Executivo Tradicional ISM"] = (11.80m, [("Arroz Agulhinha Tipo 1", .20m), ("Feijão Carioca Especial", .15m), ("Peito de Frango Resfriado", .20m), ("Tomate Italiano Fresco", .08m)]),
+                ["Bruschetta Italiana Rústica"] = (8.50m, [("Tomate Italiano Fresco", .15m), ("Queijo Mussarela Fatiado", .08m), ("Azeite de Oliva Extra Virgem", .03m)]),
+                ["Suco Natural de Laranja 500ml"] = (3.20m, [("Laranja Pera Fresca", .50m)]),
+                ["Café Espresso Duplo Especial"] = (1.80m, [("Café Gourmet em Grãos", .02m)])
+            };
+            var ingredients = new List<DishIngredient>();
+            foreach (var dish in dishes)
+            {
+                if (!recipes.TryGetValue(dish.Name, out var recipe)) continue;
+                if (dish.Cost <= 0m) dish.Cost = recipe.Cost;
+                foreach (var ingredient in recipe.Ingredients)
+                    if (products.TryGetValue(ingredient.Product, out var product))
+                        ingredients.Add(new DishIngredient { DishId = dish.Id, ProductId = product.Id, Quantity = ingredient.Quantity });
+            }
+            var costs = dishes.ToDictionary(d => d.Id, d => d.Cost);
+            var orderItems = await context.OrderItems.Where(item => item.RestaurantId == restaurant.Id && item.UnitCost <= 0m).ToListAsync();
+            foreach (var item in orderItems)
+                if (costs.TryGetValue(item.DishId, out var cost)) item.UnitCost = cost;
+            await context.DishIngredients.AddRangeAsync(ingredients);
             await context.SaveChangesAsync();
         }
     }

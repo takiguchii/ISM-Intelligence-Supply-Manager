@@ -1,12 +1,9 @@
 using System.Diagnostics;
-using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using ISM.Application.DTOs.Restaurant;
 using ISM.Application.Interfaces.Restaurant;
+using ISM.Application.Options;
 using ISM.Domain.Interfaces;
 using RestaurantEntity = ISM.Domain.Entities.Restaurant;
 
@@ -14,8 +11,6 @@ namespace ISM.Application.Services.Restaurant;
 
 public sealed class RestaurantAiConfigService : IRestaurantAiConfigService
 {
-    private const string DefaultModel = "gemini-3.5-flash-lite";
-    private const string RequiredEndpointHost = "generativelanguage.googleapis.com";
     private const int RequestTimeoutSeconds = 240;
 
     private readonly IRestaurantRepository _restaurantRepository;
@@ -46,7 +41,8 @@ public sealed class RestaurantAiConfigService : IRestaurantAiConfigService
         {
             HasCustomKey = hasCustomKey,
             KeyLast4Digits = keyLast4Digits,
-            ApiEndpoint = restaurant.PhotoImportApiEndpoint,
+            Provider = InferProvider(restaurant.PhotoImportProvider, restaurant.PhotoImportApiEndpoint, AiProviderCatalog.Gemini, restaurant.PhotoImportModel),
+            ApiEndpoint = AiProviderCatalog.Endpoint(InferProvider(restaurant.PhotoImportProvider, restaurant.PhotoImportApiEndpoint, AiProviderCatalog.Gemini, restaurant.PhotoImportModel)),
             Model = restaurant.PhotoImportModel,
             IsUsingRestaurantConfig = hasCustomKey,
             IsUsingGlobalFallback = !hasCustomKey,
@@ -67,34 +63,16 @@ public sealed class RestaurantAiConfigService : IRestaurantAiConfigService
             restaurant.PhotoImportApiKey = string.IsNullOrWhiteSpace(dto.ApiKey) ? null : dto.ApiKey.Trim();
         }
 
-        if (dto.ApiEndpoint is not null)
-        {
-            var endpoint = dto.ApiEndpoint.Trim();
-            if (!string.IsNullOrWhiteSpace(endpoint))
-            {
-                if (!endpoint.Contains(RequiredEndpointHost, StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new InvalidOperationException($"Endpoint inválido. Deve conter '{RequiredEndpointHost}'.");
-                }
-
-                if (!endpoint.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-                {
-                    endpoint = "https://" + endpoint.TrimStart('/');
-                }
-
-                restaurant.PhotoImportApiEndpoint = endpoint.TrimEnd('/');
-            }
-            else
-            {
-                restaurant.PhotoImportApiEndpoint = null;
-            }
-        }
+        var provider = AiProviderCatalog.Normalize(dto.Provider ?? restaurant.PhotoImportProvider, InferProvider(restaurant.PhotoImportProvider, restaurant.PhotoImportApiEndpoint, AiProviderCatalog.Gemini, restaurant.PhotoImportModel));
+        restaurant.PhotoImportProvider = provider;
+        restaurant.PhotoImportApiEndpoint = AiProviderCatalog.Endpoint(provider);
 
         if (dto.Model is not null)
         {
             var model = dto.Model.Trim();
-            restaurant.PhotoImportModel = string.IsNullOrWhiteSpace(model) ? null : model;
+            restaurant.PhotoImportModel = string.IsNullOrWhiteSpace(model) ? AiProviderCatalog.DefaultModel(provider) : model;
         }
+        else if (string.IsNullOrWhiteSpace(restaurant.PhotoImportModel)) restaurant.PhotoImportModel = AiProviderCatalog.DefaultModel(provider);
 
         restaurant.UpdatedAtUtc = DateTime.UtcNow;
         _restaurantRepository.Update(restaurant);
@@ -106,252 +84,43 @@ public sealed class RestaurantAiConfigService : IRestaurantAiConfigService
         TestRestaurantAiPhotoConfigRequestDto? req,
         CancellationToken ct)
     {
-        var warnings = new List<string>();
-        var stopwatch = Stopwatch.StartNew();
-        string? httpError = null;
-        int? httpStatus = null;
-        string? normalizedModelFinal = null;
-        string? normalizedEndpointFinal = null;
+        var restaurant = await GetRestaurantOrThrowAsync(restaurantId, ct);
+        var provider = AiProviderCatalog.Normalize(req?.OverrideProvider ?? restaurant.PhotoImportProvider, InferProvider(restaurant.PhotoImportProvider, restaurant.PhotoImportApiEndpoint, AiProviderCatalog.Gemini, req?.OverrideModel ?? restaurant.PhotoImportModel));
+        var model = string.IsNullOrWhiteSpace(req?.OverrideModel) ? restaurant.PhotoImportModel ?? AiProviderCatalog.DefaultModel(provider) : req!.OverrideModel!.Trim();
+        var apiKey = string.IsNullOrWhiteSpace(req?.OverrideApiKey) ? restaurant.PhotoImportApiKey?.Trim() : req!.OverrideApiKey!.Trim();
+        if (string.IsNullOrWhiteSpace(apiKey))
+            return new TestRestaurantAiPhotoConfigResultDto { Success = false, Provider = provider, NormalizedModel = model, NormalizedEndpoint = AiProviderCatalog.Endpoint(provider), ErrorMessage = "Informe a chave de API deste provedor.", LatencyMs = 0 };
 
+        var stopwatch = Stopwatch.StartNew();
         try
         {
-            RestaurantEntity? restaurant = null;
-            try
-            {
-                restaurant = await GetRestaurantOrThrowAsync(restaurantId, ct);
-            }
-            catch
-            {
-                restaurant = null;
-            }
-
-            var apiKey = !string.IsNullOrWhiteSpace(req?.OverrideApiKey)
-                ? req.OverrideApiKey!.Trim()
-                : restaurant?.PhotoImportApiKey?.Trim();
-
-            var rawEndpoint = !string.IsNullOrWhiteSpace(req?.OverrideEndpoint)
-                ? req.OverrideEndpoint!.Trim()
-                : restaurant?.PhotoImportApiEndpoint?.Trim();
-
-            var rawModel = !string.IsNullOrWhiteSpace(req?.OverrideModel)
-                ? req.OverrideModel!.Trim()
-                : restaurant?.PhotoImportModel?.Trim();
-
-            if (string.IsNullOrWhiteSpace(apiKey))
-            {
-                return new TestRestaurantAiPhotoConfigResultDto
-                {
-                    Success = false,
-                    Provider = "Google Gemini",
-                    NormalizedModel = null,
-                    NormalizedEndpoint = null,
-                    Warnings = warnings.Count > 0 ? warnings : null,
-                    ErrorMessage = "Chave API não configurada.",
-                    HttpStatusFromProvider = null,
-                    LatencyMs = stopwatch.ElapsedMilliseconds
-                };
-            }
-
-            if (string.IsNullOrWhiteSpace(rawEndpoint))
-            {
-                rawEndpoint = $"https://{RequiredEndpointHost}/v1beta";
-                warnings.Add("Endpoint não configurado, usando padrão v1beta.");
-            }
-
-            if (!rawEndpoint.Contains(RequiredEndpointHost, StringComparison.OrdinalIgnoreCase))
-            {
-                return new TestRestaurantAiPhotoConfigResultDto
-                {
-                    Success = false,
-                    Provider = "Google Gemini",
-                    NormalizedModel = null,
-                    NormalizedEndpoint = rawEndpoint,
-                    Warnings = warnings.Count > 0 ? warnings : null,
-                    ErrorMessage = $"Endpoint inválido: deve conter '{RequiredEndpointHost}'.",
-                    HttpStatusFromProvider = null,
-                    LatencyMs = stopwatch.ElapsedMilliseconds
-                };
-            }
-
-            if (!rawEndpoint.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-            {
-                rawEndpoint = "https://" + rawEndpoint;
-            }
-
-            var normalizedEndpoint = rawEndpoint.TrimEnd('/');
-            normalizedEndpointFinal = normalizedEndpoint;
-
-            var normalizedModel = NormalizeModelName(rawModel);
-            normalizedModelFinal = normalizedModel;
-
-            if (normalizedModel != rawModel && !string.IsNullOrWhiteSpace(rawModel))
-            {
-                warnings.Add($"Nome do modelo normalizado de '{rawModel}' para '{normalizedModel}'.");
-            }
-
-            var url = $"{normalizedEndpoint}/models/{normalizedModel}:generateContent?key={Uri.EscapeDataString(apiKey!)}";
-
-            var requestBody = new
-            {
-                contents = new[]
-                {
-                    new
-                    {
-                        parts = new[]
-                        {
-                            new { text = "ping responda somente pong" }
-                        }
-                    }
-                }
-            };
-
-            var json = JsonSerializer.Serialize(requestBody);
-            using var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(RequestTimeoutSeconds) };
-
-            HttpResponseMessage? response = null;
-            try
-            {
-                response = await httpClient.PostAsync(url, content, ct);
-                httpStatus = (int)response.StatusCode;
-
-                var responseJson = await response.Content.ReadAsStringAsync(ct);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    string? providerError = null;
-                    try
-                    {
-                        using var doc = JsonDocument.Parse(responseJson);
-                        if (doc.RootElement.TryGetProperty("error", out var errorEl) &&
-                            errorEl.TryGetProperty("message", out var msgEl))
-                        {
-                            providerError = msgEl.GetString();
-                        }
-                    }
-                    catch
-                    {
-                    }
-
-                    httpError = string.IsNullOrWhiteSpace(providerError)
-                        ? $"Falha na requisição: HTTP {(int)response.StatusCode}."
-                        : $"Erro do provedor: {providerError}";
-
-                    return new TestRestaurantAiPhotoConfigResultDto
-                    {
-                        Success = false,
-                        Provider = "Google Gemini",
-                        NormalizedModel = normalizedModel,
-                        NormalizedEndpoint = normalizedEndpoint,
-                        Warnings = warnings.Count > 0 ? warnings : null,
-                        ErrorMessage = httpError,
-                        HttpStatusFromProvider = httpStatus,
-                        LatencyMs = stopwatch.ElapsedMilliseconds
-                    };
-                }
-
-                bool hasCandidates = false;
-                try
-                {
-                    using var doc = JsonDocument.Parse(responseJson);
-                    hasCandidates = doc.RootElement.TryGetProperty("candidates", out var candidatesEl)
-                                    && candidatesEl.ValueKind == JsonValueKind.Array
-                                    && candidatesEl.GetArrayLength() > 0;
-                }
-                catch
-                {
-                    hasCandidates = false;
-                }
-
-                if (!hasCandidates)
-                {
-                    return new TestRestaurantAiPhotoConfigResultDto
-                    {
-                        Success = false,
-                        Provider = "Google Gemini",
-                        NormalizedModel = normalizedModel,
-                        NormalizedEndpoint = normalizedEndpoint,
-                        Warnings = warnings.Count > 0 ? warnings : null,
-                        ErrorMessage = "Resposta inválida: sem candidates no JSON retornado.",
-                        HttpStatusFromProvider = httpStatus,
-                        LatencyMs = stopwatch.ElapsedMilliseconds
-                    };
-                }
-
-                return new TestRestaurantAiPhotoConfigResultDto
-                {
-                    Success = true,
-                    Provider = "Google Gemini",
-                    NormalizedModel = normalizedModel,
-                    NormalizedEndpoint = normalizedEndpoint,
-                    Warnings = warnings.Count > 0 ? warnings : null,
-                    ErrorMessage = null,
-                    HttpStatusFromProvider = httpStatus,
-                    LatencyMs = stopwatch.ElapsedMilliseconds
-                };
-            }
-            catch (HttpRequestException ex)
-            {
-                httpError = $"Erro de conexão HTTP: {ex.Message}";
-                if (ex.StatusCode.HasValue)
-                {
-                    httpStatus = (int)ex.StatusCode.Value;
-                }
-            }
-            catch (TaskCanceledException)
-            {
-                httpError = $"Timeout após {RequestTimeoutSeconds}s aguardando resposta do provedor.";
-            }
-            catch (OperationCanceledException)
-            {
-                httpError = "Operação cancelada.";
-            }
-            catch (UriFormatException ex)
-            {
-                httpError = $"URL de endpoint malformada: {ex.Message}";
-            }
-            catch (JsonException ex)
-            {
-                httpError = $"Falha ao processar JSON de resposta: {ex.Message}";
-            }
-            finally
-            {
-                response?.Dispose();
-            }
+            var pixel = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j3ioAAAAASUVORK5CYII=");
+            using var request = AiProviderCatalog.CreateRequest(provider, model, apiKey, "Responda de forma curta.", "Descreva a imagem em uma palavra.", 32, pixel, "image/png", sessionId: $"ses_ism_photo_test_{restaurantId}");
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(45) };
+            using var response = await client.SendAsync(request, ct);
+            var body = await response.Content.ReadAsStringAsync(ct);
+            var success = response.IsSuccessStatusCode && !string.IsNullOrWhiteSpace(AiProviderCatalog.ExtractText(provider, body));
+            var error = success ? null : GetProviderErrorMessage(body) ?? $"Falha na validação: HTTP {(int)response.StatusCode}.";
+            return new TestRestaurantAiPhotoConfigResultDto { Success = success, Provider = provider, NormalizedModel = model, NormalizedEndpoint = AiProviderCatalog.Endpoint(provider), ErrorMessage = error, HttpStatusFromProvider = (int)response.StatusCode, LatencyMs = stopwatch.ElapsedMilliseconds };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or InvalidOperationException)
         {
-            httpError = $"Falha inesperada: {ex.Message}";
+            return new TestRestaurantAiPhotoConfigResultDto { Success = false, Provider = provider, NormalizedModel = model, NormalizedEndpoint = AiProviderCatalog.Endpoint(provider), ErrorMessage = ex is TaskCanceledException ? "Tempo esgotado ao testar o provedor." : ex.Message, LatencyMs = stopwatch.ElapsedMilliseconds };
         }
-        finally
-        {
-            stopwatch.Stop();
-        }
-
-        return new TestRestaurantAiPhotoConfigResultDto
-        {
-            Success = false,
-            Provider = "Google Gemini",
-            NormalizedModel = normalizedModelFinal,
-            NormalizedEndpoint = normalizedEndpointFinal,
-            Warnings = warnings.Count > 0 ? warnings : null,
-            ErrorMessage = httpError,
-            HttpStatusFromProvider = httpStatus,
-            LatencyMs = stopwatch.ElapsedMilliseconds
-        };
     }
 
     public async Task<RestaurantAgentConfigDto> GetAgentByRestaurantIdAsync(int restaurantId, CancellationToken ct)
     {
         var restaurant = await GetRestaurantOrThrowAsync(restaurantId, ct);
+        var provider = InferProvider(restaurant.AgentProvider, restaurant.AgentApiEndpoint, AiProviderCatalog.OpenCodeGo, restaurant.AgentModel);
         var hasKey = !string.IsNullOrWhiteSpace(restaurant.AgentApiKey);
         return new RestaurantAgentConfigDto
         {
             HasApiKey = hasKey,
             KeyLast4Digits = hasKey && restaurant.AgentApiKey!.Length >= 4 ? restaurant.AgentApiKey[^4..] : null,
-            ApiEndpoint = restaurant.AgentApiEndpoint,
-            Model = restaurant.AgentModel ?? "gemma3:270m"
+            Provider = provider,
+            ApiEndpoint = AiProviderCatalog.Endpoint(provider),
+            Model = restaurant.AgentModel ?? AiProviderCatalog.DefaultModel(provider)
         };
     }
 
@@ -360,8 +129,11 @@ public sealed class RestaurantAiConfigService : IRestaurantAiConfigService
         var restaurant = await GetRestaurantOrThrowAsync(restaurantId, ct);
         if (dto.ClearKey) restaurant.AgentApiKey = null;
         else if (dto.ApiKey is not null) restaurant.AgentApiKey = string.IsNullOrWhiteSpace(dto.ApiKey) ? null : dto.ApiKey.Trim();
-        if (dto.ApiEndpoint is not null) restaurant.AgentApiEndpoint = string.IsNullOrWhiteSpace(dto.ApiEndpoint) ? null : NormalizeAgentEndpoint(dto.ApiEndpoint);
-        if (dto.Model is not null) restaurant.AgentModel = string.IsNullOrWhiteSpace(dto.Model) ? "gemma3:270m" : dto.Model.Trim();
+        var provider = AiProviderCatalog.Normalize(dto.Provider ?? restaurant.AgentProvider, InferProvider(restaurant.AgentProvider, restaurant.AgentApiEndpoint, AiProviderCatalog.OpenCodeGo, restaurant.AgentModel));
+        restaurant.AgentProvider = provider;
+        restaurant.AgentApiEndpoint = AiProviderCatalog.Endpoint(provider);
+        if (dto.Model is not null) restaurant.AgentModel = string.IsNullOrWhiteSpace(dto.Model) ? AiProviderCatalog.DefaultModel(provider) : dto.Model.Trim();
+        else if (string.IsNullOrWhiteSpace(restaurant.AgentModel)) restaurant.AgentModel = AiProviderCatalog.DefaultModel(provider);
         restaurant.UpdatedAtUtc = DateTime.UtcNow;
         _restaurantRepository.Update(restaurant);
         await _restaurantRepository.SaveChangesAsync(ct);
@@ -369,69 +141,77 @@ public sealed class RestaurantAiConfigService : IRestaurantAiConfigService
 
     public async Task<TestRestaurantAgentConfigResultDto> TestAgentByRestaurantIdAsync(int restaurantId, TestRestaurantAgentConfigRequestDto? req, CancellationToken ct)
     {
-        var stopwatch = Stopwatch.StartNew();
         var restaurant = await GetRestaurantOrThrowAsync(restaurantId, ct);
-        var endpoint = NormalizeAgentEndpoint(string.IsNullOrWhiteSpace(req?.OverrideEndpoint) ? restaurant.AgentApiEndpoint : req!.OverrideEndpoint);
-        var model = string.IsNullOrWhiteSpace(req?.OverrideModel) ? restaurant.AgentModel ?? "gemma3:270m" : req!.OverrideModel!.Trim();
+        var provider = AiProviderCatalog.Normalize(req?.OverrideProvider ?? restaurant.AgentProvider, InferProvider(restaurant.AgentProvider, restaurant.AgentApiEndpoint, AiProviderCatalog.OpenCodeGo, req?.OverrideModel ?? restaurant.AgentModel));
+        var model = string.IsNullOrWhiteSpace(req?.OverrideModel) ? restaurant.AgentModel ?? AiProviderCatalog.DefaultModel(provider) : req!.OverrideModel!.Trim();
         var apiKey = string.IsNullOrWhiteSpace(req?.OverrideApiKey) ? restaurant.AgentApiKey?.Trim() : req!.OverrideApiKey!.Trim();
-        var provider = endpoint.Contains("11434", StringComparison.OrdinalIgnoreCase) ? "Ollama" : endpoint.Contains("anthropic.com", StringComparison.OrdinalIgnoreCase) ? "Anthropic Claude" : "API compatível";
-        if (provider != "Ollama" && string.IsNullOrWhiteSpace(apiKey)) return AgentFailure(provider, endpoint, model, "Informe a chave de API para este endpoint.", stopwatch);
+        if (string.IsNullOrWhiteSpace(apiKey)) return AgentFailure(provider, AiProviderCatalog.Endpoint(provider), model, "Informe a chave de API deste provedor.", Stopwatch.StartNew());
 
+        var stopwatch = Stopwatch.StartNew();
         try
         {
-            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(RequestTimeoutSeconds) };
-            using var request = new HttpRequestMessage(HttpMethod.Post, provider == "Ollama" ? $"{endpoint}/api/chat" : provider == "Anthropic Claude" ? $"{endpoint}/messages" : $"{endpoint}/chat/completions");
-            if (provider == "Anthropic Claude") { request.Headers.Add("x-api-key", apiKey); request.Headers.Add("anthropic-version", "2023-06-01"); }
-            else if (provider != "Ollama") request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-            object payload = provider == "Ollama"
-                ? new { model, stream = false, think = false, messages = new[] { new { role = "user", content = "ping responda somente pong" } }, options = new { num_predict = 16 } }
-                : provider == "Anthropic Claude"
-                    ? new { model, max_tokens = 8, messages = new[] { new { role = "user", content = "ping responda somente pong" } } }
-                    : new { model, messages = new[] { new { role = "user", content = "ping responda somente pong" } }, max_tokens = 8 };
-            request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+            using var request = AiProviderCatalog.CreateRequest(provider, model, apiKey, "Responda somente pong.", "ping", 16, sessionId: $"ses_ism_agent_test_{restaurantId}");
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(45) };
             using var response = await client.SendAsync(request, ct);
             var body = await response.Content.ReadAsStringAsync(ct);
-            stopwatch.Stop();
-            var valid = response.IsSuccessStatusCode && ((provider == "Ollama" && body.Contains("\"message\"", StringComparison.OrdinalIgnoreCase)) || (provider == "Anthropic Claude" && body.Contains("\"content\"", StringComparison.OrdinalIgnoreCase)) || body.Contains("\"choices\"", StringComparison.OrdinalIgnoreCase));
-            return new TestRestaurantAgentConfigResultDto { Success = valid, Provider = provider, NormalizedEndpoint = endpoint, NormalizedModel = model, ErrorMessage = valid ? null : $"Falha na validação: HTTP {(int)response.StatusCode}.", HttpStatusFromProvider = (int)response.StatusCode, LatencyMs = stopwatch.ElapsedMilliseconds };
+            var success = response.IsSuccessStatusCode && !string.IsNullOrWhiteSpace(AiProviderCatalog.ExtractText(provider, body));
+            var error = success ? null : GetProviderErrorMessage(body) ?? $"Falha na validação: HTTP {(int)response.StatusCode}.";
+            return new TestRestaurantAgentConfigResultDto { Success = success, Provider = provider, NormalizedEndpoint = AiProviderCatalog.Endpoint(provider), NormalizedModel = model, ErrorMessage = error, HttpStatusFromProvider = (int)response.StatusCode, LatencyMs = stopwatch.ElapsedMilliseconds };
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or UriFormatException)
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or InvalidOperationException)
         {
-            return AgentFailure(provider, endpoint, model, ex is TaskCanceledException ? "Timeout ao conectar ao provedor." : $"Erro de conexão: {ex.Message}", stopwatch);
+            return AgentFailure(provider, AiProviderCatalog.Endpoint(provider), model, ex is TaskCanceledException ? "Tempo esgotado ao testar o provedor." : ex.Message, stopwatch);
         }
     }
 
-    private static string NormalizeAgentEndpoint(string? endpoint)
+    private static string InferProvider(string? provider, string? endpoint, string fallback, string? model = null)
     {
-        if (string.IsNullOrWhiteSpace(endpoint)) return "http://127.0.0.1:11434";
-        var value = endpoint.Trim();
-        if (!value.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && !value.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) value = "https://" + value;
-        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https") ||
-            !string.IsNullOrEmpty(uri.UserInfo) || !string.IsNullOrEmpty(uri.Query) || !string.IsNullOrEmpty(uri.Fragment))
-            throw new InvalidOperationException("Endpoint inválido. Use uma URL HTTP ou HTTPS sem credenciais ou parâmetros.");
-        var host = uri.Host.TrimEnd('.');
-        var localHost = host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
-            host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
-            host.Equals("::1", StringComparison.OrdinalIgnoreCase) ||
-            host.Equals("host.docker.internal", StringComparison.OrdinalIgnoreCase);
-        if (!localHost && uri.Scheme != Uri.UriSchemeHttps)
-            throw new InvalidOperationException("Endpoints externos devem usar HTTPS.");
-        if (host.Equals("169.254.169.254", StringComparison.OrdinalIgnoreCase) ||
-            host.Equals("metadata.google.internal", StringComparison.OrdinalIgnoreCase) ||
-            host.Equals("metadata.google.com", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Endpoint bloqueado por segurança.");
-        if (IPAddress.TryParse(host, out var ip) && !IPAddress.IsLoopback(ip) &&
-            (IsPrivateIpv4(ip) || ip.IsIPv6LinkLocal || ip.IsIPv6SiteLocal))
-            throw new InvalidOperationException("Endpoint interno não autorizado.");
-        return value.TrimEnd('/');
+        if (!string.IsNullOrWhiteSpace(provider)) return AiProviderCatalog.Normalize(provider, fallback);
+        var modelName = model?.Trim();
+        if (modelName?.StartsWith("gemini-", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.Gemini;
+        if (modelName?.StartsWith("claude-", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.Anthropic;
+        if (modelName?.StartsWith("gpt-", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.OpenAI;
+        if (modelName?.StartsWith("deepseek-v4.", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.OpenCodeGo;
+        if (modelName?.StartsWith("deepseek-", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.DeepSeek;
+        if (modelName?.StartsWith("llama-", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.Groq;
+        if (modelName?.StartsWith("mistral-", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.Mistral;
+        if (modelName?.StartsWith("openai/", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.OpenRouter;
+        if (modelName?.Contains(':') == true) return "Ollama";
+        if (endpoint?.Contains("generativelanguage.googleapis.com", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.Gemini;
+        if (endpoint?.Contains("anthropic.com", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.Anthropic;
+        if (endpoint?.Contains("opencode.ai", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.OpenCodeGo;
+        if (endpoint?.Contains("api.openai.com", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.OpenAI;
+        if (endpoint?.Contains("api.deepseek.com", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.DeepSeek;
+        if (endpoint?.Contains("openrouter.ai", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.OpenRouter;
+        if (endpoint?.Contains("api.groq.com", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.Groq;
+        if (endpoint?.Contains("api.mistral.ai", StringComparison.OrdinalIgnoreCase) == true) return AiProviderCatalog.Mistral;
+        return fallback;
     }
 
-    private static bool IsPrivateIpv4(IPAddress ip)
+    private static string? GetProviderErrorMessage(string body)
     {
-        var bytes = ip.GetAddressBytes();
-        return ip.AddressFamily == global::System.Net.Sockets.AddressFamily.InterNetwork &&
-            (bytes[0] == 10 || (bytes[0] == 172 && bytes[1] is >= 16 and <= 31) ||
-             (bytes[0] == 192 && bytes[1] == 168) || bytes[0] == 169 && bytes[1] == 254);
+        if (string.IsNullOrWhiteSpace(body)) return null;
+        try
+        {
+            using var document = JsonDocument.Parse(body);
+            var root = document.RootElement;
+            if (root.TryGetProperty("error", out var error))
+            {
+                if (error.ValueKind == JsonValueKind.String) return LimitProviderError(error.GetString());
+                if (error.ValueKind == JsonValueKind.Object && error.TryGetProperty("message", out var message))
+                    return LimitProviderError(message.GetString());
+            }
+            if (root.TryGetProperty("message", out var rootMessage)) return LimitProviderError(rootMessage.GetString());
+        }
+        catch (JsonException) { }
+        return LimitProviderError(body);
+    }
+
+    private static string? LimitProviderError(string? message)
+    {
+        if (string.IsNullOrWhiteSpace(message)) return null;
+        var sanitized = Regex.Replace(message, "(?i)(api[_-]?key|authorization|bearer)\\s*[:=]\\s*[^\\s,;]+", "$1=[oculto]");
+        return sanitized.Length > 400 ? sanitized[..400] : sanitized;
     }
 
     private static TestRestaurantAgentConfigResultDto AgentFailure(string provider, string endpoint, string model, string error, Stopwatch stopwatch)
@@ -448,17 +228,5 @@ public sealed class RestaurantAiConfigService : IRestaurantAiConfigService
             throw new InvalidOperationException($"Restaurante {restaurantId} não encontrado.");
         }
         return restaurant;
-    }
-
-    private static string NormalizeModelName(string? rawModel)
-    {
-        if (string.IsNullOrWhiteSpace(rawModel))
-        {
-            return DefaultModel;
-        }
-
-        var cleaned = Regex.Replace(rawModel, @"[^a-zA-Z0-9\-.]", string.Empty);
-        cleaned = cleaned.Trim('-');
-        return string.IsNullOrWhiteSpace(cleaned) ? DefaultModel : cleaned;
     }
 }

@@ -1,0 +1,131 @@
+{
+  "model": "qwen3.5:4b",
+  "generatedAtUtc": "2026-11-25T00:47:11.4073178Z",
+  "total": 8,
+  "passed": 4,
+  "failed": 4,
+  "bySpecialist": [
+    {
+      "specialist": "suppliers",
+      "total": 4,
+      "passed": 3,
+      "failed": 1,
+      "averageLatencyMs": 15792,
+      "p95LatencyMs": 23772
+    },
+    {
+      "specialist": "finance",
+      "total": 4,
+      "passed": 1,
+      "failed": 3,
+      "averageLatencyMs": 23705,
+      "p95LatencyMs": 29336
+    }
+  ],
+  "cases": [
+    {
+      "Specialist": "suppliers",
+      "Index": 1,
+      "Prompt": "Compare fornecedores do arroz de carga kg",
+      "ExpectedTool": "suppliers.compareOffers",
+      "ExpectedDenied": false,
+      "ActualSource": "Dados do ISM \u00B7 s\u00EDntese local \u00B7 suppliers.compareOffers",
+      "Mode": "llm",
+      "Response": "Nenhum pre\u00E7o atual est\u00E1 dispon\u00EDvel no hist\u00F3rico de compras anteriores do fornecedor Alpha (R$ 5,50/kg) ou Beta (R$ 6,25/kg). As \u00FAltimas informa\u00E7\u00F5es registradas datam das datas 23/11 e 22/11/2026.",
+      "LatencyMs": 22894,
+      "Status": "PASS",
+      "FailureClass": ""
+    },
+    {
+      "Specialist": "suppliers",
+      "Index": 2,
+      "Prompt": "Compare o hist\u00F3rico de fornecedores do arroz de carga kg",
+      "ExpectedTool": "suppliers.compareOffers",
+      "ExpectedDenied": false,
+      "ActualSource": "Dados do ISM \u00B7 s\u00EDntese local \u00B7 suppliers.compareOffers",
+      "Mode": "llm",
+      "Response": "N\u00E3o encontramos cota\u00E7\u00F5es recentes enviadas pelo fornecedor no hist\u00F3rico de pre\u00E7os do arroz de carga registrado at\u00E9 os valores verificados (R$ 5,50/kg e R$ 6,25/kg das compras em novembro de 2026). Por falta dessas informa\u00E7\u00F5es atualizadas, n\u00E3o \u00E9 poss\u00EDvel informar sobre ofertas ou negociar com o mercado neste momento.",
+      "LatencyMs": 16495,
+      "Status": "FAIL",
+      "FailureClass": "fato ausente"
+    },
+    {
+      "Specialist": "suppliers",
+      "Index": 3,
+      "Prompt": "Mostre quem vende arroz de carga em kg",
+      "ExpectedTool": "suppliers.compareOffers",
+      "ExpectedDenied": false,
+      "ActualSource": "Dados do ISM \u00B7 s\u00EDntese local \u00B7 suppliers.compareOffers",
+      "Mode": "llm",
+      "Response": "N\u00E3o foram recebidas cota\u00E7\u00F5es atuais para as ofertas equivalentes de arroz de carga comparadas ao hist\u00F3rico verificado na data do dia, que mostra R$ 5,50/kg e R$ 6,25/kg nos fornecedores Alpha e Beta respectivamente. O dado est\u00E1 baseado exclusivamente em registros anteriores sem novas negocia\u00E7\u00F5es registradas at\u00E9 agora.",
+      "LatencyMs": 23772,
+      "Status": "PASS",
+      "FailureClass": ""
+    },
+    {
+      "Specialist": "suppliers",
+      "Index": 4,
+      "Prompt": "Qual foi o faturamento deste m\u00EAs?",
+      "ExpectedTool": null,
+      "ExpectedDenied": true,
+      "ActualSource": "Pol\u00EDtica de escopo do ISM",
+      "Mode": "deterministic",
+      "Response": "Esta conversa \u00E9 do especialista de fornecedores e s\u00F3 pode consultar informa\u00E7\u00F5es dessa \u00E1rea. Abra o Assistente geral para analisar outros assuntos.",
+      "LatencyMs": 7,
+      "Status": "PASS",
+      "FailureClass": ""
+    },
+    {
+      "Specialist": "finance",
+      "Index": 1,
+      "Prompt": "Qual foi o faturamento deste m\u00EAs?",
+      "ExpectedTool": "finance.getPeriodSummary",
+      "ExpectedDenied": false,
+      "ActualSource": "Dados determin\u00EDsticos do ISM \u00B7 finance.getPeriodSummary",
+      "Mode": "deterministic",
+      "Response": "Per\u00EDodo: 2026-11-01T00:00:00Z a 2026-11-25T00:45:36.582028Z\n\u2022 Vendas de pedidos pagos: R$ 70,00\n\u2022 Outras receitas liquidadas: R$ 0,00\n\u2022 Despesas liquidadas: R$ 10,00\n\u2022 Fluxo l\u00EDquido: R$ 60,00\nResumo financeiro calculado por per\u00EDodo e fonte efetiva. Fonte: FinancePeriod, observado em 24/11/2026 21:45.",
+      "LatencyMs": 25037,
+      "Status": "FAIL",
+      "FailureClass": "s\u00EDntese local/fallback"
+    },
+    {
+      "Specialist": "finance",
+      "Index": 2,
+      "Prompt": "Resuma receitas e despesas dos \u00FAltimos 7 dias",
+      "ExpectedTool": "finance.getPeriodSummary",
+      "ExpectedDenied": false,
+      "ActualSource": "Dados determin\u00EDsticos do ISM \u00B7 finance.getPeriodSummary",
+      "Mode": "deterministic",
+      "Response": "Per\u00EDodo: 2026-11-18T00:46:01.6193664Z a 2026-11-25T00:46:01.6193664Z\n\u2022 Vendas de pedidos pagos: R$ 70,00\n\u2022 Outras receitas liquidadas: R$ 0,00\n\u2022 Despesas liquidadas: R$ 10,00\n\u2022 Fluxo l\u00EDquido: R$ 60,00\nResumo financeiro calculado por per\u00EDodo e fonte efetiva. Fonte: FinancePeriod, observado em 24/11/2026 21:46.",
+      "LatencyMs": 29336,
+      "Status": "FAIL",
+      "FailureClass": "s\u00EDntese local/fallback"
+    },
+    {
+      "Specialist": "finance",
+      "Index": 3,
+      "Prompt": "Qual foi a receita do m\u00EAs passado?",
+      "ExpectedTool": "finance.getPeriodSummary",
+      "ExpectedDenied": false,
+      "ActualSource": "Dados determin\u00EDsticos do ISM \u00B7 finance.getPeriodSummary",
+      "Mode": "deterministic",
+      "Response": "Per\u00EDodo: 2026-10-01T00:00:00Z a 2026-10-31T23:59:59.9999999Z\n\u2022 Vendas de pedidos pagos: R$ 0,00\n\u2022 Outras receitas liquidadas: R$ 0,00\n\u2022 Despesas liquidadas: R$ 25,00\n\u2022 Fluxo l\u00EDquido: R$ -25,00\nResumo financeiro calculado por per\u00EDodo e fonte efetiva. Fonte: FinancePeriod, observado em 24/11/2026 21:46.",
+      "LatencyMs": 22470,
+      "Status": "FAIL",
+      "FailureClass": "s\u00EDntese local/fallback"
+    },
+    {
+      "Specialist": "finance",
+      "Index": 4,
+      "Prompt": "Quais foram as vendas recentes?",
+      "ExpectedTool": "orders.getRecent",
+      "ExpectedDenied": false,
+      "ActualSource": "Dados do ISM \u00B7 s\u00EDntese local \u00B7 orders.getRecent",
+      "Mode": "llm",
+      "Response": "As suas vendas consideradas (pedidos pagos) no total de R$ 70,00 consultadas nas vendas dos pedidos pagos, conforme as informa\u00E7\u00F5es dispon\u00EDveis em Orders observada \u00E0s 21:46 do dia 24/11/2026.",
+      "LatencyMs": 17980,
+      "Status": "PASS",
+      "FailureClass": ""
+    }
+  ]
+}

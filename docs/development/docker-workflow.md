@@ -20,7 +20,7 @@ Esse comando é destrutivo apenas para o banco da branch selecionada.
 
 ## Seed de desenvolvimento
 
-Para criar dados locais, defina `SEED_DEMO_DATA=true` e uma `SEED_PASSWORD` no `.env`, depois suba o ambiente. O seed roda apenas em `Development`, é idempotente e cria `admin@ism.com.br`, `gerente@ism.com.br`, `chef@ism.com.br` e `garcom@ism.com.br`, todos com a senha definida localmente.
+Para criar dados locais, defina `SEED_DEMO_DATA=true` e uma `SEED_PASSWORD` no `.env`, depois suba o ambiente. O seed roda apenas em `Development` e é idempotente. Além de criar `admin@ism.com.br`, `gerente@ism.com.br`, `chef@ism.com.br` e `garcom@ism.com.br`, preenche dados demonstrativos para validar pratos e fichas técnicas, pedidos pagos e em andamento, lançamentos financeiros, movimentos recentes de estoque e histórico de preços de compras. Movimentos e preços são históricos simulados, não cotações atuais. No restaurante de demonstração conhecido, o seed completa custos e fichas técnicas ausentes sem tocar em outros restaurantes. As contas usam a senha definida localmente.
 
 ## Perfis de Ferramentas do Banco (Docker Compose Profiles)
 

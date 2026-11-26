@@ -292,6 +292,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAgentToolRegistry, AgentToolRegistry>();
         services.AddScoped<IAgentIntentRouter, AgentIntentRouter>();
         services.AddScoped<AssistantIntentCoordinator>();
+        services.AddScoped<ConstrainedOrchestrationService>();
         services.AddScoped<IAutomationService, AutomationService>();
         services.AddScoped<IAutomationRunner, AutomationRunner>();
         services.AddScoped<IAgentTool, StockProductTool>();
@@ -302,6 +303,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAgentTool, DishPriceSimulationTool>();
         services.AddScoped<IAgentTool, SupplierComparisonTool>();
         services.AddScoped<IAgentTool, FinancePeriodTool>();
+        services.AddScoped<IAgentTool, SalesInsightsTool>();
+        services.AddScoped<IAgentTool, RevenueForecastTool>();
+        services.AddScoped<IAgentTool, LatestOrderTool>();
+        services.AddScoped<IAgentTool, RecentOrdersTool>();
+        services.AddScoped<IAgentTool, StockOverviewTool>();
+        services.AddScoped<IAgentTool, DishOverviewTool>();
         services.AddScoped<IAssistantService, AssistantService>();
         services.AddHostedService<AgentsBackgroundScheduler>();
         services.AddHostedService<NotificationDeliveryWorker>();

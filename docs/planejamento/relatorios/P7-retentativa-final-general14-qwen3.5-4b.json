@@ -1,0 +1,32 @@
+{
+  "model": "qwen3.5:4b",
+  "generatedAtUtc": "2026-11-25T03:17:44.7782363Z",
+  "total": 1,
+  "passed": 1,
+  "failed": 0,
+  "bySpecialist": [
+    {
+      "specialist": "general",
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "averageLatencyMs": 14292,
+      "p95LatencyMs": 14292
+    }
+  ],
+  "cases": [
+    {
+      "Specialist": "general",
+      "Index": 14,
+      "Prompt": "Analise o faturamento junto com o pre\u00E7o do prato 1",
+      "ExpectedTool": "finance.getRevenueSummary, pricing.getDishCost",
+      "ExpectedDenied": false,
+      "ActualSource": "Orquestrador ISM \u00B7 finance.getRevenueSummary, pricing.getDishCost",
+      "Mode": "deterministic",
+      "Response": "\u2022 Resumo financeiro do m\u00EAs\n\u2022 Vendas de pedidos pagos: R$ 70,00\n\u2022 Outras receitas liquidadas: R$ 0,00\n\u2022 Despesas liquidadas: R$ 10,00\n\u2022 Contas a receber: R$ 0,00\n\u2022 Contas a pagar: R$ 0,00 Fonte: FinanceOverview.\n\u2022 Prato Executivo\n\u2022 Pre\u00E7o atual: R$ 35,00\n\u2022 Custo cadastrado: R$ 11,00\n\u2022 Margem alvo: 60%\nCusto do prato consultado. Fonte: Dish.",
+      "LatencyMs": 14292,
+      "Status": "PASS",
+      "FailureClass": ""
+    }
+  ]
+}

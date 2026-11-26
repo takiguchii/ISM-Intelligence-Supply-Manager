@@ -21,7 +21,7 @@ public sealed class AssistantProviderResilienceTests
 
         status.Enabled.Should().BeFalse();
         status.Reachable.Should().BeFalse();
-        status.Error.Should().Contain("desabilitada");
+        status.Error.Should().Be("Conversação por IA desativada.");
         completion.Success.Should().BeFalse();
         completion.Error.Should().Be("Provider desabilitado");
     }
@@ -49,9 +49,9 @@ public sealed class AssistantProviderResilienceTests
         var status = await provider.GetStatusAsync();
         var completion = await provider.CompleteAsync("system", "user");
 
-        status.Error.Should().Be("Timeout");
+        status.Error.Should().Be("Tempo esgotado.");
         completion.Success.Should().BeFalse();
-        completion.Error.Should().Be("Timeout");
+        completion.Error.Should().Be("Tempo esgotado");
     }
 
     private static OllamaTextProvider CreateProvider(HttpMessageHandler handler, bool enabled = true)

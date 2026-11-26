@@ -52,10 +52,12 @@ public sealed class Restaurant : BaseEntity
     public decimal PackagingFee { get; set; }
 
     public string? PhotoImportApiKey { get; set; }
+    [StringLength(40)] public string? PhotoImportProvider { get; set; }
     public string? PhotoImportModel { get; set; }
     public string? PhotoImportApiEndpoint { get; set; }
 
     [StringLength(512)] public string? AgentApiKey { get; set; }
+    [StringLength(40)] public string? AgentProvider { get; set; }
     [StringLength(512)] public string? AgentApiEndpoint { get; set; }
     [StringLength(128)] public string? AgentModel { get; set; }
 }

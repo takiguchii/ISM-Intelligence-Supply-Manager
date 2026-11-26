@@ -9,8 +9,11 @@ export interface AgentInsight extends AgentCardViewModel { id: string; icon: Age
 export interface RevenueVsCostPoint { day: string; receita: number; custo: number; }
 export interface TopDish { name: string; pedidos: number; }
 export interface WeekdayOrders { day: string; pedidos: number; }
+export interface CriticalStockProduct { name: string; currentQuantity: number; minimumQuantity: number; unit: string; }
+export interface PeakPeriod { period: string; pedidos: number; }
+export interface OrderQueue { status: string; pedidos: number; }
 export interface PriceAdjustment { id: string; name: string; from: number; to: number; direction: "up" | "down"; reason: string; }
-export interface DashboardMetrics { kpis: Kpi[]; aiInsights: AgentInsight[]; revenueVsCost: RevenueVsCostPoint[]; topDishes: TopDish[]; weekdayOrders: WeekdayOrders[]; priceAdjustments: PriceAdjustment[]; }
+export interface DashboardMetrics { kpis: Kpi[]; aiInsights: AgentInsight[]; revenueVsCost: RevenueVsCostPoint[]; topDishes: TopDish[]; weekdayOrders: WeekdayOrders[]; criticalStock: CriticalStockProduct[]; peakPeriods: PeakPeriod[]; orderQueue: OrderQueue[]; priceAdjustments: PriceAdjustment[]; }
 
 const errorCards = (message: string): AgentInsight[] => (["stock", "pricing", "suppliers"] as const).map(agent => ({
   id: `${agent}-error`, agent, icon: agent, label: agent === "stock" ? "Estoque" : agent === "pricing" ? "Precificação" : "Fornecedores",
@@ -20,7 +23,7 @@ const errorCards = (message: string): AgentInsight[] => (["stock", "pricing", "s
 }));
 
 export const useDashboardMetrics = (restaurantId: Ref<number | null>, requiresSelection: Ref<boolean>) => {
-  const data = ref<DashboardMetrics>({ kpis: [], aiInsights: [], revenueVsCost: [], topDishes: [], weekdayOrders: [], priceAdjustments: [] });
+  const data = ref<DashboardMetrics>({ kpis: [], aiInsights: [], revenueVsCost: [], topDishes: [], weekdayOrders: [], criticalStock: [], peakPeriods: [], orderQueue: [], priceAdjustments: [] });
   const pending = ref(false);
   const error = ref<string | null>(null);
   const available = ref(false);
@@ -48,7 +51,7 @@ export const useDashboardMetrics = (restaurantId: Ref<number | null>, requiresSe
       const aiInsights = alertCenter.error.value
         ? errorCards(alertCenter.error.value)
         : aggregateAgentCards(scopedAlerts).map(card => ({ ...card, id: `${card.agent}-summary`, icon: card.agent }));
-      data.value = { ...metricsResponse, aiInsights, priceAdjustments: [] };
+      data.value = { ...metricsResponse, criticalStock: metricsResponse.criticalStock || [], peakPeriods: metricsResponse.peakPeriods || [], orderQueue: metricsResponse.orderQueue || [], aiInsights, priceAdjustments: [] };
       available.value = true;
     } catch (err: any) {
       if (requestGeneration !== generation) return;

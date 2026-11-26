@@ -193,6 +193,7 @@ const CATEGORY_FUTURE = new Set(["financas"]);
 export interface RestaurantAiPhotoConfigDto {
   hasCustomKey: boolean;
   keyLast4Digits?: string | null;
+  provider: string;
   apiEndpoint?: string | null;
   model?: string | null;
   isUsingRestaurantConfig: boolean;
@@ -213,6 +214,7 @@ export interface TestRestaurantAiPhotoConfigResultDto {
 
 export interface UpdateRestaurantAiPhotoConfigDto {
   apiKey?: string | null;
+  provider?: string | null;
   apiEndpoint?: string | null;
   model?: string | null;
   clearKey?: boolean;
@@ -220,6 +222,7 @@ export interface UpdateRestaurantAiPhotoConfigDto {
 
 export interface TestRestaurantAiPhotoConfigRequestDto {
   overrideApiKey?: string | null;
+  overrideProvider?: string | null;
   overrideEndpoint?: string | null;
   overrideModel?: string | null;
 }
@@ -227,12 +230,38 @@ export interface TestRestaurantAiPhotoConfigRequestDto {
 export interface RestaurantAgentConfigDto {
   hasApiKey: boolean;
   keyLast4Digits?: string | null;
+  provider: string;
   apiEndpoint?: string | null;
   model?: string | null;
 }
 
-export interface UpdateRestaurantAgentConfigDto { apiKey?: string | null; apiEndpoint?: string | null; model?: string | null; clearKey?: boolean; }
+export interface UpdateRestaurantAgentConfigDto { apiKey?: string | null; provider?: string | null; apiEndpoint?: string | null; model?: string | null; clearKey?: boolean; }
 export interface TestRestaurantAgentConfigResultDto extends TestRestaurantAiPhotoConfigResultDto {}
+
+export const AI_PROVIDER_OPTIONS = [
+  { label: "OpenAI / Codex", value: "OpenAI" },
+  { label: "OpenCode Go", value: "OpenCodeGo" },
+  { label: "Google Gemini", value: "Gemini" },
+  { label: "Anthropic Claude", value: "Anthropic" },
+  { label: "DeepSeek", value: "DeepSeek" },
+  { label: "OpenRouter", value: "OpenRouter" },
+  { label: "Groq", value: "Groq" },
+  { label: "Mistral", value: "Mistral" }
+] as const;
+
+export function defaultAiModel(provider: string): string {
+  switch (provider) {
+    case "OpenAI": return "gpt-6.2-astra";
+    case "OpenCodeGo": return "deepseek-v4.1-flash";
+    case "Gemini": return "gemini-3.5-flash-lite";
+    case "Anthropic": return "claude-sonnet-4-5";
+    case "DeepSeek": return "deepseek-chat";
+    case "OpenRouter": return "openai/gpt-4o-mini";
+    case "Groq": return "llama-3.3-70b-versatile";
+    case "Mistral": return "mistral-small-latest";
+    default: return "";
+  }
+}
 
 export const GEMINI_DEFAULT_ENDPOINT = "https://generativelanguage.googleapis.com/v1";
 

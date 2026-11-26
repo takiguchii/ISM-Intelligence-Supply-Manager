@@ -1,0 +1,71 @@
+{
+  "model": "qwen3.5:4b",
+  "generatedAtUtc": "2026-11-25T00:53:26.3218067Z",
+  "total": 4,
+  "passed": 4,
+  "failed": 0,
+  "bySpecialist": [
+    {
+      "specialist": "suppliers",
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "averageLatencyMs": 16235,
+      "p95LatencyMs": 25707
+    }
+  ],
+  "cases": [
+    {
+      "Specialist": "suppliers",
+      "Index": 1,
+      "Prompt": "Compare fornecedores do arroz de carga kg",
+      "ExpectedTool": "suppliers.compareOffers",
+      "ExpectedDenied": false,
+      "ActualSource": "Dados do ISM \u00B7 s\u00EDntese local \u00B7 suppliers.compareOffers",
+      "Mode": "llm",
+      "Response": "O hist\u00F3rico de pre\u00E7os das compras anteriores mostra que Alpha vendeu arroz a R$ 5,50/kg em 23/11/2026 e Beta a R$ 6,25/kg em 22/11/2026. Estes valores referem-se exclusivamente ao passado e n\u00E3o s\u00E3o cota\u00E7\u00F5es atuais.",
+      "LatencyMs": 25707,
+      "Status": "PASS",
+      "FailureClass": ""
+    },
+    {
+      "Specialist": "suppliers",
+      "Index": 2,
+      "Prompt": "Compare o hist\u00F3rico de fornecedores do arroz de carga kg",
+      "ExpectedTool": "suppliers.compareOffers",
+      "ExpectedDenied": false,
+      "ActualSource": "Dados do ISM \u00B7 s\u00EDntese local \u00B7 suppliers.compareOffers",
+      "Mode": "llm",
+      "Response": "O hist\u00F3rico de pre\u00E7os mostra que o Fornecedor Alpha entregou arroz por R$ 5,50/kg (\u00FAltima compra em 23/11/2026) e o Fornecedor Beta por R$ 6,25/kg (\u00FAltima compra em 22/11/2026).",
+      "LatencyMs": 14896,
+      "Status": "PASS",
+      "FailureClass": ""
+    },
+    {
+      "Specialist": "suppliers",
+      "Index": 3,
+      "Prompt": "Mostre quem vende arroz de carga em kg",
+      "ExpectedTool": "suppliers.compareOffers",
+      "ExpectedDenied": false,
+      "ActualSource": "Dados do ISM \u00B7 s\u00EDntese local \u00B7 suppliers.compareOffers",
+      "Mode": "llm",
+      "Response": "O hist\u00F3rico de pre\u00E7os anteriores para arroz de carga mostra R$ 5,50/kg no Fornecedor Alpha e R$ 6,25/kg no Fornecedor Beta (\u00FAltimas compras em 23/11/2026 e 22/11/2026).",
+      "LatencyMs": 24318,
+      "Status": "PASS",
+      "FailureClass": ""
+    },
+    {
+      "Specialist": "suppliers",
+      "Index": 4,
+      "Prompt": "Qual foi o faturamento deste m\u00EAs?",
+      "ExpectedTool": null,
+      "ExpectedDenied": true,
+      "ActualSource": "Pol\u00EDtica de escopo do ISM",
+      "Mode": "deterministic",
+      "Response": "Esta conversa \u00E9 do especialista de fornecedores e s\u00F3 pode consultar informa\u00E7\u00F5es dessa \u00E1rea. Abra o Assistente geral para analisar outros assuntos.",
+      "LatencyMs": 19,
+      "Status": "PASS",
+      "FailureClass": ""
+    }
+  ]
+}

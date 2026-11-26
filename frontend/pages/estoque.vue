@@ -24,6 +24,7 @@ const totalItens = ref(0)
 const paginadoNoServidor = ref(true)
 
 const isModalOpen = ref(false)
+const receiptReviewOpen = ref(false)
 const isEditing = ref(false)
 const isLoading = ref(true)
 const isSaving = ref(false)
@@ -249,10 +250,12 @@ const abrirModal = (item: any = null) => {
     isEditing.value = false
   }
   isModalOpen.value = true
+  receiptReviewOpen.value = false
 }
 
 const fecharModal = () => {
   isModalOpen.value = false
+  receiptReviewOpen.value = false
   errorMessage.value = ''
 }
 
@@ -268,7 +271,12 @@ const abrirAssistente = async () => {
   else if (itensCriticos.value[0]?.id) consultarSaldo(itensCriticos.value[0].id)
 }
 const consultarSaldo = (productId: number) =>
-  assistantUi.openGeneralChat(`Qual é o saldo de estoque do produto ${productId}?`)
+  assistantUi.openSpecialistChat("stock", {
+    sourceView: "estoque",
+    subjectEntityType: "Product",
+    subjectEntityId: productId,
+    subject: `Estoque — produto ${productId}`
+  }, `Qual é o saldo de estoque do produto ${productId}?`)
 
 onMounted(() => {
   carregarHistorico()
@@ -485,8 +493,10 @@ onMounted(() => {
     </section>
 
     <!-- ==================== MODAL ==================== -->
-    <div v-if="isModalOpen" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-5xl p-5 sm:p-6 shadow-2xl relative space-y-4 my-6">
+    <div v-if="isModalOpen" class="stock-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/70 p-3 backdrop-blur-sm sm:p-5" @click.self="fecharModal">
+      <div class="stock-modal-panel flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-2xl border border-zinc-700/80 bg-zinc-900 shadow-2xl shadow-black/40" :class="receiptReviewOpen ? 'max-w-4xl' : 'max-w-5xl'">
+        <header class="flex shrink-0 items-center justify-between border-b border-zinc-800 px-5 py-4 sm:px-6">
+          <div><p class="text-[10px] font-semibold uppercase tracking-[.18em] text-indigo-300">{{ isEditing ? 'Estoque' : receiptReviewOpen ? 'Etapa 2 de 2' : 'Etapa 1 de 2' }}</p><h3 class="mt-1 text-lg font-bold text-white">{{ isEditing ? 'Editar insumo' : receiptReviewOpen ? 'Revisar entrada' : 'Adicionar entrada ao estoque' }}</h3></div>
         <button
           type="button"
           aria-label="Fechar modal"
@@ -497,12 +507,11 @@ onMounted(() => {
             <path stroke-linecap="round" d="m6 6 12 12M18 6 6 18" />
           </svg>
         </button>
-        <h3 class="border-b border-zinc-800 pb-4 pr-12 text-lg font-bold text-white">
-          {{ isEditing ? 'Editar insumo' : 'Adicionar entrada ao estoque' }}
-        </h3>
+        </header>
 
-        <div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.95fr)]">
-        <form @submit.prevent="salvarItem" class="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
+        <div class="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+        <div class="grid gap-4 lg:gap-5" :class="receiptReviewOpen ? 'grid-cols-1' : 'lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.95fr)]'">
+        <form v-show="!receiptReviewOpen" @submit.prevent="salvarItem" class="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4 sm:p-5">
           <div v-if="!isEditing" class="rounded-xl border border-indigo-500/20 bg-indigo-500/10 p-3">
             <p class="text-sm font-semibold text-indigo-100">Cadastro manual</p>
             <p class="mt-1 text-xs leading-5 text-zinc-400">Preencha um insumo individualmente ou use a leitura de nota ao lado para conferir vários itens.</p>
@@ -585,10 +594,11 @@ onMounted(() => {
           </div>
         </form>
         <div v-if="!isEditing" class="min-w-0">
-          <AssistantReceiptCapture stock-mode @confirmed="onReceiptConfirmed" />
+          <AssistantReceiptCapture stock-mode @reviewing="receiptReviewOpen = $event" @confirmed="onReceiptConfirmed" />
         </div>
         <div v-else class="hidden lg:block rounded-2xl border border-dashed border-zinc-800 p-5 text-sm text-zinc-500">
           A leitura de nota fica disponível ao cadastrar uma nova entrada. Para alterar este registro, edite os campos ao lado.
+        </div>
         </div>
         </div>
       </div>
@@ -607,4 +617,10 @@ onMounted(() => {
   -moz-appearance: textfield;
   appearance: textfield;
 }
+
+.stock-modal-backdrop { animation: stock-backdrop-in 180ms ease-out both; }
+.stock-modal-panel { animation: stock-panel-in 220ms cubic-bezier(.22,1,.36,1) both; }
+@keyframes stock-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes stock-panel-in { from { opacity: 0; transform: translateY(10px) scale(.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .stock-modal-backdrop, .stock-modal-panel { animation: none; } }
 </style>

@@ -5,7 +5,7 @@ import { productService, type ProductResponse } from "~/services/modules/stock/p
 import { useConfirmation } from "~/composables/useConfirmation";
 
 const props = withDefaults(defineProps<{ stockMode?: boolean }>(), { stockMode: false });
-const emit = defineEmits<{ confirmed: [] }>();
+const emit = defineEmits<{ confirmed: []; reviewing: [value: boolean] }>();
 const confirmation = useConfirmation();
 
 const fileInput = ref<HTMLInputElement | null>(null);
@@ -23,6 +23,22 @@ const productMappings = ref<ReceiptProductMappingDto[]>([]);
 const confirmationResult = ref<ReceiptConfirmationResultDto | null>(null);
 const idempotencyKey = ref("");
 const recognizedSnapshot = ref("");
+const expandedMapping = ref<number | null>(0);
+const normalizeUnit = (unit: string | null | undefined) => {
+  const value = unit?.trim().toLocaleLowerCase("pt-BR") || "";
+  if (["kg", "quilo", "quilos"].includes(value)) return "kg";
+  if (["g", "gr", "grama", "gramas"].includes(value)) return "g";
+  if (["l", "lt", "litro", "litros"].includes(value)) return "L";
+  if (["ml", "mililitro", "mililitros"].includes(value)) return "mL";
+  if (["un", "und", "unid", "unidade", "unidades", "pct", "pacote", "pacotes", "caixa", "caixas", "fardo", "fardos", "saco", "sacos"].includes(value)) return "Un";
+  return value || "Un";
+};
+const selectedProduct = (mapping: ReceiptProductMappingDto) => products.value.find(product => product.id === mapping.productId);
+const targetUnit = (mapping: ReceiptProductMappingDto) => selectedProduct(mapping)?.unit || mapping.newProductUnit || "Un";
+const hasUnitConversion = (index: number, mapping: ReceiptProductMappingDto) => {
+  const sourceUnit = normalizeUnit(result.value?.items[index]?.unit);
+  return sourceUnit !== normalizeUnit(targetUnit(mapping));
+};
 const editedAfterAnalysis = computed(() => result.value !== null && recognizedSnapshot.value !== JSON.stringify(result.value));
 const statusLabel = computed(() => loading.value ? "Lendo documento…" : confirmationResult.value ? "Entrada registrada" : result.value ? "Prévia pronta · sem lançamento" : file.value?.name ?? "");
 
@@ -52,6 +68,7 @@ function selectFile(event: Event) {
   file.value = selected;
   previewUrl.value = selected.type === "application/pdf" ? "" : URL.createObjectURL(selected);
   result.value = null;
+  emit("reviewing", false);
   confirmationResult.value = null;
   productMappings.value = [];
   recognizedSnapshot.value = "";
@@ -70,6 +87,7 @@ async function analyze() {
   error.value = "";
   try {
     result.value = await previewReceipt(file.value);
+    emit("reviewing", true);
     recognizedSnapshot.value = JSON.stringify(result.value);
     products.value = (await productService.getAll()).filter(product => product.isActive);
     productMappings.value = result.value.items.map((item, lineIndex) => ({
@@ -78,10 +96,11 @@ async function analyze() {
       quantityInStockUnit: item.quantity ?? 0,
       conversionNote: "",
       newProductName: props.stockMode ? item.description : null,
-      newProductUnit: props.stockMode ? (item.unit ?? "kg") : null,
+      newProductUnit: props.stockMode ? normalizeUnit(item.unit) : null,
       newProductMinimumQuantity: props.stockMode ? 0 : null,
       newProductMaximumQuantity: props.stockMode ? 0 : null
     }));
+    expandedMapping.value = 0;
     idempotencyKey.value = crypto.randomUUID();
   }
   catch (cause: any) { error.value = cause?.data?.detail || cause?.data || cause?.message || "Não foi possível analisar a imagem."; }
@@ -211,48 +230,42 @@ onBeforeUnmount(() => { if (previewUrl.value) URL.revokeObjectURL(previewUrl.val
       </div>
     </template>
 
-    <div v-if="result" class="mt-5 space-y-4 rounded-2xl bg-zinc-900/80 p-4 text-xs sm:p-5">
-      <div class="flex items-start justify-between gap-3">
+    <div v-if="result" class="receipt-review mt-4 space-y-4 rounded-2xl border border-zinc-800/80 bg-zinc-900/80 p-4 text-xs sm:p-5">
+      <div class="flex items-start justify-between gap-3 rounded-xl border border-zinc-800 bg-gradient-to-r from-zinc-950/80 to-zinc-900/40 p-4">
         <div>
-          <p class="text-sm font-semibold text-white">Prévia para conferência</p>
-          <p class="mt-1 text-xs text-zinc-500">Revise os campos reconhecidos antes de confirmar a entrada.</p>
+          <p class="text-[10px] font-semibold uppercase tracking-[.16em] text-indigo-300">Documento reconhecido</p>
+          <p class="mt-1 text-base font-semibold text-white">{{ result.supplier || 'Fornecedor não identificado' }}</p>
+          <p class="mt-1 text-xs text-zinc-400">Confira os itens e escolha como cada um será registrado no estoque.</p>
         </div>
-        <span class="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-300">{{ result.items.length }} itens</span>
-      </div>
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <label class="space-y-1.5"><span class="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Fornecedor</span><input v-model="result.supplier" class="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 outline-none transition focus:border-indigo-400" /></label>
-        <label class="space-y-1.5"><span class="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Total reconhecido</span><input v-model.number="result.total" type="number" step="0.01" class="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 outline-none transition focus:border-indigo-400" /></label>
+        <div class="shrink-0 text-right"><p class="text-[10px] uppercase tracking-wide text-zinc-500">Total da nota</p><p class="mt-1 text-sm font-bold text-white">{{ result.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }}</p><span class="mt-1 inline-block rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">{{ result.items.length }} itens</span></div>
       </div>
       <div class="space-y-2">
-        <p class="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Itens encontrados</p>
-        <div v-for="(item, index) in result.items" :key="`${index}-${item.description}`" class="grid grid-cols-2 gap-2 rounded-xl bg-zinc-950/70 p-2 sm:grid-cols-[minmax(0,2fr)_minmax(90px,0.8fr)_minmax(70px,0.6fr)_minmax(90px,0.8fr)]">
-          <input v-model="item.description" :aria-label="`Descrição do item ${index + 1}`" class="min-w-0 rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-2 text-xs text-zinc-100 outline-none focus:border-indigo-400" />
-          <input v-model.number="item.quantity" :aria-label="`Quantidade do item ${index + 1}`" type="number" step="0.001" class="min-w-0 rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-2 text-xs text-zinc-100 outline-none focus:border-indigo-400" />
-          <input v-model="item.unit" :aria-label="`Unidade do item ${index + 1}`" class="min-w-0 rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-2 text-xs text-zinc-100 outline-none focus:border-indigo-400" />
-          <input v-model.number="item.unitPrice" :aria-label="`Preço unitário do item ${index + 1}`" type="number" step="0.01" class="min-w-0 rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-2 text-xs text-zinc-100 outline-none focus:border-indigo-400" />
+        <p class="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Itens reconhecidos</p>
+        <div v-for="(item, index) in result.items" :key="`${index}-${item.description}`" class="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950/50">
+          <button type="button" class="flex w-full items-center gap-3 px-3 py-3 text-left transition hover:bg-zinc-800/50" :aria-expanded="expandedMapping === index" @click="expandedMapping = expandedMapping === index ? null : index"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-indigo-400/10 text-[11px] font-semibold text-indigo-200">{{ index + 1 }}</span><span class="min-w-0 flex-1 truncate font-medium text-zinc-200">{{ item.description || 'Item sem descrição' }}</span><span class="shrink-0 text-zinc-400">{{ item.quantity }} {{ item.unit }} · {{ Number(item.unitPrice || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }}</span><span class="ml-1 text-zinc-500">{{ expandedMapping === index ? '−' : '+' }}</span></button>
+          <Transition name="receipt-fade"><div v-if="expandedMapping === index" class="grid grid-cols-2 gap-2 border-t border-zinc-800 p-3 sm:grid-cols-4"><label class="space-y-1 text-[10px] text-zinc-500">Descrição<input v-model="item.description" :aria-label="`Descrição do item ${index + 1}`" class="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-2 text-xs text-zinc-100 outline-none focus:border-indigo-400" /></label><label class="space-y-1 text-[10px] text-zinc-500">Quantidade<input v-model.number="item.quantity" :aria-label="`Quantidade do item ${index + 1}`" type="number" step="0.001" class="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-2 text-xs text-zinc-100 outline-none focus:border-indigo-400" /></label><label class="space-y-1 text-[10px] text-zinc-500">Unidade<input v-model="item.unit" :aria-label="`Unidade do item ${index + 1}`" class="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-2 text-xs text-zinc-100 outline-none focus:border-indigo-400" /></label><label class="space-y-1 text-[10px] text-zinc-500">Preço unitário<input v-model.number="item.unitPrice" :aria-label="`Preço unitário do item ${index + 1}`" type="number" step="0.01" class="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-2 text-xs text-zinc-100 outline-none focus:border-indigo-400" /></label></div></Transition>
         </div>
       </div>
       <div v-if="result.decision === 'PREVIEW_REQUIRES_CONFIRMATION' && !confirmationResult" class="space-y-2 border-t border-zinc-200 pt-2 dark:border-zinc-700">
-        <p class="font-semibold text-zinc-700 dark:text-zinc-200">{{ props.stockMode ? 'Confira cada insumo antes de lançar no estoque' : 'Mapeamento para o estoque · confirme unidades e embalagens' }}</p>
-        <div v-for="(mapping, index) in productMappings" :key="`mapping-${index}`" class="grid grid-cols-1 gap-2 rounded-xl bg-zinc-950/60 p-3 sm:grid-cols-3">
-          <label class="space-y-1"><span class="text-[10px] text-zinc-500">Destino da linha {{ index + 1 }}</span>
-            <select v-model.number="mapping.productId" class="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-2 text-xs text-zinc-100 outline-none focus:border-indigo-400">
+        <p class="font-semibold text-zinc-200">Vincule cada item ao estoque e confira a quantidade a adicionar.</p>
+        <div v-for="(mapping, index) in productMappings" :key="`mapping-${index}`" class="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/50 p-3 sm:p-4">
+          <div class="flex flex-wrap items-center justify-between gap-2"><div class="flex min-w-0 items-center gap-2"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-indigo-400/10 text-[11px] font-semibold text-indigo-200">{{ index + 1 }}</span><span class="truncate text-xs font-semibold text-zinc-100">{{ result.items[index]?.description || `Item ${index + 1}` }}</span></div><span class="text-[11px] text-zinc-400">Na nota: {{ result.items[index]?.quantity }} {{ result.items[index]?.unit }}</span></div>
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1.4fr)_minmax(130px,.8fr)]">
+          <label class="space-y-1"><span class="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Destino no estoque</span>
+            <select v-model.number="mapping.productId" @change="mapping.conversionNote = ''" class="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-2.5 text-xs text-zinc-100 outline-none focus:border-indigo-400">
               <option :value="0">{{ props.stockMode ? 'Criar novo insumo' : 'Selecione um produto' }}</option>
               <option v-for="product in products" :key="product.id" :value="product.id">{{ product.name }} ({{ product.unit }})</option>
             </select>
           </label>
-          <label class="space-y-1"><span class="text-[10px] text-zinc-500">Quantidade na unidade do estoque</span>
-            <input v-model.number="mapping.quantityInStockUnit" type="number" min="0.001" step="0.001" class="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-2 text-xs text-zinc-100 outline-none focus:border-indigo-400" />
+          <label class="space-y-1"><span class="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Quantidade a adicionar ({{ targetUnit(mapping) }})</span>
+            <input v-model.number="mapping.quantityInStockUnit" type="number" min="0.001" step="0.001" class="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-2.5 text-xs text-zinc-100 outline-none focus:border-indigo-400" />
           </label>
-          <label class="space-y-1"><span class="text-[10px] text-zinc-500">Justificativa de conversão</span>
-            <input v-model="mapping.conversionNote" placeholder="Ex.: 1 pacote de 5 kg = 5 kg" class="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-2 text-xs text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-indigo-400" />
-          </label>
+          </div>
           <template v-if="props.stockMode && !mapping.productId">
-            <label class="space-y-1"><span class="text-[10px] text-zinc-500">Nome do novo insumo</span><input v-model="mapping.newProductName" class="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-2 text-xs text-zinc-100 outline-none focus:border-indigo-400" /></label>
-            <label class="space-y-1"><span class="text-[10px] text-zinc-500">Unidade</span><select v-model="mapping.newProductUnit" class="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-2 text-xs text-zinc-100 outline-none focus:border-indigo-400"><option value="g">g</option><option value="kg">kg</option><option value="L">L</option><option value="mL">mL</option><option value="Un">Un</option></select></label>
-            <label class="space-y-1"><span class="text-[10px] text-zinc-500">Estoque mínimo</span><input v-model.number="mapping.newProductMinimumQuantity" type="number" min="0" step="0.001" class="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-2 text-xs text-zinc-100 outline-none focus:border-indigo-400" /></label>
-            <label class="space-y-1"><span class="text-[10px] text-zinc-500">Estoque máximo</span><input v-model.number="mapping.newProductMaximumQuantity" type="number" min="0" step="0.001" class="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-2 text-xs text-zinc-100 outline-none focus:border-indigo-400" /></label>
+            <div class="grid grid-cols-1 gap-3 border-t border-zinc-800 pt-3 sm:grid-cols-2"><label class="space-y-1"><span class="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Nome do novo insumo</span><input v-model="mapping.newProductName" class="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-2 text-xs text-zinc-100 outline-none focus:border-indigo-400" /></label><label class="space-y-1"><span class="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Unidade do estoque</span><select v-model="mapping.newProductUnit" class="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-2 text-xs text-zinc-100 outline-none focus:border-indigo-400"><option value="g">g</option><option value="kg">kg</option><option value="L">L</option><option value="mL">mL</option><option value="Un">Un</option></select></label></div>
+            <details class="rounded-lg border border-zinc-800 px-3 py-2"><summary class="cursor-pointer text-[11px] font-medium text-zinc-400">Configurar estoque mínimo e máximo <span class="ml-1 text-zinc-600">(opcional)</span></summary><div class="mt-3 grid grid-cols-2 gap-3"><label class="space-y-1 text-[10px] text-zinc-500">Mínimo<input v-model.number="mapping.newProductMinimumQuantity" type="number" min="0" step="0.001" class="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-2 text-xs text-zinc-100 outline-none focus:border-indigo-400" /></label><label class="space-y-1 text-[10px] text-zinc-500">Máximo<input v-model.number="mapping.newProductMaximumQuantity" type="number" min="0" step="0.001" class="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-2 text-xs text-zinc-100 outline-none focus:border-indigo-400" /></label></div></details>
           </template>
+          <label v-if="hasUnitConversion(index, mapping)" class="block space-y-1 border-t border-zinc-800 pt-3"><span class="text-[10px] font-semibold uppercase tracking-wide text-amber-300">Conversão necessária · {{ result.items[index]?.unit }} para {{ targetUnit(mapping) }}</span><input v-model="mapping.conversionNote" :placeholder="`Ex.: ${result.items[index]?.quantity} ${result.items[index]?.unit} = ${mapping.quantityInStockUnit} ${targetUnit(mapping)}`" class="w-full rounded-lg border border-amber-500/20 bg-zinc-900 px-2.5 py-2.5 text-xs text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-amber-400" /><span class="block text-[10px] text-zinc-500">Informe como converteu a quantidade da nota para a unidade do estoque.</span></label>
         </div>
         <button type="button" :disabled="confirming || editedAfterAnalysis || !productMappings.length" class="rounded-xl bg-emerald-500 px-4 py-2.5 text-xs font-semibold text-zinc-950 transition hover:bg-emerald-400 disabled:opacity-50" @click="confirmImport">{{ confirming ? 'Conferindo e registrando…' : 'Confirmar entrada no estoque' }}</button>
         <p v-if="editedAfterAnalysis" class="text-amber-700 dark:text-amber-300">Campos reconhecidos alterados exigem nova análise antes da confirmação.</p>

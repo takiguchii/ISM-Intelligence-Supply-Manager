@@ -248,6 +248,10 @@ namespace ISM.Infrastructure.Data.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("varchar(128)");
 
+                    b.Property<string>("AgentProvider")
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)");
+
                     b.Property<string>("CNPJ")
                         .IsRequired()
                         .HasMaxLength(14)
@@ -307,6 +311,10 @@ namespace ISM.Infrastructure.Data.Migrations
 
                     b.Property<string>("PhotoImportModel")
                         .HasColumnType("longtext");
+
+                    b.Property<string>("PhotoImportProvider")
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)");
 
                     b.Property<int?>("PlanId")
                         .HasColumnType("int");
@@ -806,6 +814,15 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.Property<int>("RestaurantId")
                         .HasColumnType("int");
 
+                    b.Property<string>("SourceView")
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<string>("SpecialistId")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)");
+
                     b.Property<string>("Subject")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -813,6 +830,10 @@ namespace ISM.Infrastructure.Data.Migrations
 
                     b.Property<int?>("SubjectEntityId")
                         .HasColumnType("int");
+
+                    b.Property<string>("SubjectEntityType")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
 
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("datetime(6)");
@@ -827,6 +848,8 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.HasIndex("RestaurantId", "OriginAlertId");
 
                     b.HasIndex("RestaurantId", "UserId", "LastMessageAtUtc");
+
+                    b.HasIndex("RestaurantId", "UserId", "SpecialistId", "LastMessageAtUtc");
 
                     b.ToTable("assistant_threads", (string)null);
                 });

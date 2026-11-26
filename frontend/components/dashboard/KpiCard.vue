@@ -9,12 +9,13 @@ const props = defineProps<{
     icon: string;
     hint?: string;
 }>();
+defineEmits<{ click: [] }>();
 
 const isUp = computed(() => props.trend === "up");
 </script>
 
 <template>
-    <div class="p-6 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800/80 shadow-sm dark:shadow-lg space-y-4 h-full transition-colors duration-200">
+    <button type="button" class="group w-full p-6 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800/80 shadow-sm dark:shadow-lg space-y-4 h-full text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:hover:border-indigo-400/40" :aria-label="`Ver detalhes de ${label}`" @click="$emit('click')">
         <div class="flex items-center justify-between">
             <span class="text-xs font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{{ label }}</span>
             <span
@@ -38,5 +39,5 @@ const isUp = computed(() => props.trend === "up");
             </span>
             <span v-if="hint" class="text-xs text-zinc-500 dark:text-zinc-500">{{ hint }}</span>
         </div>
-    </div>
+    </button>
 </template>

@@ -2,10 +2,11 @@ using System.Diagnostics;
 using System.Text.Json;
 using ISM.Application.Agents;
 using ISM.Application.Security;
+using Microsoft.Extensions.Logging;
 
 namespace ISM.Application.Services.Agents;
 
-public sealed class AgentToolRegistry(IEnumerable<IAgentTool> tools, ICurrentUser currentUser) : IAgentToolRegistry
+public sealed class AgentToolRegistry(IEnumerable<IAgentTool> tools, ICurrentUser currentUser, ILogger<AgentToolRegistry> logger) : IAgentToolRegistry
 {
     private readonly IReadOnlyDictionary<string, IAgentTool> _tools = tools.ToDictionary(
         tool => tool.Descriptor.ToolName,
@@ -21,6 +22,8 @@ public sealed class AgentToolRegistry(IEnumerable<IAgentTool> tools, ICurrentUse
             return Result(request.ToolName, AgentDecisionCode.Denied, "Usuário sem escopo gerencial de restaurante.", correlationId, stopwatch);
         if (string.IsNullOrWhiteSpace(request.ToolName) || !_tools.TryGetValue(request.ToolName.Trim(), out var tool))
             return Result(request.ToolName, AgentDecisionCode.InsufficientData, "Ferramenta não encontrada no registry allowlistado.", correlationId, stopwatch);
+        if (!string.Equals(request.Specialist, tool.Descriptor.Specialist, StringComparison.OrdinalIgnoreCase))
+            return Result(tool.Descriptor.ToolName, AgentDecisionCode.Denied, "A ferramenta não pertence à especialidade informada.", correlationId, stopwatch);
         if (request.Input.ValueKind is not JsonValueKind.Object)
             return Result(tool.Descriptor.ToolName, AgentDecisionCode.InsufficientData, "A entrada da ferramenta deve ser um objeto JSON.", correlationId, stopwatch);
         if (request.Input.TryGetProperty("restaurantId", out _))
@@ -39,8 +42,9 @@ public sealed class AgentToolRegistry(IEnumerable<IAgentTool> tools, ICurrentUse
         {
             return Result(tool.Descriptor.ToolName, AgentDecisionCode.Unreachable, "A ferramenta excedeu o prazo de execução.", correlationId, stopwatch);
         }
-        catch (Exception)
+        catch (Exception exception)
         {
+            logger.LogError(exception, "Falha na ferramenta {ToolName} para correlação {CorrelationId}", tool.Descriptor.ToolName, correlationId);
             return Result(tool.Descriptor.ToolName, AgentDecisionCode.Unreachable, "A ferramenta não pôde consultar a fonte autorizada.", correlationId, stopwatch);
         }
     }
