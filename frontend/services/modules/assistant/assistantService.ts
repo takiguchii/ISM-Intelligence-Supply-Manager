@@ -13,6 +13,7 @@ export const assistantService = {
   threads: (params?: { page?: number; limit?: number }) => apiClientWithAuth<AssistantThread[]>("/api/assistant/threads", { params }),
   createThread: (body: { originAlertId?: number | null; parentThreadId?: number | null; subject?: string | null; specialistId?: AgentKind | null; sourceView?: string | null; subjectEntityType?: string | null; subjectEntityId?: number | null }) => apiClientWithAuth<AssistantConversation>("/api/assistant/threads", { method: "POST", body }),
   thread: (id: number) => apiClientWithAuth<AssistantConversation>(`/api/assistant/threads/${id}`),
+  archiveThread: (id: number) => apiClientWithAuth<void>(`/api/assistant/threads/${id}`, { method: "DELETE" }),
   alertContext: (id: number) => apiClientWithAuth<AssistantContext>(`/api/assistant/alerts/${id}/context`),
   sendMessage: (id: number, message: string) => apiClientWithAuth<AssistantConversation>(`/api/assistant/threads/${id}/messages`, { method: "POST", body: { message } }),
   sendMessageWithImage: (id: number, message: string, file: File) => {

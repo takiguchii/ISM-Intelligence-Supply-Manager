@@ -6,11 +6,13 @@ import KpiCard from "~/components/dashboard/KpiCard.vue";
 import RevenueVsCostChart from "~/components/dashboard/RevenueVsCostChart.vue";
 import TopDishesChart from "~/components/dashboard/TopDishesChart.vue";
 import WeekdayOrdersChart from "~/components/dashboard/WeekdayOrdersChart.vue";
+import PeakPeriodsChart from "~/components/dashboard/PeakPeriodsChart.vue";
+import OrderQueueChart from "~/components/dashboard/OrderQueueChart.vue";
 import AiInsightCard from "~/components/dashboard/AiInsightCard.vue";
 import AgentInsightDetails from "~/components/dashboard/AgentInsightDetails.vue";
 import { useAuthStore } from "~/stores/auth";
 import { homeForUser } from "~/utils/navigation";
-import { useDashboardMetrics } from "~/composables/useDashboardMetrics";
+import { useDashboardMetrics, type Kpi } from "~/composables/useDashboardMetrics";
 import { useAssistantUi } from "~/composables/useAssistantUi";
 import { useSystemAlertCenter } from "~/composables/useSystemAlertCenter";
 
@@ -35,6 +37,22 @@ const {
   refresh: refreshMetrics
 } = useDashboardMetrics(dashboardRestaurantId, isSuperAdmin);
 const selectedInsight = ref<typeof metrics.value.aiInsights[number] | null>(null);
+const selectedKpi = ref<Kpi | null>(null);
+const kpiDetails = computed(() => {
+  const kpi = selectedKpi.value;
+  if (!kpi) return { description: "", rows: [] as Array<{ label: string; value: string }> };
+  const currency = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  if (kpi.id === "estoque") {
+    return { description: "Produtos ativos no nível mínimo ou abaixo, ordenados pela maior necessidade de reposição.", rows: metrics.value.criticalStock.map(product => ({ label: product.name, value: `${product.currentQuantity.toLocaleString("pt-BR")} ${product.unit} · mínimo ${product.minimumQuantity.toLocaleString("pt-BR")} ${product.unit}` })) };
+  }
+  if (["receita", "margem"].includes(kpi.id)) {
+    return { description: "Composição diária dos pedidos pagos nos últimos 7 dias.", rows: metrics.value.revenueVsCost.map(day => ({ label: day.day, value: kpi.id === "receita" ? currency(day.receita) : day.receita > 0 ? `${(((day.receita - day.custo) / day.receita) * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% de margem` : "Sem vendas" })) };
+  }
+  if (kpi.id === "pedidos") {
+    return { description: "Pratos mais pedidos na última semana e média de pedidos por dia da semana no último mês.", rows: [...metrics.value.topDishes.map(dish => ({ label: dish.name, value: `${dish.pedidos} unidades vendidas` })), ...metrics.value.weekdayOrders.map(day => ({ label: `Média de ${day.day}`, value: `${day.pedidos.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} pedidos/semana` }))] };
+  }
+  return { description: kpi.hint || "Detalhamento do indicador.", rows: [] };
+});
 
 watch(dashboardRestaurantId, () => { if (authStore.isAuthenticated) refreshMetrics(); });
 watch(alertCenter.alerts, () => { if (metricsAvailable.value) refreshMetrics(); });
@@ -129,7 +147,7 @@ onMounted(async () => {
 
         <!-- KPIs -->
         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <KpiCard v-for="kpi in metrics.kpis" :key="kpi.id" v-bind="kpi" />
+          <KpiCard v-for="kpi in metrics.kpis" :key="kpi.id" v-bind="kpi" @click="selectedKpi = kpi" />
         </div>
 
         <section aria-labelledby="agent-insights-title" class="space-y-3">
@@ -138,17 +156,50 @@ onMounted(async () => {
           <p v-else class="rounded-xl border border-dashed border-zinc-300 px-4 py-3 text-xs text-zinc-500 dark:border-zinc-700">Nenhum alerta persistido dos agentes neste momento.</p>
         </section>
 
-        <!-- Receita vs. Custo -->
-        <RevenueVsCostChart :data="metrics.revenueVsCost" />
-
-        <!-- Pratos mais pedidos / Pedidos por dia da semana -->
+        <section aria-labelledby="sales-analysis-title" class="space-y-3">
+          <div><h3 id="sales-analysis-title" class="text-sm font-bold text-zinc-800 dark:text-zinc-200">Vendas e cardápio</h3><p class="mt-0.5 text-xs text-zinc-500">Tendência financeira e produtos com maior procura.</p></div>
+          <RevenueVsCostChart :data="metrics.revenueVsCost" />
         <div class="grid gap-6 lg:grid-cols-2">
           <TopDishesChart :data="metrics.topDishes" />
           <WeekdayOrdersChart :data="metrics.weekdayOrders" />
         </div>
+        </section>
+
+        <section aria-labelledby="operations-overview-title" class="space-y-3">
+          <div><h3 id="operations-overview-title" class="text-sm font-bold text-zinc-800 dark:text-zinc-200">Visão operacional</h3><p class="mt-0.5 text-xs text-zinc-500">Resumo da fila atual e dos períodos de maior movimento.</p></div>
+          <div class="grid gap-6 lg:grid-cols-2"><OrderQueueChart :data="metrics.orderQueue" /><PeakPeriodsChart :data="metrics.peakPeriods" /></div>
+        </section>
 
       </section>
+      <Teleport to="body">
+        <Transition name="kpi-detail">
+          <div v-if="selectedKpi" class="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6" role="presentation" @keydown.esc="selectedKpi = null">
+            <button class="absolute inset-0 h-full w-full bg-zinc-950/25 backdrop-blur-md" aria-label="Fechar detalhes do indicador" @click="selectedKpi = null" />
+            <section class="kpi-detail-panel relative flex max-h-[min(80vh,680px)] w-full max-w-xl flex-col overflow-hidden rounded-3xl border border-zinc-200/80 bg-white shadow-2xl shadow-zinc-950/20 dark:border-zinc-700/80 dark:bg-zinc-950" role="dialog" aria-modal="true" aria-labelledby="kpi-detail-title">
+              <header class="border-b border-zinc-200/70 bg-zinc-50/80 px-6 py-5 dark:border-zinc-800 dark:bg-zinc-900/70 sm:px-7">
+                <div class="flex items-start justify-between gap-4"><div><p class="text-[10px] font-semibold uppercase tracking-[.2em] text-indigo-600 dark:text-indigo-300">Detalhamento do indicador</p><h2 id="kpi-detail-title" class="mt-1 text-xl font-bold tracking-tight text-zinc-900 dark:text-white">{{ selectedKpi.label }}</h2><p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{{ kpiDetails.description }}</p></div><button type="button" class="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-xl text-zinc-500 transition hover:bg-zinc-200/70 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-white" aria-label="Fechar" @click="selectedKpi = null">×</button></div>
+                <p class="relative mt-5 text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">{{ selectedKpi.value }}</p>
+              </header>
+              <div class="min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
+                <div v-if="kpiDetails.rows.length" class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                  <article v-for="row in kpiDetails.rows" :key="row.label" class="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0"><span class="min-w-0 text-sm font-medium text-zinc-700 dark:text-zinc-200">{{ row.label }}</span><span class="max-w-[65%] text-right text-sm text-zinc-500 dark:text-zinc-400">{{ row.value }}</span></article>
+                </div>
+                <p v-else class="rounded-2xl border border-dashed border-zinc-300 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700">{{ selectedKpi.id === 'estoque' ? 'Nenhum produto está no nível crítico de estoque.' : 'Ainda não há dados suficientes para detalhar este indicador.' }}</p>
+              </div>
+              <footer class="flex justify-end border-t border-zinc-100 px-5 py-4 dark:border-zinc-800"><button type="button" class="rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200" @click="selectedKpi = null">Entendi</button></footer>
+            </section>
+          </div>
+        </Transition>
+      </Teleport>
       <AgentInsightDetails :insight="selectedInsight" :open="Boolean(selectedInsight)" @close="selectedInsight = null" @converse="converseAboutInsight(selectedInsight)" />
     </main>
   </div>
 </template>
+
+<style scoped>
+.kpi-detail-enter-active, .kpi-detail-leave-active { transition: opacity 220ms ease; }
+.kpi-detail-enter-active .kpi-detail-panel, .kpi-detail-leave-active .kpi-detail-panel { transition: transform 280ms cubic-bezier(.22,1,.36,1), opacity 220ms ease; }
+.kpi-detail-enter-from, .kpi-detail-leave-to { opacity: 0; }
+.kpi-detail-enter-from .kpi-detail-panel, .kpi-detail-leave-to .kpi-detail-panel { transform: translateY(14px) scale(.97); opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .kpi-detail-enter-active, .kpi-detail-leave-active, .kpi-detail-enter-active .kpi-detail-panel, .kpi-detail-leave-active .kpi-detail-panel { transition-duration: 1ms; } }
+</style>

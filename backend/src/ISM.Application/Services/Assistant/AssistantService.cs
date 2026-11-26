@@ -173,6 +173,16 @@ public sealed class AssistantService(
         return thread is null ? null : await BuildConversationAsync(thread, DeserializeContext(thread.ContextSnapshotJson), cancellationToken);
     }
 
+    public async Task<bool> ArchiveThreadAsync(int threadId, CancellationToken cancellationToken = default)
+    {
+        var restaurantId = RequireRestaurant();
+        var thread = await conversations.GetThreadAsync(threadId, restaurantId, currentUser.UserId, cancellationToken);
+        if (thread is null) return false;
+        thread.IsArchived = true;
+        await conversations.SaveThreadAsync(thread, cancellationToken);
+        return true;
+    }
+
     public async Task<AssistantContextResponse?> GetAlertContextAsync(int alertId, CancellationToken cancellationToken = default)
     {
         var restaurantId = RequireRestaurant();

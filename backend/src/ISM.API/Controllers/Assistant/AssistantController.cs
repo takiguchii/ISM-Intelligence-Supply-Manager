@@ -126,6 +126,10 @@ public sealed class AssistantController(IAssistantService service, IAgentToolReg
     public async Task<ActionResult<AssistantConversationResponse>> Thread(int id, CancellationToken cancellationToken)
         => (await service.GetThreadAsync(id, cancellationToken)) is { } result ? Ok(result) : NotFound();
 
+    [HttpDelete("threads/{id:int}")]
+    public async Task<IActionResult> ArchiveThread(int id, CancellationToken cancellationToken)
+        => await service.ArchiveThreadAsync(id, cancellationToken) ? NoContent() : NotFound();
+
     [HttpGet("alerts/{id:int}/context")]
     public async Task<ActionResult<AssistantContextResponse>> AlertContext(int id, CancellationToken cancellationToken)
         => (await service.GetAlertContextAsync(id, cancellationToken)) is { } result ? Ok(result) : NotFound();
