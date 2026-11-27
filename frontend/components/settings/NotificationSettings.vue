@@ -144,7 +144,7 @@ async function loadQr() {
   <div class="space-y-6">
     <div v-if="!isPlatformAdmin" class="settings-card">
       <h2>Canais de notificação</h2>
-      <p class="settings-hint">Receba novos alertas na central, por e-mail ou pelo WhatsApp. O envio externo começa após salvar suas preferências e configurar o serviço.</p>
+      <p class="settings-hint">Receba novos alertas na central, por e-mail, WhatsApp ou Telegram. O envio externo começa após salvar suas preferências e configurar o serviço.</p>
       <p v-if="error" role="alert" class="text-red-600 dark:text-red-400">{{ error }}</p>
       <p v-if="success" role="status" class="text-emerald-600 dark:text-emerald-400">{{ success }}</p>
       <form v-if="preferences" ref="formElement" @submit.prevent="save">
@@ -202,10 +202,10 @@ async function loadQr() {
     </div>
     <div v-if="!isPlatformAdmin" class="settings-card">
       <h2>Histórico de envios</h2>
-      <p class="settings-hint">“Aceito pelo servidor” confirma o envio ao SMTP ou WhatsApp; não confirma leitura nem chegada à caixa de entrada.</p>
+      <p class="settings-hint">“Aceito pelo servidor” confirma a aceitação pelo SMTP, WhatsApp ou Telegram; não confirma leitura nem chegada à caixa de entrada.</p>
       <p v-if="historyError" role="alert" class="text-red-600 dark:text-red-400">{{ historyError }}</p>
       <p v-if="!history.length && !historyError" class="settings-hint">Nenhum envio registrado. Ative um canal e envie um teste depois da configuração.</p>
-      <ul class="divide-y divide-zinc-200 dark:divide-zinc-800"><li v-for="delivery in history" :key="delivery.id" class="py-4 space-y-1"><p class="font-medium">{{ delivery.subject }}</p><p v-if="delivery.isTest" class="text-xs font-semibold text-indigo-600 dark:text-indigo-300">Envio de demonstração{{ delivery.sourceAlertId ? ' · alerta real do restaurante' : ' · cenário ilustrativo' }}</p><p class="settings-hint">{{ delivery.channel === 'email' ? 'E-mail' : 'WhatsApp' }} · {{ statusLabels[delivery.status] || delivery.status }} · {{ new Date(delivery.createdAtUtc).toLocaleString('pt-BR') }} · {{ delivery.attempts }} tentativa(s)</p><p v-if="delivery.lastError" class="text-sm text-amber-700 dark:text-amber-300">{{ delivery.lastError }}</p></li></ul>
+      <ul class="divide-y divide-zinc-200 dark:divide-zinc-800"><li v-for="delivery in history" :key="delivery.id" class="py-4 space-y-1"><p class="font-medium">{{ delivery.subject }}</p><p v-if="delivery.isTest" class="text-xs font-semibold text-indigo-600 dark:text-indigo-300">Envio de demonstração{{ delivery.sourceAlertId ? ' · alerta real do restaurante' : ' · cenário ilustrativo' }}</p><p class="settings-hint">{{ delivery.channel === 'email' ? 'E-mail' : delivery.channel === 'telegram' ? 'Telegram' : 'WhatsApp' }} · {{ statusLabels[delivery.status] || delivery.status }} · {{ new Date(delivery.createdAtUtc).toLocaleString('pt-BR') }} · {{ delivery.attempts }} tentativa(s)</p><p v-if="delivery.lastError" class="text-sm text-amber-700 dark:text-amber-300">{{ delivery.lastError }}</p></li></ul>
     </div>
   </div>
 </template>

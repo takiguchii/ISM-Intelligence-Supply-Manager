@@ -22,12 +22,16 @@ public sealed class OrchestrationConcurrencyTests
         results.Should().OnlyContain(result => !result.Partial && result.Steps.Count == 2);
         results.SelectMany(result => result.Evidence).Should().OnlyContain(evidence => IsExpectedRestaurant(evidence.RestaurantId));
         registry.Calls.Should().Be(40);
+        registry.MaxConcurrentStepsWithinQuery.Should().Be(1);
     }
 
     private sealed class ConcurrentRegistry : IAgentToolRegistry
     {
         private int _calls;
+        private int _maxConcurrentStepsWithinQuery;
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<string, int> _activeByCorrelation = new();
         public int Calls => _calls;
+        public int MaxConcurrentStepsWithinQuery => _maxConcurrentStepsWithinQuery;
         public IReadOnlyCollection<AgentToolDescriptor> List() =>
         [
             new("finance.getRevenueSummary", "finance", "1", "", AgentToolOperation.Read, ["Manager"], 1, 3000, false, "low"),
@@ -37,15 +41,36 @@ public sealed class OrchestrationConcurrencyTests
         public async Task<AgentToolResult> ExecuteAsync(AgentToolExecuteRequest request, CancellationToken cancellationToken = default)
         {
             Interlocked.Increment(ref _calls);
-            await Task.Delay(1, cancellationToken);
-            var restaurantId = request.Input.TryGetProperty("productId", out var product) && product.TryGetInt32(out var id) ? id % 2 == 0 ? 2 : 1 : 1;
-            object data = request.ToolName switch
+            var correlationId = request.CorrelationId ?? string.Empty;
+            var active = _activeByCorrelation.AddOrUpdate(correlationId, 1, (_, current) => current + 1);
+            UpdateMaximum(active);
+            try
             {
-                "finance.getRevenueSummary" => new { SalesRevenue = 100m, OtherIncome = 0m, Expenses = 0m, AccountsReceivable = 0m, AccountsPayable = 0m },
-                "stock.getProduct" => new { Name = $"Produto {restaurantId}", CurrentQuantity = 10m, MinimumQuantity = 2m, AverageCost = 5m, IsCritical = false },
-                _ => new { }
-            };
-            return new(request.ToolName, AgentDecisionCode.CanAct, data, [new("Fixture", request.ToolName, restaurantId, DateTime.UtcNow, null, "fixture")], "ok", request.CorrelationId ?? "corr", 1);
+                await Task.Delay(1, cancellationToken);
+                var restaurantId = request.Input.TryGetProperty("productId", out var product) && product.TryGetInt32(out var id) ? id % 2 == 0 ? 2 : 1 : 1;
+                object data = request.ToolName switch
+                {
+                    "finance.getRevenueSummary" => new { SalesRevenue = 100m, OtherIncome = 0m, Expenses = 0m, AccountsReceivable = 0m, AccountsPayable = 0m },
+                    "stock.getProduct" => new { Name = $"Produto {restaurantId}", CurrentQuantity = 10m, MinimumQuantity = 2m, AverageCost = 5m, IsCritical = false },
+                    _ => new { }
+                };
+                return new(request.ToolName, AgentDecisionCode.CanAct, data, [new("Fixture", request.ToolName, restaurantId, DateTime.UtcNow, null, "fixture")], "ok", request.CorrelationId ?? "corr", 1);
+            }
+            finally
+            {
+                _activeByCorrelation.AddOrUpdate(correlationId, 0, (_, current) => current - 1);
+            }
+        }
+
+        private void UpdateMaximum(int value)
+        {
+            var current = Volatile.Read(ref _maxConcurrentStepsWithinQuery);
+            while (value > current)
+            {
+                var observed = Interlocked.CompareExchange(ref _maxConcurrentStepsWithinQuery, value, current);
+                if (observed == current) return;
+                current = observed;
+            }
         }
     }
 

@@ -62,7 +62,7 @@ public static class NotificationMessageFormatter
     public static NotificationPreview Render(string scenario, string channel, string restaurantName,
         string timeZone, DateTime occurredAtUtc, string publicAppUrl, bool isTest, SystemAlert? alert = null)
     {
-        if (channel is not ("email" or "whatsapp")) throw new InvalidOperationException("Canal inválido.");
+        if (channel is not ("email" or "whatsapp" or "telegram")) throw new InvalidOperationException("Canal inválido.");
         var content = Example(alert == null ? scenario : ScenarioFor(alert.AlertType));
         if (alert != null) content = content with
         {
@@ -95,6 +95,7 @@ public static class NotificationMessageFormatter
             $"*Restaurante:* {WhatsApp(name)}\n*Prioridade:* {content.Priority}\n*{WhatsApp(title)}*\n\n{WhatsApp(content.Summary)}\n" +
             (facts.Length > 0 ? "\n" + string.Join("\n", content.Facts.Select(f => $"• *{f.Label}:* {WhatsApp(f.Value)}")) + "\n" : "") +
             $"\n*O que fazer:* {content.Recommendation}\n\n{content.Action}:\n{uri.AbsoluteUri}\n\n_{date} ({zone.Id})_\n{disclaimer}";
+        if (channel == "telegram") return new(subject, plain, null, content.Id, isTest, source);
         if (channel == "whatsapp") return new(subject, whatsapp, null, content.Id, isTest, source);
         var color = critical ? "#b91c1c" : warning ? "#92400e" : "#047857";
         var surface = critical ? "#fef2f2" : warning ? "#fffbeb" : "#ecfdf5";

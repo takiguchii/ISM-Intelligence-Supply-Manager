@@ -12,6 +12,7 @@ using ISM.Domain.Modules.Menu.Entities;
 using ISM.Domain.Modules.Orders;
 using ISM.Domain.Modules.Finance;
 using ISM.Domain.Modules.Assistant.Entities;
+using ISM.Domain.Modules.Purchases.Entities;
 
 namespace ISM.Infrastructure.Data.Context;
 
@@ -28,6 +29,8 @@ public sealed class IsmDbContext : DbContext
     public DbSet<FinanceEntry> FinanceEntries => Set<FinanceEntry>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
+    public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
+    public DbSet<PurchaseOrderItem> PurchaseOrderItems => Set<PurchaseOrderItem>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<StockMovement> StockMovements => Set<StockMovement>();
@@ -131,6 +134,7 @@ public sealed class IsmDbContext : DbContext
             builder.HasKey(order => order.Id);
             builder.Property(order => order.TableReference).HasMaxLength(100).IsRequired();
             builder.Property(order => order.Status).HasConversion<int>();
+            builder.Property(order => order.PaymentMethod).HasConversion<int>().HasDefaultValue(PaymentMethod.Unspecified);
             builder.Property(order => order.RequestId).HasMaxLength(36).IsRequired();
             builder.Property(order => order.Version).IsConcurrencyToken();
             builder.HasIndex(order => new { order.RestaurantId, order.RequestId }).IsUnique();
@@ -229,6 +233,7 @@ public sealed class IsmDbContext : DbContext
                 .HasConversion<int>();
             builder.Property(sm => sm.QuantityDelta).HasColumnType("decimal(10,3)").IsRequired();
             builder.Property(sm => sm.UnitCostSnapshot).HasColumnType("decimal(10,2)");
+            builder.Property(sm => sm.Reason).HasMaxLength(200);
             builder.Property(sm => sm.CreatedAtUtc).HasColumnType("datetime(6)").IsRequired();
             builder.Property(sm => sm.UpdatedAtUtc).HasColumnType("datetime(6)");
             builder.HasIndex(sm => new { sm.RestaurantId, sm.ProductId, sm.CreatedAtUtc });
@@ -244,6 +249,32 @@ public sealed class IsmDbContext : DbContext
                 .HasForeignKey(sm => sm.RestaurantId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            builder.ApplyTenantQueryFilter(this);
+        });
+
+        modelBuilder.Entity<PurchaseOrder>(builder =>
+        {
+            builder.ToTable("purchase_orders");
+            builder.HasKey(po => po.Id);
+            builder.Property(po => po.Status).HasConversion<int>();
+            builder.Property(po => po.TotalAmount).HasColumnType("decimal(10,2)");
+            builder.Property(po => po.Observation).HasMaxLength(500);
+            builder.HasIndex(po => new { po.RestaurantId, po.Status });
+            builder.HasIndex(po => new { po.RestaurantId, po.CreatedAtUtc });
+            builder.HasOne<Restaurant>().WithMany().HasForeignKey(po => po.RestaurantId).OnDelete(DeleteBehavior.Restrict);
+            builder.HasOne<Supplier>().WithMany().HasForeignKey(po => po.SupplierId).OnDelete(DeleteBehavior.Restrict);
+            builder.ApplyTenantQueryFilter(this);
+        });
+
+        modelBuilder.Entity<PurchaseOrderItem>(builder =>
+        {
+            builder.ToTable("purchase_order_items");
+            builder.HasKey(poi => poi.Id);
+            builder.Property(poi => poi.QuantityOrdered).HasColumnType("decimal(10,3)");
+            builder.Property(poi => poi.QuantityReceived).HasColumnType("decimal(10,3)");
+            builder.Property(poi => poi.UnitPrice).HasColumnType("decimal(10,2)");
+            builder.HasOne(poi => poi.PurchaseOrder).WithMany(po => po.Items).HasForeignKey(poi => poi.PurchaseOrderId).OnDelete(DeleteBehavior.Cascade);
+            builder.HasOne(poi => poi.Product).WithMany().HasForeignKey(poi => poi.ProductId).OnDelete(DeleteBehavior.Restrict);
             builder.ApplyTenantQueryFilter(this);
         });
 
@@ -505,6 +536,24 @@ public sealed class IsmDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(di => di.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<TelegramConnection>(builder =>
+        {
+            builder.ToTable("telegram_connections");
+            builder.HasKey(x => x.UserId);
+            builder.HasIndex(x => x.ChatId).IsUnique();
+            builder.HasIndex(x => x.ExpectedUserId).IsUnique();
+            builder.HasIndex(x => x.CodeHash).IsUnique();
+            builder.Property(x => x.CodeHash).HasMaxLength(64);
+            builder.Property(x => x.Version).IsConcurrencyToken();
+            builder.HasOne<User>().WithOne().HasForeignKey<TelegramConnection>(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<TelegramPollingCursor>(builder =>
+        {
+            builder.ToTable("telegram_polling_cursors");
+            builder.HasKey(x => x.BotUsername);
+            builder.Property(x => x.BotUsername).HasMaxLength(32);
         });
 
         modelBuilder.Entity<User>(builder =>

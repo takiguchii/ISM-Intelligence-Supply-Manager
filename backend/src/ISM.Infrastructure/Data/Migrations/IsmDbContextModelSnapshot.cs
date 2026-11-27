@@ -396,6 +396,71 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.ToTable("suppliers", (string)null);
                 });
 
+            modelBuilder.Entity("ISM.Domain.Entities.TelegramConnection", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("AlertsEnabled")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<long?>("ChatId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("CodeExpiresAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("CodeHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<long?>("ExpectedUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("LastMessageAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<long>("LastUpdateId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("RestaurantId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ThreadId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.HasKey("UserId");
+
+                    b.HasIndex("ChatId")
+                        .IsUnique();
+
+                    b.HasIndex("CodeHash")
+                        .IsUnique();
+
+                    b.HasIndex("ExpectedUserId")
+                        .IsUnique();
+
+                    b.ToTable("telegram_connections", (string)null);
+                });
+
+            modelBuilder.Entity("ISM.Domain.Entities.TelegramPollingCursor", b =>
+                {
+                    b.Property<string>("BotUsername")
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<long>("Offset")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("BotUsername");
+
+                    b.ToTable("telegram_polling_cursors", (string)null);
+                });
+
             modelBuilder.Entity("ISM.Domain.Entities.TmpAuthorization", b =>
                 {
                     b.Property<int>("Id")
@@ -1341,6 +1406,11 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.Property<DateTime?>("PaidAtUtc")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<int>("PaymentMethod")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
                     b.Property<Guid>("RequestId")
                         .HasMaxLength(36)
                         .HasColumnType("char(36)");
@@ -1424,6 +1494,92 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.ToTable("order_items", (string)null);
                 });
 
+            modelBuilder.Entity("ISM.Domain.Modules.Purchases.Entities.PurchaseOrder", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("ExpectedDeliveryAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Observation")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<int>("RestaurantId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SupplierId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SupplierId");
+
+                    b.HasIndex("RestaurantId", "CreatedAtUtc");
+
+                    b.HasIndex("RestaurantId", "Status");
+
+                    b.ToTable("purchase_orders", (string)null);
+                });
+
+            modelBuilder.Entity("ISM.Domain.Modules.Purchases.Entities.PurchaseOrderItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PurchaseOrderId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("QuantityOrdered")
+                        .HasColumnType("decimal(10,3)");
+
+                    b.Property<decimal>("QuantityReceived")
+                        .HasColumnType("decimal(10,3)");
+
+                    b.Property<int>("RestaurantId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("PurchaseOrderId");
+
+                    b.ToTable("purchase_order_items", (string)null);
+                });
+
             modelBuilder.Entity("ISM.Domain.Modules.Stock.Entities.Product", b =>
                 {
                     b.Property<int>("Id")
@@ -1502,6 +1658,10 @@ namespace ISM.Infrastructure.Data.Migrations
 
                     b.Property<decimal>("QuantityDelta")
                         .HasColumnType("decimal(10,3)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
 
                     b.Property<int>("RestaurantId")
                         .HasColumnType("int");
@@ -1714,6 +1874,15 @@ namespace ISM.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Restaurant");
+                });
+
+            modelBuilder.Entity("ISM.Domain.Entities.TelegramConnection", b =>
+                {
+                    b.HasOne("ISM.Domain.Entities.User", null)
+                        .WithOne()
+                        .HasForeignKey("ISM.Domain.Entities.TelegramConnection", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ISM.Domain.Entities.TmpAuthorization", b =>
@@ -1930,6 +2099,40 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("ISM.Domain.Modules.Purchases.Entities.PurchaseOrder", b =>
+                {
+                    b.HasOne("ISM.Domain.Entities.Restaurant", null)
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ISM.Domain.Entities.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ISM.Domain.Modules.Purchases.Entities.PurchaseOrderItem", b =>
+                {
+                    b.HasOne("ISM.Domain.Modules.Stock.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ISM.Domain.Modules.Purchases.Entities.PurchaseOrder", "PurchaseOrder")
+                        .WithMany("Items")
+                        .HasForeignKey("PurchaseOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("PurchaseOrder");
+                });
+
             modelBuilder.Entity("ISM.Domain.Modules.Stock.Entities.Product", b =>
                 {
                     b.HasOne("ISM.Domain.Entities.Restaurant", "Restaurant")
@@ -2028,6 +2231,11 @@ namespace ISM.Infrastructure.Data.Migrations
                 });
 
             modelBuilder.Entity("ISM.Domain.Modules.Orders.Order", b =>
+                {
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("ISM.Domain.Modules.Purchases.Entities.PurchaseOrder", b =>
                 {
                     b.Navigation("Items");
                 });

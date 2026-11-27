@@ -76,8 +76,11 @@ public sealed class SystemAlertRepository : ISystemAlertRepository
         var recipients = await _dbContext.Users.IgnoreQueryFilters()
             .Where(u => u.IsActive && u.RestaurantId == alert.RestaurantId &&
                 (u.Role == "Admin" || u.Role == "Manager") &&
-                (u.EmailNotificationsEnabled || u.WhatsAppNotificationsEnabled))
+                (u.EmailNotificationsEnabled || u.WhatsAppNotificationsEnabled || _dbContext.Set<TelegramConnection>().Any(t => t.UserId == u.Id && t.RestaurantId == alert.RestaurantId && t.ChatId != null && t.AlertsEnabled)))
             .ToListAsync(cancellationToken);
+        var telegramLinks = await _dbContext.Set<TelegramConnection>()
+            .Where(t => t.RestaurantId == alert.RestaurantId && t.ChatId != null && t.AlertsEnabled)
+            .ToDictionaryAsync(t => t.UserId, cancellationToken);
         await _dbContext.Restaurants.FirstOrDefaultAsync(r => r.Id == alert.RestaurantId, cancellationToken);
         var now = DateTime.UtcNow;
         foreach (var user in recipients.Where(u => NotificationPolicy.CanReceive(u, alert)))
@@ -96,6 +99,8 @@ public sealed class SystemAlertRepository : ISystemAlertRepository
                     CreatedAtUtc = now, NextAttemptAtUtc = now
                 });
             }
+            if (telegramLinks.TryGetValue(user.Id, out var telegram))
+                Queue("telegram", telegram.ChatId!.Value.ToString(global::System.Globalization.CultureInfo.InvariantCulture));
             if (user.EmailNotificationsEnabled)
                 Queue("email", user.NotificationEmailAddress ?? user.Email);
             if (user.WhatsAppNotificationsEnabled && !string.IsNullOrWhiteSpace(user.WhatsAppPhone))

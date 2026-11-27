@@ -100,7 +100,8 @@ public sealed class RestaurantAiConfigService : IRestaurantAiConfigService
             using var response = await client.SendAsync(request, ct);
             var body = await response.Content.ReadAsStringAsync(ct);
             var success = response.IsSuccessStatusCode && !string.IsNullOrWhiteSpace(AiProviderCatalog.ExtractText(provider, body));
-            var error = success ? null : GetProviderErrorMessage(body) ?? $"Falha na validação: HTTP {(int)response.StatusCode}.";
+            var error = success ? null : GetProviderErrorMessage(body)
+                ?? (response.IsSuccessStatusCode ? "O provedor respondeu sem conteúdo de texto." : $"Falha na validação: HTTP {(int)response.StatusCode}.");
             return new TestRestaurantAiPhotoConfigResultDto { Success = success, Provider = provider, NormalizedModel = model, NormalizedEndpoint = AiProviderCatalog.Endpoint(provider), ErrorMessage = error, HttpStatusFromProvider = (int)response.StatusCode, LatencyMs = stopwatch.ElapsedMilliseconds };
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or InvalidOperationException)
@@ -150,12 +151,13 @@ public sealed class RestaurantAiConfigService : IRestaurantAiConfigService
         var stopwatch = Stopwatch.StartNew();
         try
         {
-            using var request = AiProviderCatalog.CreateRequest(provider, model, apiKey, "Responda somente pong.", "ping", 16, sessionId: $"ses_ism_agent_test_{restaurantId}");
+            using var request = AiProviderCatalog.CreateRequest(provider, model, apiKey, "Responda somente pong.", "ping", 512, sessionId: $"ses_ism_agent_test_{restaurantId}");
             using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(45) };
             using var response = await client.SendAsync(request, ct);
             var body = await response.Content.ReadAsStringAsync(ct);
             var success = response.IsSuccessStatusCode && !string.IsNullOrWhiteSpace(AiProviderCatalog.ExtractText(provider, body));
-            var error = success ? null : GetProviderErrorMessage(body) ?? $"Falha na validação: HTTP {(int)response.StatusCode}.";
+            var error = success ? null : GetProviderErrorMessage(body)
+                ?? (response.IsSuccessStatusCode ? "O provedor respondeu sem conteúdo de texto." : $"Falha na validação: HTTP {(int)response.StatusCode}.");
             return new TestRestaurantAgentConfigResultDto { Success = success, Provider = provider, NormalizedEndpoint = AiProviderCatalog.Endpoint(provider), NormalizedModel = model, ErrorMessage = error, HttpStatusFromProvider = (int)response.StatusCode, LatencyMs = stopwatch.ElapsedMilliseconds };
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or InvalidOperationException)
@@ -204,7 +206,7 @@ public sealed class RestaurantAiConfigService : IRestaurantAiConfigService
             if (root.TryGetProperty("message", out var rootMessage)) return LimitProviderError(rootMessage.GetString());
         }
         catch (JsonException) { }
-        return LimitProviderError(body);
+        return null;
     }
 
     private static string? LimitProviderError(string? message)

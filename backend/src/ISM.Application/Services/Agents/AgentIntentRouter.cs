@@ -22,6 +22,7 @@ public sealed class AgentIntentRouter : IAgentIntentRouter
             ["orders.getLatest"] = ("assistant", Array.Empty<string>()),
             ["orders.getRecent"] = ("finance", Array.Empty<string>()),
             ["stock.getOverview"] = ("stock", Array.Empty<string>()),
+            ["stock.analyzeMenuImpact"] = ("stock", Array.Empty<string>()),
             ["pricing.getDishOverview"] = ("pricing", Array.Empty<string>())
         };
 
@@ -58,6 +59,18 @@ public sealed class AgentIntentRouter : IAgentIntentRouter
             return Intent("suppliers", "suppliers.compareOffers", new { productName = supplierProduct, unit = supplierUnit }, 0.96);
         if (new[] { "abaixo do mínimo", "abaixo do minimo", "itens críticos", "itens criticos", "estoque crítico", "estoque critico", "estoque geral", "visão geral do estoque", "visao geral do estoque" }.Any(normalized.Contains))
             return Intent("stock", "stock.getOverview", new { }, 0.96);
+        if (new[] { "impacto no estoque", "impacto do cardápio", "impacto do cardapio", "consumo pelo cardápio", "consumo pelo cardapio", "saída de insumos", "saida de insumos", "insumos mais consumidos", "demanda dos ingredientes", "estoque e vendas", "vendas e estoque", "consumo do cardápio", "consumo do cardapio" }.Any(normalized.Contains))
+            return Intent("stock", "stock.analyzeMenuImpact", new { }, 0.97);
+        var asksBestSalesDay = new[] { "melhor dia", "dia mais", "dia que mais", "maior faturamento", "pico de faturamento", "pico de vendas" }.Any(normalized.Contains);
+        if (asksBestSalesDay)
+        {
+            if (!TryResolveFinancePeriod(normalized, out var bestStart, out var bestEnd))
+            {
+                bestEnd = DateTime.UtcNow;
+                bestStart = bestEnd.AddDays(-7);
+            }
+            return Intent("finance", "finance.getPeriodSummary", new { startUtc = bestStart, endUtc = bestEnd }, 0.97);
+        }
         if (TryResolveFinancePeriod(normalized, out var startUtc, out var endUtc))
             return Intent("finance", "finance.getPeriodSummary", new { startUtc, endUtc }, 0.96);
         if (normalized.Contains("último pedido") || normalized.Contains("ultimo pedido") || normalized.Contains("pedido mais recente"))
@@ -151,9 +164,66 @@ public sealed class AgentIntentRouter : IAgentIntentRouter
     private static bool TryResolveFinancePeriod(string message, out DateTime startUtc, out DateTime endUtc)
     {
         endUtc = DateTime.UtcNow;
+        startUtc = default;
+
+        var hasFinancialContext = new[]
+        {
+            "financeiro", "faturamento", "receita", "venda", "vendas", "despesa", "despesas",
+            "gasto", "gastos", "caixa", "fluxo", "resultado", "fechamento", "balanço", "balanco",
+            "como foi", "como foram", "desempenho", "lucro", "faturou", "vendemos", "resumo"
+        }.Any(term => message.Contains(term, StringComparison.OrdinalIgnoreCase));
+
+        var today = DateTime.UtcNow.Date;
+
+        if (message.Contains("ontem", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!hasFinancialContext) return false;
+            startUtc = today.AddDays(-1);
+            endUtc = today.AddTicks(-1);
+            return true;
+        }
+
+        if (message.Contains("hoje", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!hasFinancialContext) return false;
+            startUtc = today;
+            endUtc = DateTime.UtcNow;
+            return true;
+        }
+
+        if (message.Contains("semana passada", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("última semana", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("ultima semana", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("da semana passada", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("na semana passada", StringComparison.OrdinalIgnoreCase))
+        {
+            var daysFromMonday = ((int)today.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
+            var currentMonday = today.AddDays(-daysFromMonday);
+            startUtc = currentMonday.AddDays(-7);
+            endUtc = currentMonday.AddTicks(-1);
+            return true;
+        }
+
+        if (message.Contains("esta semana", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("nesta semana", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("semana atual", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!hasFinancialContext) return false;
+            var daysFromMonday = ((int)today.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
+            startUtc = today.AddDays(-daysFromMonday);
+            endUtc = DateTime.UtcNow;
+            return true;
+        }
+
         if (message.Contains("últimos 7 dias", StringComparison.OrdinalIgnoreCase) || message.Contains("ultimos 7 dias", StringComparison.OrdinalIgnoreCase))
         {
             startUtc = endUtc.AddDays(-7);
+            return true;
+        }
+        if (message.Contains("últimos 14 dias", StringComparison.OrdinalIgnoreCase) || message.Contains("ultimos 14 dias", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("últimos 15 dias", StringComparison.OrdinalIgnoreCase) || message.Contains("ultimos 15 dias", StringComparison.OrdinalIgnoreCase))
+        {
+            startUtc = endUtc.AddDays(-14);
             return true;
         }
         if (message.Contains("últimos 30 dias", StringComparison.OrdinalIgnoreCase) || message.Contains("ultimos 30 dias", StringComparison.OrdinalIgnoreCase))
@@ -170,10 +240,10 @@ public sealed class AgentIntentRouter : IAgentIntentRouter
         }
         if (message.Contains("este mês", StringComparison.OrdinalIgnoreCase) || message.Contains("este mes", StringComparison.OrdinalIgnoreCase) || message.Contains("neste mês", StringComparison.OrdinalIgnoreCase) || message.Contains("neste mes", StringComparison.OrdinalIgnoreCase))
         {
+            if (!hasFinancialContext) return false;
             startUtc = new DateTime(endUtc.Year, endUtc.Month, 1, 0, 0, 0, DateTimeKind.Utc);
             return true;
         }
-        startUtc = default;
         return false;
     }
 

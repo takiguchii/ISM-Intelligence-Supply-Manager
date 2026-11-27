@@ -79,6 +79,8 @@ public sealed class AgentIntentRouterTests
     [InlineData("o que mais nos deu lucro nessa última semana?", "sales.getDishInsights")]
     [InlineData("qual prato foi mais vendido e menos vendido na semana?", "sales.getDishInsights")]
     [InlineData("qual prato você acha que vai ter uma boa previsão com base nos nossos dados?", "sales.getDishInsights")]
+    [InlineData("qual é o impacto do cardápio no estoque?", "stock.analyzeMenuImpact")]
+    [InlineData("quais são os insumos mais consumidos pelas vendas?", "stock.analyzeMenuImpact")]
     public void Resolve_Selects_domain_tool_for_actionable_questions(string question, string expectedTool)
     {
         var intent = _router.Resolve(question);

@@ -13,6 +13,8 @@ using ISM.Infrastructure.Repositories.DataImport;
 using ISM.Infrastructure.Repositories.Restaurant;
 using ISM.Infrastructure.Repositories.System;
 using ISM.Infrastructure.Repositories.Assistant;
+using ISM.Domain.Interfaces.Purchases;
+using ISM.Infrastructure.Repositories.Purchases;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -62,6 +64,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IImportAuditRepository, ImportAuditRepository>();
         services.AddScoped<ITmpAuthorizationRepository, TmpAuthorizationRepository>();
+        services.AddScoped<IPurchaseOrderRepository, PurchaseOrderRepository>();
 
         return services;
     }

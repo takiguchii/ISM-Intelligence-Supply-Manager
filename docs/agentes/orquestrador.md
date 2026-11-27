@@ -30,7 +30,7 @@ registry allowlist -> papel/tenant/especialista/prazo -> ferramenta
 resumo + evidências + avisos de falha parcial
 ```
 
-Execução limitada a 90 segundos e duas ferramentas concorrentes. Dependências entre etapas são rejeitadas. O tenant sempre vem da identidade autenticada. Falhas por ferramenta aparecem como aviso e não apagam resultados válidos das demais etapas.
+Execução limitada a 90 segundos, com uma ferramenta por vez para preservar a segurança dos serviços scoped e do `DbContext` do EF Core. Dependências entre etapas são rejeitadas. O tenant sempre vem da identidade autenticada. Falhas por ferramenta aparecem como aviso e não apagam resultados válidos das demais etapas.
 
 ## Automação agendada
 

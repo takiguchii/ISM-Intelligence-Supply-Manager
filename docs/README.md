@@ -31,6 +31,12 @@ Esta pasta contém a documentação funcional, técnica e operacional do Intelli
 - [Cocou e experiência do Assistente](visuals/assistant.md)
 - [Corpus oficial de recibos para QA](Imagens%20de%20notas/manifest.json)
 
+## Apresentação do projeto
+
+- [Roteiro de Enzo e Alexandre — até 10 minutos](apresentacao/roteiro-dupla.md)
+- [Roteiro com os seis integrantes — até 10 minutos](apresentacao/roteiro-equipe.md)
+- [Preparação, monetização e respostas à banca](apresentacao/preparacao-e-negocio.md)
+
 ## Convenções
 
 Os documentos descrevem o comportamento implementado ou uma decisão arquitetural aprovada. Checkpoints de execução, prompts de agentes, logs de uma tarefa e relatórios temporários não fazem parte desta documentação oficial.

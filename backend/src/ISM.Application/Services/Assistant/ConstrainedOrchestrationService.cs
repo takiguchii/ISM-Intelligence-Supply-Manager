@@ -9,7 +9,8 @@ public sealed class ConstrainedOrchestrationService(
     IAgentIntentRouter intentRouter) : IOrchestrationPlanner, IOrchestrationExecutor, IOrchestrationSynthesizer
 {
     private const int MaxSteps = 5;
-    private const int MaxConcurrency = 2;
+    // As ferramentas compartilham serviços scoped, incluindo o DbContext do EF Core, que não é thread-safe.
+    private const int MaxConcurrency = 1;
     private const int BudgetMilliseconds = 90000;
 
     public Task<ValidatedOrchestrationPlan> PlanAsync(AssistantQueryContext query, CancellationToken cancellationToken = default)
