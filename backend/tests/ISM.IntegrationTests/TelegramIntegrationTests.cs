@@ -278,7 +278,7 @@ public sealed class TelegramIntegrationTests
             await db.SaveChangesAsync();
         }
         var response = await f.MessageAsync("Qual é o saldo do produto 5?", 2);
-        response.Should().Contain("saldo atual 6,125 e mínimo 15 kg").And.Contain("Fonte: Product");
+        response.Should().Contain("Saldo atual: 6,125 kg").And.Contain("Mínimo: 15 kg").And.Contain("Fonte: Product");
     }
     [Fact] public void ResponseFormatting_EscapesHtmlAndKeepsSupportedEmphasis()
     {

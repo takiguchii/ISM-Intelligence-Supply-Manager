@@ -3,7 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
 import { useAssistantUi } from "~/composables/useAssistantUi";
 import { useAssistantChat } from "~/composables/useAssistantChat";
 import AgentMascot2D from "~/components/assistant/AgentMascot2D.vue";
-import { agentForAlert, moodForAlert, type AgentMood } from "~/types/agentExperience";
+import { moodForAlert, type AgentMood } from "~/types/agentExperience";
 
 const ui = useAssistantUi();
 const chat = useAssistantChat();
@@ -13,9 +13,9 @@ const requestedOrigin = computed(() => ui.requestedAlert.value?.id ?? null);
 const contextLabel = computed(() => chat.context.value?.entityName || null);
 const contextFacts = computed(() => Object.entries(chat.context.value?.facts || {}).slice(0, 5));
 const chatAgent = computed(() => {
-  const context = chat.context.value;
-  return context ? agentForAlert(context) : "general";
+  return chat.currentThread.value?.specialistId || ui.requestedSpecialist.value;
 });
+const chatAgentLabel = computed(() => ({ stock: "Estoque", pricing: "Precificação", suppliers: "Fornecedores", finance: "Financeiro", general: "Assistente geral" }[chatAgent.value]));
 const chatMood = computed<AgentMood>(() => {
   if (chat.pending.value || chat.loadingHistory.value) return "thinking";
   if (chat.error.value) return "error";
@@ -27,6 +27,8 @@ const cameraInputRef = ref<HTMLInputElement | null>(null);
 const attachment = ref<File | null>(null);
 const attachmentPreview = ref("");
 const attachmentError = ref("");
+const historyOpen = ref(false);
+const archivingThreadId = ref<number | null>(null);
 const canSubmit = computed(() => Boolean(draft.value.trim() || attachment.value));
 const dialogRef = ref<HTMLElement | null>(null);
 let returnFocusTo: HTMLElement | null = null;
@@ -69,7 +71,14 @@ const openCamera = () => cameraInputRef.value?.click();
 const prepare = async (request: number) => {
   draft.value = ui.requestedDraft.value;
   clearAttachment();
-  const preparation = chat.ensureReady(requestedOrigin.value);
+  const preparation = chat.ensureReady({
+    originAlertId: requestedOrigin.value,
+    specialistId: ui.requestedSpecialist.value,
+    sourceView: ui.requestedSourceView.value,
+    subjectEntityType: ui.requestedSubjectEntityType.value,
+    subjectEntityId: ui.requestedSubjectEntityId.value,
+    subject: ui.requestedSubject.value
+  });
   await nextTick();
   if (ui.chatOpen.value && request === ui.openRequest.value) dialogRef.value?.focus();
   await preparation;
@@ -78,9 +87,16 @@ const prepare = async (request: number) => {
     inputRef.value?.focus();
   }
 };
-const selectHistory = (event: Event) => {
-  const id = Number((event.target as HTMLSelectElement).value);
-  if (id > 0) { draft.value = ""; clearAttachment(); void chat.selectThread(id); }
+const selectHistory = (id: number) => { draft.value = ""; clearAttachment(); void chat.selectThread(id); historyOpen.value = false; };
+const removeThread = async (id: number) => {
+  archivingThreadId.value = id;
+  try { await chat.archiveThread(id); }
+  catch (cause: any) { chat.error.value = cause?.data?.detail || "Não foi possível excluir esta conversa."; }
+  finally { archivingThreadId.value = null; }
+};
+const loadMoreHistory = (event: Event) => {
+  const list = event.target as HTMLElement;
+  if (list.scrollTop + list.clientHeight >= list.scrollHeight - 36) void chat.loadMoreThreads();
 };
 const retry = async () => { if (await chat.retry() === true) draft.value = ""; };
 const submit = async () => {
@@ -118,16 +134,17 @@ onBeforeUnmount(() => { window.removeEventListener("keydown", handleKeydown); re
         <aside ref="dialogRef" class="assistant-chat-panel absolute inset-y-0 right-0 flex w-full max-w-[480px] flex-col border-l border-zinc-200/80 bg-white/95 shadow-2xl shadow-zinc-950/20 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/95" role="dialog" aria-modal="true" aria-labelledby="assistant-chat-title" tabindex="-1">
           <header class="border-b border-zinc-200/80 px-5 pb-4 pt-[calc(1.25rem+env(safe-area-inset-top))] dark:border-zinc-800">
             <div class="flex items-center justify-between gap-4">
-              <div class="flex min-w-0 items-center gap-3"><div class="flex h-12 w-14 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-400/10"><AgentMascot2D :agent="chatAgent" :mood="chatMood" size="sm" /></div><div class="min-w-0"><p class="text-[10px] font-semibold uppercase tracking-[.18em] text-indigo-600 dark:text-indigo-300">Assistente ISM</p><h2 id="assistant-chat-title" class="mt-0.5 truncate text-lg font-semibold tracking-tight text-zinc-900 dark:text-white">Como posso ajudar?</h2><p class="mt-1 truncate text-xs text-zinc-500">{{ chat.status.value?.providerReachable ? `Conectado · ${chat.status.value.model}` : chat.status.value?.enabled ? 'Modelo local indisponível' : 'Conversação local desativada' }}</p></div></div>
+              <div class="flex min-w-0 items-center gap-3"><div class="flex h-12 w-14 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-400/10"><AgentMascot2D :agent="chatAgent" :mood="chatMood" size="sm" /></div><div class="min-w-0"><p class="text-[10px] font-semibold uppercase tracking-[.18em] text-indigo-600 dark:text-indigo-300">{{ chatAgentLabel }}</p><h2 id="assistant-chat-title" class="mt-0.5 truncate text-lg font-semibold tracking-tight text-zinc-900 dark:text-white">Como posso ajudar?</h2><p class="mt-1 truncate text-xs text-zinc-500">{{ chat.status.value?.providerReachable ? `Conectado · ${chat.status.value.model}` : chat.status.value?.enabled ? 'Provedor de IA indisponível' : 'Conversação por IA desativada' }}</p></div></div>
               <button type="button" class="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-xl text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:hover:bg-zinc-800 dark:hover:text-white" aria-label="Fechar chat" @click="ui.closeChat">×</button>
             </div>
-            <div class="mt-4 flex gap-2"><select class="min-w-0 flex-1 rounded-xl border border-zinc-200 bg-zinc-50/70 px-3 py-2.5 text-xs text-zinc-700 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300" aria-label="Histórico de conversas" :value="chat.currentThread.value?.id || ''" @change="selectHistory($event)"><option value="" disabled>{{ chat.threads.value.length ? "Selecione uma conversa" : "Sem histórico" }}</option><option v-for="thread in chat.threads.value" :key="thread.id" :value="thread.id">{{ thread.subject }}</option></select><button type="button" class="shrink-0 rounded-xl border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-600 transition hover:border-indigo-300 hover:bg-indigo-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800" @click="ui.openGeneralChat()">Nova conversa</button></div>
+            <div class="mt-4 flex gap-2"><button type="button" class="flex min-w-0 flex-1 items-center justify-between rounded-xl border border-zinc-200 bg-zinc-50/70 px-3 py-2.5 text-left text-xs text-zinc-700 transition hover:border-indigo-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300" :aria-expanded="historyOpen" @click="historyOpen = !historyOpen"><span class="font-semibold">Histórico de conversas</span><span class="ml-2 rounded-full bg-zinc-200/80 px-2 py-0.5 text-[10px] dark:bg-zinc-800">{{ chat.threads.value.length }}</span></button><button type="button" class="shrink-0 rounded-xl border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-600 transition hover:border-indigo-300 hover:bg-indigo-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800" @click="historyOpen = false; ui.openGeneralChat()">Nova conversa</button></div>
+            <Transition name="history-list"><div v-if="historyOpen" class="mt-2 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-900"><div class="border-b border-zinc-100 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:border-zinc-800">Suas conversas</div><div class="max-h-52 overflow-y-auto overscroll-contain p-1.5" @scroll="loadMoreHistory"><p v-if="!chat.threads.value.length" class="px-3 py-5 text-center text-xs text-zinc-500">Nenhuma conversa salva ainda.</p><div v-for="thread in chat.threads.value" :key="thread.id" class="group flex items-center gap-1 rounded-lg" :class="chat.currentThread.value?.id === thread.id ? 'bg-indigo-50 dark:bg-indigo-400/10' : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/70'"><button type="button" class="min-w-0 flex-1 px-2.5 py-2 text-left" @click="selectHistory(thread.id)"><span class="block truncate text-xs font-medium text-zinc-700 dark:text-zinc-200">{{ thread.subject }}</span><span class="mt-0.5 block text-[10px] text-zinc-400">{{ new Date(thread.lastMessageAtUtc).toLocaleDateString('pt-BR') }}</span></button><button type="button" class="mr-1 grid h-8 w-8 shrink-0 place-items-center rounded-lg text-zinc-400 transition hover:bg-rose-100 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 disabled:opacity-40 dark:hover:bg-rose-400/10 dark:hover:text-rose-300" :aria-label="`Excluir conversa: ${thread.subject}`" title="Excluir conversa" :disabled="archivingThreadId === thread.id" @click.stop="removeThread(thread.id)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16m-10 4v6m4-6v6M5 7l1 13h12l1-13M9 7V4h6v3"/></svg></button></div><p v-if="chat.loadingMoreThreads.value" class="px-3 py-2 text-center text-[10px] text-zinc-400">Carregando mais conversas…</p><p v-else-if="!chat.hasMoreThreads.value && chat.threads.value.length" class="px-3 py-2 text-center text-[10px] text-zinc-400">Fim do histórico</p></div></div></Transition>
             <div v-if="contextLabel" class="mt-3 rounded-xl border border-indigo-100 bg-indigo-50/70 px-3 py-2.5 text-xs text-indigo-800 dark:border-indigo-400/15 dark:bg-indigo-400/5 dark:text-indigo-200"><p class="truncate font-semibold">Contexto: {{ contextLabel }}</p><div v-if="contextFacts.length" class="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 opacity-80"><span v-for="fact in contextFacts" :key="fact[0]">{{ fact[0] }}: {{ fact[1] }}</span></div></div>
           </header>
           <div class="min-h-0 flex-1 space-y-5 overflow-y-auto bg-gradient-to-b from-zinc-50/70 to-white px-5 py-6 dark:from-zinc-900/40 dark:to-zinc-950" aria-live="polite">
             <p v-if="chat.loadingHistory.value" class="py-10 text-center text-sm text-zinc-500">Carregando conversa…</p>
             <div v-else-if="!chat.messages.value.length" class="mx-auto flex max-w-xs flex-col items-center py-16 text-center"><span class="rounded-full border border-indigo-200 bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[.16em] text-indigo-600 shadow-sm dark:border-indigo-400/20 dark:bg-zinc-900 dark:text-indigo-300">Pronto para ajudar</span><p class="mt-4 text-base font-semibold tracking-tight text-zinc-800 dark:text-zinc-100">Por onde começamos?</p><p class="mt-2 text-xs leading-5 text-zinc-500">Pergunte sobre os dados e alertas disponíveis no seu ISM.</p></div>
-            <div v-else class="space-y-5"><article v-for="message in chat.messages.value" :key="message.id" class="flex flex-col" :class="message.role === 'user' ? 'items-end' : 'items-start'"><p class="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{{ message.role === 'user' ? 'Você' : 'ISM Assist' }}</p><div class="max-w-[90%] rounded-2xl px-4 py-3 text-[14px] leading-6 shadow-sm" :class="message.role === 'user' ? 'rounded-br-md bg-indigo-600 text-white shadow-indigo-900/10' : 'rounded-bl-md border border-zinc-200/80 bg-white text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200'"><p class="whitespace-pre-wrap break-words">{{ message.content }}</p><p v-if="message.role === 'assistant' && message.mode" class="mt-2 border-t border-zinc-200/70 pt-1.5 text-[10px] opacity-55 dark:border-zinc-700">{{ message.source || (message.mode === 'llm' ? 'Assistente local' : 'Dados do ISM') }}</p></div></article><p v-if="chat.pending.value" class="animate-pulse px-1 text-xs text-zinc-500">Consultando informações autorizadas…</p></div>
+            <div v-else class="space-y-5"><article v-for="message in chat.messages.value" :key="message.id" class="flex flex-col" :class="message.role === 'user' ? 'items-end' : 'items-start'"><p class="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{{ message.role === 'user' ? 'Você' : 'ISM Assist' }}</p><div class="max-w-[90%] rounded-2xl px-4 py-3 text-[14px] leading-6 shadow-sm" :class="message.role === 'user' ? 'rounded-br-md bg-indigo-600 text-white shadow-indigo-900/10' : 'rounded-bl-md border border-zinc-200/80 bg-white text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200'"><p class="whitespace-pre-wrap break-words">{{ message.content }}</p><p v-if="message.role === 'assistant' && message.mode" class="mt-2 border-t border-zinc-200/70 pt-1.5 text-[10px] opacity-55 dark:border-zinc-700">{{ message.source || (message.mode === 'llm' ? 'Assistente de IA' : 'Dados do ISM') }}</p></div></article><p v-if="chat.pending.value" class="animate-pulse px-1 text-xs text-zinc-500">Consultando informações autorizadas…</p></div>
           </div>
           <div v-if="chat.error.value" class="mx-5 mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-700 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-300" role="alert">{{ chat.error.value }} <button type="button" class="ml-1 font-semibold underline underline-offset-2" @click="retry">Tentar novamente</button></div>
           <form class="assistant-composer-shell border-t border-zinc-200/80 bg-white/90 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] dark:border-zinc-800 dark:bg-zinc-950/90" @submit.prevent="submit">
@@ -168,6 +185,8 @@ onBeforeUnmount(() => { window.removeEventListener("keydown", handleKeydown); re
 .assistant-chat-enter-active .assistant-chat-panel, .assistant-chat-leave-active .assistant-chat-panel { transition: transform 340ms cubic-bezier(.22,1,.36,1); }
 .assistant-chat-enter-from, .assistant-chat-leave-to { opacity: 0; }
 .assistant-chat-enter-from .assistant-chat-panel, .assistant-chat-leave-to .assistant-chat-panel { transform: translateX(32px); }
+.history-list-enter-active, .history-list-leave-active { transition: opacity 180ms ease, transform 180ms ease; }
+.history-list-enter-from, .history-list-leave-to { opacity: 0; transform: translateY(-6px); }
 .assistant-composer-action,
 .assistant-composer-send {
   display: grid;
@@ -207,5 +226,5 @@ onBeforeUnmount(() => { window.removeEventListener("keydown", handleKeydown); re
 .assistant-composer-send:hover:not(:disabled) { background: linear-gradient(135deg, #4f46e5, #7c3aed); }
 .assistant-composer-send:focus-visible { outline: 2px solid #818cf8; outline-offset: 2px; }
 .assistant-composer-send:disabled { cursor: not-allowed; opacity: 0.4; box-shadow: none; }
-@media (prefers-reduced-motion: reduce) { .assistant-chat-enter-active, .assistant-chat-leave-active, .assistant-chat-enter-active .assistant-chat-panel, .assistant-chat-leave-active .assistant-chat-panel { transition-duration: 1ms; } }
+@media (prefers-reduced-motion: reduce) { .assistant-chat-enter-active, .assistant-chat-leave-active, .assistant-chat-enter-active .assistant-chat-panel, .assistant-chat-leave-active .assistant-chat-panel, .history-list-enter-active, .history-list-leave-active { transition-duration: 1ms; } }
 </style>

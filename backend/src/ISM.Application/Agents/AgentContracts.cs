@@ -53,7 +53,10 @@ public sealed record AgentToolResult(
     string CorrelationId,
     long DurationMilliseconds);
 
-public sealed record AgentToolExecuteRequest(string ToolName, JsonElement Input, string? CorrelationId = null);
+public sealed record AgentToolExecuteRequest(string ToolName, JsonElement Input, string? CorrelationId = null)
+{
+    public string? Specialist { get; init; }
+}
 
 public interface IAgentTool
 {

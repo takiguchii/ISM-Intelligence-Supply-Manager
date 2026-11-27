@@ -97,6 +97,7 @@ services:
     environment:
       CHOKIDAR_USEPOLLING: "true"
       NUXT_API_BASE: ${NUXT_API_BASE}
+      NUXT_PUBLIC_API_BASE: ${NUXT_PUBLIC_API_BASE:-http://localhost:8080}
       NUXT_TELEMETRY_DISABLED: "1"
     depends_on:
       backend:

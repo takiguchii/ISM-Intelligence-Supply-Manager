@@ -1,4 +1,5 @@
 import { apiClientWithAuth } from "~/services/api/client";
+import type { AgentKind } from "~/types/agentExperience";
 import type { AssistantAction, AssistantChatResponse, AssistantContext, AssistantConversation, AssistantOverview, AssistantStatus, AssistantThread } from "~/types/assistant";
 
 export const assistantService = {
@@ -10,8 +11,9 @@ export const assistantService = {
   review: (id: number) => apiClientWithAuth<AssistantAction>(`/api/assistant/actions/${id}/review`, { method: "POST" }),
   chat: (message: string) => apiClientWithAuth<AssistantChatResponse>("/api/assistant/chat", { method: "POST", body: { message } }),
   threads: (params?: { page?: number; limit?: number }) => apiClientWithAuth<AssistantThread[]>("/api/assistant/threads", { params }),
-  createThread: (body: { originAlertId?: number | null; parentThreadId?: number | null; subject?: string | null }) => apiClientWithAuth<AssistantConversation>("/api/assistant/threads", { method: "POST", body }),
+  createThread: (body: { originAlertId?: number | null; parentThreadId?: number | null; subject?: string | null; specialistId?: AgentKind | null; sourceView?: string | null; subjectEntityType?: string | null; subjectEntityId?: number | null }) => apiClientWithAuth<AssistantConversation>("/api/assistant/threads", { method: "POST", body }),
   thread: (id: number) => apiClientWithAuth<AssistantConversation>(`/api/assistant/threads/${id}`),
+  archiveThread: (id: number) => apiClientWithAuth<void>(`/api/assistant/threads/${id}`, { method: "DELETE" }),
   alertContext: (id: number) => apiClientWithAuth<AssistantContext>(`/api/assistant/alerts/${id}/context`),
   sendMessage: (id: number, message: string) => apiClientWithAuth<AssistantConversation>(`/api/assistant/threads/${id}/messages`, { method: "POST", body: { message } }),
   sendMessageWithImage: (id: number, message: string, file: File) => {

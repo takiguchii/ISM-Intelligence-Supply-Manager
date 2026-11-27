@@ -43,8 +43,13 @@ interface ApiError {
 }
 
 const authStore = useAuthStore()
-const { canUse: canUseAssistant, openGeneralChat } = useAssistantUi()
-const consultarCusto = (id: number) => openGeneralChat(`Qual é o custo e o preço do prato ${id}?`)
+const { canUse: canUseAssistant, openSpecialistChat } = useAssistantUi()
+const consultarCusto = (id: number) => openSpecialistChat("pricing", {
+  sourceView: "cardapio",
+  subjectEntityType: "Dish",
+  subjectEntityId: id,
+  subject: `Precificação — prato ${id}`
+}, `Qual é o custo e o preço do prato ${id}?`)
 const router = useRouter()
 const config = useRuntimeConfig()
 const canManageMenu = computed(() => ["Admin", "Manager"].includes(authStore.currentUser?.role ?? ""))

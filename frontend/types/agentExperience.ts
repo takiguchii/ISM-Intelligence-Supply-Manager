@@ -1,6 +1,6 @@
 import type { SystemAlertResponse } from "~/types/system";
 
-export type AgentKind = "stock" | "pricing" | "suppliers" | "general";
+export type AgentKind = "stock" | "pricing" | "suppliers" | "finance" | "general";
 export type AgentMood =
   | "idle"
   | "curious"
@@ -40,6 +40,7 @@ const AGENT_LABELS: Record<AgentKind, string> = {
   stock: "Estoque",
   pricing: "Precificação",
   suppliers: "Fornecedores",
+  finance: "Financeiro",
   general: "Assistente"
 };
 

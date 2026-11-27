@@ -9,10 +9,8 @@ import SubscriptionSettings from "~/components/settings/SubscriptionSettings.vue
 import {
   aiConfigService,
   agentConfigService,
-  MODEL_PRESETS,
-  GEMINI_DEFAULT_ENDPOINT,
-  GEMINI_MODEL_HINTS,
-  normalizeGeminiModelName,
+  AI_PROVIDER_OPTIONS,
+  defaultAiModel,
   type RestaurantAiPhotoConfigDto,
   type TestRestaurantAiPhotoConfigResultDto,
   type TestRestaurantAiPhotoConfigRequestDto,
@@ -105,14 +103,12 @@ const aiConfigSaveSuccess = ref(false);
 const aiConfigTestResult = ref<TestRestaurantAiPhotoConfigResultDto | null>(null);
 const aiApiKey = ref("");
 const aiShowApiKey = ref(false);
-const aiEndpoint = ref("");
-const aiModelPreset = ref<(typeof MODEL_PRESETS)[number]["value"]>("gemini-3.5-flash-lite");
-
-const aiEffectiveModel = computed(() => normalizeGeminiModelName(aiModelPreset.value));
+const imageProvider = ref("Gemini");
+const imageModel = ref("gemini-3.5-flash-lite");
 const agentConfig = ref<RestaurantAgentConfigDto | null>(null);
 const agentApiKey = ref("");
-const agentApiEndpoint = ref("http://127.0.0.1:11434");
-const agentModel = ref("gemma3:270m");
+const agentProvider = ref("OpenCodeGo");
+const agentModel = ref("deepseek-v4.1-flash");
 const agentShowApiKey = ref(false);
 const agentLoading = ref(false);
 const agentSaving = ref(false);
@@ -127,11 +123,8 @@ const aiCanSave = computed(() => {
   return true;
 });
 
-function applyAiPreset() {
-  aiEndpoint.value = GEMINI_DEFAULT_ENDPOINT;
-}
-
-watch(aiModelPreset, () => applyAiPreset());
+function changeImageProvider() { imageModel.value = defaultAiModel(imageProvider.value); }
+function changeAgentProvider() { agentModel.value = defaultAiModel(agentProvider.value); }
 
 async function loadAiConfig() {
   const rid = activeAiRestaurantId.value;
@@ -145,13 +138,8 @@ async function loadAiConfig() {
     aiConfig.value = isSuperAdmin.value
       ? await aiConfigService.getByRestaurantId(rid)
       : await aiConfigService.getMyRestaurant();
-    const savedModel = normalizeGeminiModelName(aiConfig.value.model);
-    if (savedModel && MODEL_PRESETS.some((p) => p.value === savedModel)) {
-      aiModelPreset.value = savedModel as (typeof MODEL_PRESETS)[number]["value"];
-    } else {
-      aiModelPreset.value = "gemini-3.5-flash-lite";
-    }
-    applyAiPreset();
+    imageProvider.value = aiConfig.value.provider || "Gemini";
+    imageModel.value = aiConfig.value.model || defaultAiModel(imageProvider.value);
   } catch (err: any) {
     aiConfigError.value = err?.data?.message ?? err?.message ?? "Não foi possível carregar a configuração.";
   } finally {
@@ -165,8 +153,8 @@ async function loadAgentConfig() {
   agentLoading.value = true;
   try {
     agentConfig.value = isSuperAdmin.value ? await agentConfigService.getByRestaurantId(rid) : await agentConfigService.getMyRestaurant();
-    agentApiEndpoint.value = agentConfig.value.apiEndpoint || "http://127.0.0.1:11434";
-    agentModel.value = agentConfig.value.model || "gemma3:270m";
+    agentProvider.value = agentConfig.value.provider || "OpenCodeGo";
+    agentModel.value = agentConfig.value.model || defaultAiModel(agentProvider.value);
   } catch (err: any) { agentError.value = err?.data?.message ?? err?.message ?? "Não foi possível carregar os agentes."; }
   finally { agentLoading.value = false; }
 }
@@ -175,7 +163,7 @@ async function saveAgentConfig() {
   if (!activeAiRestaurantId.value || agentSaving.value) return;
   agentSaving.value = true; agentError.value = null; agentTestResult.value = null;
   try {
-    const payload: any = { apiEndpoint: agentApiEndpoint.value.trim(), model: agentModel.value.trim() || "gemma3:270m" };
+    const payload: any = { provider: agentProvider.value, model: agentModel.value.trim() || defaultAiModel(agentProvider.value) };
     if (agentApiKey.value.trim()) payload.apiKey = agentApiKey.value.trim();
     if (isSuperAdmin.value) await agentConfigService.updateByRestaurantId(activeAiRestaurantId.value, payload); else await agentConfigService.updateMyRestaurant(payload);
     agentApiKey.value = ""; agentSuccess.value = true; setTimeout(() => (agentSuccess.value = false), 3500); await loadAgentConfig();
@@ -187,7 +175,7 @@ async function testAgentConfig() {
   if (!activeAiRestaurantId.value || agentTesting.value) return;
   agentTesting.value = true; agentError.value = null; agentTestResult.value = null;
   try {
-    const req = { overrideEndpoint: agentApiEndpoint.value.trim(), overrideModel: agentModel.value.trim() || "gemma3:270m", overrideApiKey: agentApiKey.value.trim() || null };
+    const req = { overrideProvider: agentProvider.value, overrideModel: agentModel.value.trim() || defaultAiModel(agentProvider.value), overrideApiKey: agentApiKey.value.trim() || null };
     agentTestResult.value = isSuperAdmin.value ? await agentConfigService.testByRestaurantId(activeAiRestaurantId.value, req) : await agentConfigService.testMyRestaurant(req);
     if (!agentTestResult.value.success) agentError.value = agentTestResult.value.errorMessage || "Falha na conexão.";
   } catch (err: any) { agentError.value = err?.data?.message ?? err?.message ?? "Falha ao testar a conexão."; }
@@ -210,10 +198,10 @@ async function saveAiConfig() {
   aiConfigTestResult.value = null;
   try {
     const rid = activeAiRestaurantId.value;
-    const model = normalizeGeminiModelName(aiModelPreset.value);
+    const model = imageModel.value.trim();
     const payload: UpdateRestaurantAiPhotoConfigDto = {
-      apiEndpoint: GEMINI_DEFAULT_ENDPOINT,
-      model: model || null
+      provider: imageProvider.value,
+      model: model || defaultAiModel(imageProvider.value)
     };
     if (aiApiKey.value.length > 0) {
       payload.apiKey = aiApiKey.value.trim();
@@ -273,27 +261,13 @@ async function testAiConfig() {
   aiConfigError.value = null;
   aiConfigTestResult.value = null;
   try {
-    const formModel = normalizeGeminiModelName(aiModelPreset.value);
-    const formEndpoint = aiEndpoint.value?.trim() ?? GEMINI_DEFAULT_ENDPOINT;
+    const formModel = imageModel.value.trim();
     const formKey = aiApiKey.value.length > 0 ? aiApiKey.value.trim() : null;
-
-    const savedEndpoint = aiConfig.value?.apiEndpoint
-      ? aiConfig.value.apiEndpoint.trim()
-      : null;
-    const savedModel = aiConfig.value?.model ? normalizeGeminiModelName(aiConfig.value.model) : null;
-
-    const endpointDiffers = savedEndpoint == null || formEndpoint.toLowerCase() !== savedEndpoint.toLowerCase();
-    const modelDiffers = savedModel == null || formModel !== savedModel;
-    const keyDiffers = formKey != null;
-
-    const overrideRequest: TestRestaurantAiPhotoConfigRequestDto | null =
-      endpointDiffers || modelDiffers || keyDiffers
-        ? {
-            overrideApiKey: keyDiffers ? formKey : null,
-            overrideEndpoint: endpointDiffers ? formEndpoint : null,
-            overrideModel: modelDiffers ? formModel || null : null
-          }
-        : null;
+    const overrideRequest: TestRestaurantAiPhotoConfigRequestDto = {
+      overrideProvider: imageProvider.value,
+      overrideApiKey: formKey,
+      overrideModel: formModel || defaultAiModel(imageProvider.value)
+    };
 
     const result = isSuperAdmin.value
       ? await aiConfigService.testByRestaurantId(rid, overrideRequest)
@@ -880,27 +854,27 @@ onMounted(async () => {
           </div>
 
 
-        <!-- Configuração única de IA usada pelo chat, pelos agentes e pela visão. -->
+        <!-- Configuração de IA usada pelos agentes e pelo chat. -->
         <section v-if="activeSectionId === 'ai'" class="rounded-2xl border dark:bg-zinc-900/50 bg-white dark:border-zinc-800 border-zinc-200 shadow-xl overflow-hidden">
           <div class="p-5 sm:p-6 border-b dark:border-zinc-800/80 border-zinc-200">
             <h2 class="text-base sm:text-lg font-semibold dark:text-white text-zinc-900">Inteligência Artificial</h2>
-            <p class="mt-1 text-xs sm:text-sm dark:text-zinc-400 text-zinc-500">Uma configuração para conversa, agentes e análise de imagens. Ollama local não exige API key.</p>
+            <p class="mt-1 text-xs sm:text-sm dark:text-zinc-400 text-zinc-500">Escolha o provedor, informe a chave e o modelo que será usado pelo ISM Assist, especialistas e orquestrador.</p>
           </div>
           <div v-if="agentLoading" class="p-6 text-sm dark:text-zinc-400 text-zinc-500">Carregando configuração dos agentes…</div>
           <div v-else-if="activeAiRestaurantId" class="p-5 sm:p-6 space-y-4">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <label class="space-y-2 lg:col-span-2"><span class="text-xs uppercase tracking-widest dark:text-zinc-400 text-zinc-500 font-semibold">Endpoint da API</span><input v-model="agentApiEndpoint" class="w-full rounded-xl px-3.5 py-3.5 text-sm dark:bg-zinc-900/80 bg-white dark:border-zinc-700/70 border-zinc-300 dark:text-zinc-100 text-zinc-900 font-mono" placeholder="http://127.0.0.1:11434" maxlength="512" /></label>
-              <label class="space-y-2"><span class="text-xs uppercase tracking-widest dark:text-zinc-400 text-zinc-500 font-semibold">Modelo padrão</span><input v-model="agentModel" class="w-full rounded-xl px-3.5 py-3.5 text-sm dark:bg-zinc-900/80 bg-white dark:border-zinc-700/70 border-zinc-300 dark:text-zinc-100 text-zinc-900 font-mono" placeholder="gemma3:270m" maxlength="128" /></label>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <label class="space-y-2"><span class="text-xs uppercase tracking-widest dark:text-zinc-400 text-zinc-500 font-semibold">Provedor da IA</span><select v-model="agentProvider" @change="changeAgentProvider" class="w-full rounded-xl px-3.5 py-3.5 text-sm dark:bg-zinc-900/80 bg-white dark:border-zinc-700/70 border-zinc-300 dark:text-zinc-100 text-zinc-900"><option v-for="provider in AI_PROVIDER_OPTIONS" :key="provider.value" :value="provider.value">{{ provider.label }}</option></select></label>
+              <label class="space-y-2"><span class="text-xs uppercase tracking-widest dark:text-zinc-400 text-zinc-500 font-semibold">Modelo padrão</span><input v-model="agentModel" class="w-full rounded-xl px-3.5 py-3.5 text-sm dark:bg-zinc-900/80 bg-white dark:border-zinc-700/70 border-zinc-300 dark:text-zinc-100 text-zinc-900 font-mono" :placeholder="defaultAiModel(agentProvider)" maxlength="128" /></label>
             </div>
-            <div class="space-y-2"><div class="flex justify-between"><label class="text-xs uppercase tracking-widest dark:text-zinc-400 text-zinc-500 font-semibold">API key do agente <span class="normal-case tracking-normal font-normal">(opcional para Ollama)</span></label><span v-if="agentConfig?.hasApiKey" class="text-xs text-emerald-600 dark:text-emerald-300">Chave salva · •••• {{ agentConfig.keyLast4Digits }}</span></div><div class="relative"><input v-model="agentApiKey" :type="agentShowApiKey ? 'text' : 'password'" autocomplete="new-password" data-1p-ignore class="w-full rounded-xl pl-4 pr-12 py-3.5 text-sm dark:bg-zinc-900/80 bg-white dark:border-zinc-700/70 border-zinc-300 dark:text-zinc-100 text-zinc-900 font-mono" placeholder="Cole a chave do Codex, Claude ou outro provedor" maxlength="512" /><button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 p-2" @click="agentShowApiKey = !agentShowApiKey">{{ agentShowApiKey ? 'Ocultar' : 'Mostrar' }}</button></div></div>
-            <p class="text-xs dark:text-zinc-500 text-zinc-500">Padrão: Ollama local em <code>http://127.0.0.1:11434</code> com <code>gemma3:270m</code>. Para APIs externas, informe o endpoint compatível com OpenAI e a chave correspondente.</p>
+            <div class="space-y-2"><div class="flex justify-between"><label class="text-xs uppercase tracking-widest dark:text-zinc-400 text-zinc-500 font-semibold">Chave de API dos agentes</label><span v-if="agentConfig?.hasApiKey" class="text-xs text-emerald-600 dark:text-emerald-300">Chave salva · •••• {{ agentConfig.keyLast4Digits }}</span></div><div class="relative"><input v-model="agentApiKey" :type="agentShowApiKey ? 'text' : 'password'" autocomplete="new-password" data-1p-ignore class="w-full rounded-xl pl-4 pr-12 py-3.5 text-sm dark:bg-zinc-900/80 bg-white dark:border-zinc-700/70 border-zinc-300 dark:text-zinc-100 text-zinc-900 font-mono" placeholder="Cole a chave do provedor selecionado" maxlength="512" /><button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 p-2" @click="agentShowApiKey = !agentShowApiKey">{{ agentShowApiKey ? 'Ocultar' : 'Mostrar' }}</button></div></div>
+            <p class="text-xs dark:text-zinc-500 text-zinc-500">A chave e o modelo selecionados aqui alimentam as conversas dos agentes e do orquestrador.</p>
             <div class="flex flex-wrap gap-3"><button type="button" :disabled="agentSaving" class="rounded-xl px-4 py-2.5 text-sm font-semibold text-white bg-indigo-500 disabled:opacity-50" @click="saveAgentConfig">{{ agentSaving ? 'Salvando…' : 'Salvar agente' }}</button><button type="button" :disabled="agentTesting" class="rounded-xl px-4 py-2.5 text-sm font-semibold dark:text-emerald-200 text-emerald-800 bg-emerald-500/10 border border-emerald-500/30 disabled:opacity-50" @click="testAgentConfig">{{ agentTesting ? 'Testando…' : 'Testar conexão' }}</button><button v-if="agentConfig?.hasApiKey" type="button" class="rounded-xl px-4 py-2.5 text-sm font-semibold text-rose-700 dark:text-rose-200 bg-rose-500/10 border border-rose-500/30" @click="clearAgentKey">Remover chave</button></div>
             <p v-if="agentSuccess" role="status" class="text-sm text-emerald-700 dark:text-emerald-300">Configuração do agente salva.</p><p v-if="agentError" role="alert" class="text-sm text-rose-700 dark:text-rose-300">{{ agentError }}</p><p v-if="agentTestResult?.success" role="status" class="text-sm text-emerald-700 dark:text-emerald-300">Conexão validada com {{ agentTestResult.provider }} · modelo {{ agentTestResult.normalizedModel }}.</p>
           </div>
         </section>
 
-        <!-- AI Section -->
-        <section v-if="false && activeSectionId === 'ai'" class="space-y-6">
+        <!-- Configuração independente para leitura de imagens no estoque e em documentos. -->
+        <section v-if="activeSectionId === 'ai'" class="space-y-6">
           <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div class="xl:col-span-2 rounded-2xl border dark:bg-zinc-900/50 bg-white dark:border-zinc-800 border-zinc-200 shadow-xl overflow-hidden">
               <div class="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b dark:border-zinc-800/80 border-zinc-200">
@@ -913,7 +887,7 @@ onMounted(async () => {
                   <div class="space-y-0.5 flex-1">
                     <div class="flex flex-wrap items-center gap-2">
                       <h2 class="text-base sm:text-lg font-semibold dark:text-white text-zinc-900 tracking-tight">
-                        {{ isSuperAdmin ? 'Configuração de IA — Restaurante alvo' : 'Configuração de IA do Restaurante' }}
+                        {{ isSuperAdmin ? 'Leitura de imagens — Restaurante alvo' : 'Leitura de imagens' }}
                       </h2>
                       <span
                         v-if="aiConfig"
@@ -934,7 +908,7 @@ onMounted(async () => {
                       </span>
                     </div>
                     <p class="text-xs sm:text-sm dark:text-zinc-400 text-zinc-500 leading-relaxed max-w-2xl">
-                      Configure sua chave de API de inteligência artificial para importar dados de foto/PDF via OCR com visão computacional.
+                      Configure uma chave e um modelo exclusivos para interpretar imagens e extrair informações de fotos e documentos, como os itens do estoque.
                       <span v-if="!isSuperAdmin">Você paga apenas pela sua cota — nenhuma chave é compartilhada com outros restaurantes.</span>
                       <span v-else>Cada restaurante tem sua própria chave (nenhum compartilhamento).</span>
                     </p>
@@ -988,7 +962,7 @@ onMounted(async () => {
                       v-model="aiApiKey"
                       :type="aiShowApiKey ? 'text' : 'password'"
                       name="new-ai-api-key-not-password"
-                      :placeholder="aiConfig?.hasCustomKey ? 'Deixe vazio para manter a chave atual, ou cole uma nova chave aqui…' : 'Cole sua chave de API do Google AI Studio (ex.: AIza…)'"
+                      :placeholder="aiConfig?.hasCustomKey ? 'Deixe vazio para manter a chave atual, ou cole uma nova chave aqui…' : 'Cole a chave do provedor selecionado'"
                       class="w-full rounded-xl pl-4 pr-12 py-3.5 text-sm dark:bg-zinc-900/80 bg-white dark:border-zinc-700/70 border-zinc-300 dark:text-zinc-100 text-zinc-900 placeholder:dark:text-zinc-500 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/50 font-mono tracking-tight"
                       autocomplete="new-password"
                       data-1p-ignore
@@ -1013,44 +987,19 @@ onMounted(async () => {
                     </button>
                   </div>
                   <p class="text-xs dark:text-zinc-500 text-zinc-500 leading-relaxed">
-                    Recomendado: obtenha gratuitamente em
-                    <a href="https://aistudio.google.com/apikey" target="_blank" class="underline dark:text-indigo-300 text-indigo-600 hover:dark:text-indigo-200 hover:text-indigo-700 font-medium">Google AI Studio (Gemini gratuito)</a>.
-                    No momento, apenas o provedor Google Gemini é suportado.
+                    Selecione o provedor correspondente à chave. O ISM usa automaticamente o protocolo e o endereço oficiais desse provedor.
                   </p>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-5">
-                  <div class="lg:col-span-3 space-y-2">
-                    <label class="text-xs uppercase tracking-widest dark:text-zinc-400 text-zinc-500 font-semibold">Modelo Gemini</label>
-                    <select
-                      v-model="aiModelPreset"
-                      class="w-full rounded-xl px-3.5 py-3.5 text-sm dark:bg-zinc-900/80 bg-white dark:border-zinc-700/70 border-zinc-300 dark:text-zinc-100 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/50"
-                    >
-                      <option v-for="p in MODEL_PRESETS" :key="p.value" :value="p.value">
-                        {{ p.label }}
-                        <template v-if="p.tier && p.tier !== 'Custom'"> · {{ p.tier }}</template>
-                      </option>
-                    </select>
-                    <p class="text-xs dark:text-zinc-500 text-zinc-500 leading-relaxed">
-                      Dicas:
-                      <span v-for="(h, idx) in GEMINI_MODEL_HINTS" :key="idx">
-                        <code class="px-1 py-0.5 rounded dark:bg-zinc-800/70 bg-zinc-100 dark:border-zinc-700/60 border-zinc-200 dark:text-zinc-300 text-zinc-700 text-[11px] font-mono mr-1">{{ h.split(" ")[0] }}</code>
-                      </span>
-                    </p>
-                  </div>
-                  <div class="lg:col-span-2 space-y-2">
-                    <label class="text-xs uppercase tracking-widest dark:text-zinc-400 text-zinc-500 font-semibold">Endpoint base (Google)</label>
-                    <input
-                      v-model="aiEndpoint"
-                      placeholder="https://generativelanguage.googleapis.com/v1"
-                      class="w-full rounded-xl px-3.5 py-3.5 text-sm dark:bg-zinc-800/40 bg-zinc-100 dark:border-zinc-700/40 border-zinc-200 dark:text-zinc-400 text-zinc-600 placeholder:dark:text-zinc-600 placeholder:text-zinc-400 focus:outline-none focus:ring-0 focus:border-zinc-700/40 font-mono opacity-90 cursor-not-allowed select-none"
-                      maxlength="512"
-                      readonly
-                      disabled
-                      title="Apenas o provedor Google Gemini é suportado nesta versão. Endereço bloqueado para edição."
-                    />
-                    <p class="text-xs dark:text-zinc-500 text-zinc-500 leading-relaxed">🔒 Trava de segurança: endpoint fixo no Google Gemini.</p>
-                  </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5">
+                  <label class="space-y-2">
+                    <span class="text-xs uppercase tracking-widest dark:text-zinc-400 text-zinc-500 font-semibold">Provedor de visão</span>
+                    <select v-model="imageProvider" @change="changeImageProvider" class="w-full rounded-xl px-3.5 py-3.5 text-sm dark:bg-zinc-900/80 bg-white dark:border-zinc-700/70 border-zinc-300 dark:text-zinc-100 text-zinc-900"><option v-for="provider in AI_PROVIDER_OPTIONS" :key="provider.value" :value="provider.value">{{ provider.label }}</option></select>
+                  </label>
+                  <label class="space-y-2">
+                    <span class="text-xs uppercase tracking-widest dark:text-zinc-400 text-zinc-500 font-semibold">Modelo de visão</span>
+                    <input v-model="imageModel" maxlength="128" :placeholder="defaultAiModel(imageProvider)" class="w-full rounded-xl px-3.5 py-3.5 text-sm dark:bg-zinc-900/80 bg-white dark:border-zinc-700/70 border-zinc-300 dark:text-zinc-100 text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/50" />
+                  </label>
                 </div>
 
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
@@ -1134,7 +1083,7 @@ onMounted(async () => {
                   </svg>
                   <div class="space-y-1.5 flex-1 min-w-0">
                     <p class="font-semibold">
-                      {{ aiConfigTestResult.success ? 'Conexão OK com o Google Gemini' : 'Falha na validação com o provedor' }}
+                      {{ aiConfigTestResult.success ? `Conexão OK com ${aiConfigTestResult.provider}` : 'Falha na validação com o provedor' }}
                     </p>
                     <ul class="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-1 text-xs dark:text-emerald-50/90 text-emerald-900 *:break-all">
                       <li><span class="opacity-75">Modelo:</span> <code class="font-mono">{{ aiConfigTestResult.normalizedModel || '—' }}</code></li>
@@ -1163,11 +1112,11 @@ onMounted(async () => {
                 <ol class="space-y-3 text-sm dark:text-zinc-300 text-zinc-700">
                   <li class="flex gap-3">
                     <span class="w-5 h-5 shrink-0 rounded-full bg-indigo-500/20 dark:text-indigo-300 text-indigo-600 border border-indigo-500/30 text-[11px] font-bold flex items-center justify-center">1</span>
-                    <span>Crie sua chave gratuita no <a href="https://aistudio.google.com/apikey" target="_blank" class="underline dark:text-indigo-300 text-indigo-600 hover:dark:text-indigo-200 hover:text-indigo-700 font-medium">Google AI Studio</a>.</span>
+                    <span>Selecione o provedor correspondente à chave de API que você criou.</span>
                   </li>
                   <li class="flex gap-3">
                     <span class="w-5 h-5 shrink-0 rounded-full bg-indigo-500/20 dark:text-indigo-300 text-indigo-600 border border-indigo-500/30 text-[11px] font-bold flex items-center justify-center">2</span>
-                    <span>Cole aqui. Recomendamos o modelo <code class="px-1.5 py-0.5 rounded dark:bg-zinc-800/70 bg-zinc-100 dark:border-zinc-700/60 border-zinc-200 font-mono text-xs dark:text-zinc-300 text-zinc-700">gemini-3.5-flash-lite</code> (melhor free tier).</span>
+                    <span>Informe o ID do modelo exatamente como aparece na documentação do provedor.</span>
                   </li>
                   <li class="flex gap-3">
                     <span class="w-5 h-5 shrink-0 rounded-full bg-indigo-500/20 dark:text-indigo-300 text-indigo-600 border border-indigo-500/30 text-[11px] font-bold flex items-center justify-center">3</span>
@@ -1186,7 +1135,7 @@ onMounted(async () => {
                 <ul class="space-y-2 text-xs dark:text-zinc-400 text-zinc-600">
                   <li class="flex gap-2">
                     <span class="dark:text-emerald-300 text-emerald-600 mt-0.5">✓</span>
-                    <span>Chave gravada criptografada em banco, nunca exposta em APIs GET (apenas 4 últimos dígitos).</span>
+                    <span>Chave nunca retornada em APIs GET; a tela exibe somente os quatro últimos dígitos.</span>
                   </li>
                   <li class="flex gap-2">
                     <span class="dark:text-emerald-300 text-emerald-600 mt-0.5">✓</span>
@@ -1194,7 +1143,7 @@ onMounted(async () => {
                   </li>
                   <li class="flex gap-2">
                     <span class="dark:text-emerald-300 text-emerald-600 mt-0.5">✓</span>
-                    <span>Cota e faturamento diretamente na sua conta Google (você controla limites).</span>
+                    <span>Uso e cobrança seguem a conta do provedor que você selecionou.</span>
                   </li>
                 </ul>
               </div>

@@ -63,9 +63,9 @@ const chartOptions = {
     <div class="p-6 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800/80 shadow-sm dark:shadow-lg space-y-4 h-full transition-colors duration-200">
         <div>
             <h3 class="text-sm font-bold text-zinc-900 dark:text-white">Pratos mais pedidos</h3>
-            <p class="text-xs text-zinc-500 dark:text-zinc-400">Top 5 — últimos 7 dias</p>
+            <p class="text-xs text-zinc-500 dark:text-zinc-400">Top 10 — últimos 7 dias</p>
         </div>
-        <ChartOnVisible>
+        <ChartOnVisible :class="data.length > 6 ? 'h-[360px]' : 'h-64'">
             <Bar :data="chartData" :options="chartOptions" />
         </ChartOnVisible>
     </div>

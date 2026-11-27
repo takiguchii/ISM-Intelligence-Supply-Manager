@@ -106,7 +106,7 @@ public sealed class ReceiptConfirmationService(
                 newProductsByLine[i] = product;
             }
             resolvedProductIds[i] = product.Id;
-            if (!string.Equals(item.Unit, product.Unit, StringComparison.OrdinalIgnoreCase) &&
+            if (!UnitsAreEquivalent(item.Unit, product.Unit) &&
                 string.IsNullOrWhiteSpace(mapping.ConversionNote))
                 throw new InvalidOperationException($"Informe a conversão de {item.Unit} para {product.Unit} na linha {i + 1}.");
             if (item.LineTotal is null || item.LineTotal < 0)
@@ -226,4 +226,23 @@ public sealed class ReceiptConfirmationService(
     }
 
     private static string Hash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
+
+    private static bool UnitsAreEquivalent(string? source, string? target)
+    {
+        static string Canonicalize(string? unit)
+        {
+            var value = unit?.Trim().ToLowerInvariant() ?? "";
+            return value switch
+            {
+                "quilo" or "quilos" => "kg",
+                "gr" or "grama" or "gramas" => "g",
+                "lt" or "litro" or "litros" => "l",
+                "mililitro" or "mililitros" => "ml",
+                "un" or "und" or "unid" or "unidade" or "unidades" or "pct" or "pacote" or "pacotes" or "caixa" or "caixas" or "fardo" or "fardos" or "saco" or "sacos" => "un",
+                _ => value
+            };
+        }
+
+        return Canonicalize(source) == Canonicalize(target);
+    }
 }
