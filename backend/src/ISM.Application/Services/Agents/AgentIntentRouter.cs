@@ -22,6 +22,7 @@ public sealed class AgentIntentRouter : IAgentIntentRouter
             ["orders.getLatest"] = ("assistant", Array.Empty<string>()),
             ["orders.getRecent"] = ("finance", Array.Empty<string>()),
             ["stock.getOverview"] = ("stock", Array.Empty<string>()),
+            ["stock.analyzeMenuImpact"] = ("stock", Array.Empty<string>()),
             ["pricing.getDishOverview"] = ("pricing", Array.Empty<string>())
         };
 
@@ -58,6 +59,8 @@ public sealed class AgentIntentRouter : IAgentIntentRouter
             return Intent("suppliers", "suppliers.compareOffers", new { productName = supplierProduct, unit = supplierUnit }, 0.96);
         if (new[] { "abaixo do mínimo", "abaixo do minimo", "itens críticos", "itens criticos", "estoque crítico", "estoque critico", "estoque geral", "visão geral do estoque", "visao geral do estoque" }.Any(normalized.Contains))
             return Intent("stock", "stock.getOverview", new { }, 0.96);
+        if (new[] { "impacto no estoque", "impacto do cardápio", "impacto do cardapio", "consumo pelo cardápio", "consumo pelo cardapio", "saída de insumos", "saida de insumos", "insumos mais consumidos", "demanda dos ingredientes", "estoque e vendas", "vendas e estoque", "consumo do cardápio", "consumo do cardapio" }.Any(normalized.Contains))
+            return Intent("stock", "stock.analyzeMenuImpact", new { }, 0.97);
         var asksBestSalesDay = new[] { "melhor dia", "dia mais", "dia que mais", "maior faturamento", "pico de faturamento", "pico de vendas" }.Any(normalized.Contains);
         if (asksBestSalesDay)
         {

@@ -315,6 +315,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAgentTool, RecentOrdersTool>();
         services.AddScoped<IAgentTool, StockOverviewTool>();
         services.AddScoped<IAgentTool, DishOverviewTool>();
+        services.AddScoped<IAgentTool, MenuStockImpactTool>();
         services.AddScoped<IAssistantService, AssistantService>();
         services.AddHostedService<AgentsBackgroundScheduler>();
         services.AddHostedService<NotificationDeliveryWorker>();

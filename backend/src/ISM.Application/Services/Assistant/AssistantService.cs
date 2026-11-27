@@ -619,9 +619,7 @@ public sealed class AssistantService(
         var formatted = intent.ToolName == "finance.getRevenueSummary" && result.Data is not null
             ? FormatTelegramFinanceResult(result.Data)
             : DescribeToolResult(result);
-        var synthesized = intent.ToolName == "sales.getDishInsights"
-            ? new LlmTextResult(false, null, "Ranking, lucro e previsão usam formatação determinística para preservar valores e contexto.")
-            : await SynthesizeAnswerAsync(result.Message, formatted, cancellationToken, intent.ToolName, question);
+        var synthesized = await SynthesizeAnswerAsync(result.Message, formatted, cancellationToken, intent.ToolName, question);
         var warning = result.Code == AgentDecisionCode.CanAct ? null : "A resposta foi limitada pela disponibilidade ou qualidade dos dados; nenhuma ação foi executada.";
         var synthesisCoversQuestion = synthesized.Success && result.Data is not null
             && CoversToolCoreFacts(question, intent.ToolName, result.Data, synthesized.Text!);
@@ -684,6 +682,10 @@ public sealed class AssistantService(
             ? " Liste cada fornecedor com seu preço e unidade exatamente como aparecem nos fatos. Esses valores vêm de compras anteriores: chame-os somente de histórico de preços. Não fale sobre cotações ou ofertas atuais, nem afirme que existem ou não existem; não mencione negociação ou contato com fornecedores."
             : toolName == "finance.getPeriodSummary"
                 ? " Responda de forma analítica, humana e executiva ao que o usuário perguntou sobre o período financeiro. Se ele perguntou sobre o melhor dia de faturamento ou desempenho da semana, informe claramente o dia da semana, a data e o valor exato verificado nos fatos. Copie literalmente os valores monetários dos fatos, sem arredondar ou alterar a formatação. Destaque os números principais (vendas, despesas, fluxo líquido, médias e melhor dia) de forma fluida. Não mencione números, percentuais ou datas extras que não estejam presentes nos fatos."
+            : toolName == "sales.getDishInsights"
+                ? " Apresente os pratos mais vendidos, a lucratividade ou a estimativa de demanda de forma analítica, humana e executiva. Destaque os principais pratos com suas quantidades e valores copiados literalmente dos fatos, sem inventar novos números."
+            : toolName == "stock.analyzeMenuImpact"
+                ? " Responda de forma analítica, humana e consultiva cruzando as vendas do cardápio com o estoque. Destaque os insumos mais consumidos pelas vendas dos pratos e alerte claramente sobre ingredientes com risco de ruptura ou poucos dias de estoque restantes. Copie literalmente os valores numéricos dos fatos, sem inventar outros números."
             : string.Empty;
         var systemPrompt = generalInstructions + domainInstructions;
         var prompt = $"Resultado da consulta: {toolResult}\nFatos verificados e referência de formatação: {factualAnswer}\n\nEscreva a resposta final para o cliente.";
@@ -747,6 +749,14 @@ public sealed class AssistantService(
                 if (root.TryGetProperty("Dishes", out var dishes) && dishes.ValueKind == JsonValueKind.Array)
                     names.AddRange(dishes.EnumerateArray().Select(dish => ReadName(dish, "Name")).Where(name => !string.IsNullOrWhiteSpace(name))!);
                 break;
+            case "stock.analyzeMenuImpact":
+                if (root.TryGetProperty("TopConsumedIngredients", out var topIngredients) && topIngredients.ValueKind == JsonValueKind.Array)
+                    names.AddRange(topIngredients.EnumerateArray().Select(item => ReadName(item, "ProductName")).Where(name => !string.IsNullOrWhiteSpace(name))!);
+                break;
+            case "sales.getDishInsights":
+                if (root.TryGetProperty("Ranking", out var rankingDishes) && rankingDishes.ValueKind == JsonValueKind.Array)
+                    names.AddRange(rankingDishes.EnumerateArray().Select(item => ReadName(item, "Dish")).Where(name => !string.IsNullOrWhiteSpace(name))!);
+                break;
         }
         return names.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
     }
@@ -792,6 +802,10 @@ public sealed class AssistantService(
             "pricing.getDishCost" when asksCost => HasAmount(data, "Cost", answer, "custos?|cmv"),
             "stock.getProduct" => HasQuantity(data, "CurrentQuantity", answer, "saldo atual")
                 && HasQuantity(data, "MinimumQuantity", answer, "mínimo"),
+            "sales.getDishInsights" => data.TryGetProperty("Ranking", out var r) && r.ValueKind == JsonValueKind.Array && r.GetArrayLength() > 0
+                ? answer.Length > 20
+                : true,
+            "stock.analyzeMenuImpact" => true,
             _ => true
         };
     }
@@ -866,6 +880,7 @@ public sealed class AssistantService(
             "orders.getLatest" => FormatOrderResult(root, result.Message),
             "orders.getRecent" => $"Vendas dos pedidos pagos consultados: R$ {Money("PaidSales")}\n{result.Message}",
             "stock.getOverview" => FormatStockOverview(root, result.Message),
+            "stock.analyzeMenuImpact" => FormatMenuStockImpact(root, result.Message),
             "pricing.getDishOverview" => FormatDishOverview(root, result.Message),
             _ => result.Message
         };
@@ -892,6 +907,7 @@ public sealed class AssistantService(
             "orders.getLatest" => Has("OrderId", "Status", "Total", "Items"),
             "orders.getRecent" => Has("PaidSales"),
             "stock.getOverview" => Has("ProductCount", "CriticalCount", "Products") && root.GetProperty("Products").ValueKind == JsonValueKind.Array,
+            "stock.analyzeMenuImpact" => Has("LookbackDays", "PaidOrdersAnalyzed", "TotalDishesSold", "TopConsumedIngredients", "AtRiskIngredients"),
             "pricing.getDishOverview" => Has("DishCount", "Dishes") && root.GetProperty("Dishes").ValueKind == JsonValueKind.Array,
             _ => true
         };
@@ -986,6 +1002,47 @@ public sealed class AssistantService(
         var dishes = root.GetProperty("Dishes").EnumerateArray().Select(item =>
             $"• {item.GetProperty("Name").GetString()}: preço R$ {item.GetProperty("Price").GetDecimal().ToString("N2", CultureInfo.GetCultureInfo("pt-BR"))}, custo R$ {item.GetProperty("Cost").GetDecimal().ToString("N2", CultureInfo.GetCultureInfo("pt-BR"))}, CMV {item.GetProperty("CmvPercent").GetDecimal().ToString("N1", CultureInfo.GetCultureInfo("pt-BR"))}%");
         return $"Pratos ativos: {root.GetProperty("DishCount").GetInt32()}.\n{string.Join('\n', dishes)}\n{message}";
+    }
+
+    private static string FormatMenuStockImpact(JsonElement root, string message)
+    {
+        var days = root.GetProperty("LookbackDays").GetInt32();
+        var ordersCount = root.GetProperty("PaidOrdersAnalyzed").GetInt32();
+        var dishesCount = root.GetProperty("TotalDishesSold").GetInt32();
+        var sb = new StringBuilder();
+        sb.AppendLine($"Impacto do cardápio no estoque ({days} dias analisados — {ordersCount} pedidos pagos, {dishesCount} pratos vendidos):");
+
+        if (root.TryGetProperty("TopConsumedIngredients", out var top) && top.ValueKind == JsonValueKind.Array && top.GetArrayLength() > 0)
+        {
+            sb.AppendLine("• Insumos com maior consumo pelas vendas do cardápio:");
+            foreach (var item in top.EnumerateArray())
+            {
+                var name = item.GetProperty("ProductName").GetString();
+                var unit = item.GetProperty("Unit").GetString();
+                var total = item.GetProperty("TotalConsumedFromSales").GetDecimal().ToString("0.##", CultureInfo.GetCultureInfo("pt-BR"));
+                var current = item.GetProperty("CurrentQuantity").GetDecimal().ToString("0.##", CultureInfo.GetCultureInfo("pt-BR"));
+                var daysRemaining = item.GetProperty("DaysRemaining").GetDecimal().ToString("0.##", CultureInfo.GetCultureInfo("pt-BR"));
+                var risk = item.GetProperty("IsAtRisk").GetBoolean() ? " (risco iminente)" : string.Empty;
+                sb.AppendLine($"  - {name}: {total} {unit} consumidos (saldo: {current} {unit}, aprox. {daysRemaining} dias restantes){risk}");
+            }
+        }
+
+        if (root.TryGetProperty("AtRiskIngredients", out var atRisk) && atRisk.ValueKind == JsonValueKind.Array && atRisk.GetArrayLength() > 0)
+        {
+            sb.AppendLine("• Atenção aos insumos críticos no ritmo atual de vendas:");
+            foreach (var item in atRisk.EnumerateArray())
+            {
+                var name = item.GetProperty("ProductName").GetString();
+                var unit = item.GetProperty("Unit").GetString();
+                var current = item.GetProperty("CurrentQuantity").GetDecimal().ToString("0.##", CultureInfo.GetCultureInfo("pt-BR"));
+                var min = item.GetProperty("MinimumQuantity").GetDecimal().ToString("0.##", CultureInfo.GetCultureInfo("pt-BR"));
+                var daysRemaining = item.GetProperty("DaysRemaining").GetDecimal().ToString("0.##", CultureInfo.GetCultureInfo("pt-BR"));
+                sb.AppendLine($"  - {name}: saldo {current} {unit} (mínimo {min} {unit}), estoque para aprox. {daysRemaining} dias");
+            }
+        }
+
+        sb.Append(message);
+        return sb.ToString();
     }
 
     private static bool IsFinancialQuestion(string message)

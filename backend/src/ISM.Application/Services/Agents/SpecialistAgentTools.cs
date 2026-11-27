@@ -309,3 +309,101 @@ public sealed class RevenueForecastTool(IOrderRepository orders) : ReadOnlyAgent
             [new("PaidOrders", $"{start:yyyy-MM-dd}/{end:yyyy-MM-dd}", context.RestaurantId, DateTime.UtcNow, end, "Receita dos itens de pedidos pagos nos últimos 28 dias." )]);
     }
 }
+
+public sealed record MenuIngredientImpactItem(
+    int ProductId,
+    string ProductName,
+    string Unit,
+    decimal TotalConsumedFromSales,
+    decimal CurrentQuantity,
+    decimal MinimumQuantity,
+    decimal EstimatedDailyDemand,
+    decimal DaysRemaining,
+    bool IsAtRisk);
+
+public sealed record MenuStockImpactOutput(
+    int LookbackDays,
+    int PaidOrdersAnalyzed,
+    int TotalDishesSold,
+    IReadOnlyList<MenuIngredientImpactItem> TopConsumedIngredients,
+    IReadOnlyList<MenuIngredientImpactItem> AtRiskIngredients);
+
+public sealed class MenuStockImpactTool(IOrderRepository orders, IDishRepository dishes, IProductRepository products) : ReadOnlyAgentTool, IAgentTool
+{
+    public AgentToolDescriptor Descriptor { get; } = new("stock.analyzeMenuImpact", "stock", "1.0", "Analisar o impacto do volume de vendas dos pratos do cardápio sobre o estoque de insumos e risco de ruptura", AgentToolOperation.Read, ["Admin", "Manager"], 10, 5000, false, "medium")
+    {
+        InputSchema = new Dictionary<string, string> { ["lookbackDays"] = "integer between 1 and 90, optional" }
+    };
+
+    public async Task<AgentToolResult> ExecuteAsync(JsonElement input, AgentToolContext context, CancellationToken cancellationToken = default)
+    {
+        if (!IsSafeObject(input)) return Result(Descriptor, AgentDecisionCode.Denied, null, "Entrada inválida.", context);
+        var lookbackDays = 30;
+        if (input.TryGetProperty("lookbackDays", out var daysElement) && daysElement.ValueKind == JsonValueKind.Number && daysElement.TryGetInt32(out var parsedDays))
+        {
+            lookbackDays = Math.Clamp(parsedDays, 1, 90);
+        }
+
+        var since = DateTime.UtcNow.AddDays(-lookbackDays);
+        var paidOrders = (await orders.GetAllAsync(context.RestaurantId, cancellationToken))
+            .Where(o => o.Status == OrderStatus.Paid && o.PaidAtUtc >= since).ToArray();
+
+        if (paidOrders.Length == 0)
+            return Result(Descriptor, AgentDecisionCode.InsufficientData, null, "Não há pedidos pagos suficientes no período para analisar o impacto do cardápio no estoque.", context);
+
+        var dishSales = paidOrders
+            .SelectMany(o => o.Items)
+            .GroupBy(i => i.DishId)
+            .ToDictionary(g => g.Key, g => g.Sum(i => i.Quantity));
+
+        var allDishes = await dishes.GetAllDishesAsync(context.RestaurantId, cancellationToken: cancellationToken);
+        var (allProducts, _) = await products.GetPagedAsync(context.RestaurantId, 1, 100, cancellationToken: cancellationToken);
+        var productMap = allProducts.ToDictionary(p => p.Id);
+
+        var ingredientConsumption = new Dictionary<int, decimal>();
+        var totalDishesSold = dishSales.Values.Sum();
+
+        foreach (var dish in allDishes)
+        {
+            if (!dishSales.TryGetValue(dish.Id, out var qtySold) || qtySold <= 0) continue;
+            foreach (var ingredient in dish.Ingredients)
+            {
+                var consumed = ingredient.Quantity * qtySold;
+                ingredientConsumption[ingredient.ProductId] = ingredientConsumption.GetValueOrDefault(ingredient.ProductId) + consumed;
+            }
+        }
+
+        if (ingredientConsumption.Count == 0)
+            return Result(Descriptor, AgentDecisionCode.InsufficientData, null, "Os pratos vendidos não possuem fichas técnicas com insumos vinculados.", context);
+
+        var impactItems = new List<MenuIngredientImpactItem>();
+        foreach (var (productId, totalConsumed) in ingredientConsumption)
+        {
+            if (!productMap.TryGetValue(productId, out var prod)) continue;
+            var dailyDemand = decimal.Round(totalConsumed / lookbackDays, 3);
+            var daysRemaining = dailyDemand > 0m ? decimal.Round(prod.CurrentQuantity / dailyDemand, 1) : 999m;
+            var isAtRisk = prod.CurrentQuantity <= prod.MinimumQuantity || daysRemaining <= 7m;
+
+            impactItems.Add(new MenuIngredientImpactItem(
+                prod.Id,
+                prod.Name,
+                prod.Unit,
+                decimal.Round(totalConsumed, 2),
+                decimal.Round(prod.CurrentQuantity, 2),
+                decimal.Round(prod.MinimumQuantity, 2),
+                dailyDemand,
+                daysRemaining,
+                isAtRisk));
+        }
+
+        var topConsumed = impactItems.OrderByDescending(i => i.TotalConsumedFromSales).Take(8).ToArray();
+        var atRisk = impactItems.Where(i => i.IsAtRisk).OrderBy(i => i.DaysRemaining).Take(8).ToArray();
+
+        var output = new MenuStockImpactOutput(lookbackDays, paidOrders.Length, totalDishesSold, topConsumed, atRisk);
+        var message = atRisk.Length > 0
+            ? $"Análise concluída: {topConsumed.Length} insumos com maior saída calculados; {atRisk.Length} insumo(s) em risco de ruptura pelo ritmo de vendas."
+            : $"Análise concluída: {topConsumed.Length} insumos com maior saída calculados; nenhum insumo com risco crítico imediato.";
+
+        return Result(Descriptor, AgentDecisionCode.CanAct, output, message, context, [new("MenuStockImpact", $"orders:{paidOrders.Length}/dishes:{totalDishesSold}", context.RestaurantId, DateTime.UtcNow, null, "Cruzamento de vendas do cardápio com fichas técnicas e estoque.")]);
+    }
+}
