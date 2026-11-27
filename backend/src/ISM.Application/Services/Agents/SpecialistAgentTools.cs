@@ -2,6 +2,7 @@ using System.Text.Json;
 using ISM.Application.Agents;
 using ISM.Application.Common;
 using ISM.Domain.Interfaces;
+using ISM.Domain.Interfaces.Purchases;
 using ISM.Domain.Modules.Finance;
 using ISM.Domain.Modules.Orders;
 using ISM.Domain.Modules.Stock.Enums;
@@ -18,7 +19,7 @@ public sealed record StockReplenishmentToolOutput(
     bool OpenReplenishmentDataAvailable,
     string Recommendation);
 
-public sealed class StockReplenishmentTool(IProductRepository products, IStockMovementRepository movements) : ReadOnlyAgentTool, IAgentTool
+public sealed class StockReplenishmentTool(IProductRepository products, IStockMovementRepository movements, IPurchaseOrderRepository? purchaseOrders = null) : ReadOnlyAgentTool, IAgentTool
 {
     private static readonly StockMovementType[] ConsumptionTypes = Enum.GetValues<StockMovementType>();
     public AgentToolDescriptor Descriptor { get; } = new("stock.analyzeReplenishment", "stock", "2.0", "Calcular risco de ruptura e quantidade sugerida sem comprar", AgentToolOperation.Read, ["Admin", "Manager"], 1, 5000, false, "medium") { InputSchema = new Dictionary<string, string> { ["productId"] = "integer > 0" } };
@@ -45,7 +46,7 @@ public sealed class StockReplenishmentTool(IProductRepository products, IStockMo
             return Result(Descriptor, AgentDecisionCode.InsufficientData, null, "Não há consumo negativo confiável nos últimos 30 dias.", context);
 
         var days = product.CurrentQuantity / consumption;
-        var hasOpenOrders = false;
+        var hasOpenOrders = purchaseOrders != null && await purchaseOrders.HasOpenOrdersForProductAsync(context.RestaurantId, product.Id, cancellationToken);
         var output = new StockReplenishmentToolOutput(
             product.Id,
             product.Name,
@@ -54,10 +55,12 @@ public sealed class StockReplenishmentTool(IProductRepository products, IStockMo
             decimal.Round(days, 2),
             decimal.Round(Math.Max(0m, product.MaximumQuantity - product.CurrentQuantity), 3),
             hasOpenOrders,
-            hasOpenOrders ? "Revisar pedido aberto antes de repor." : "Não é seguro sugerir compra: pedidos de reposição abertos não estão disponíveis.");
+            hasOpenOrders ? "Revisar pedido de reposição aberto antes de nova compra." : "Sem pedidos de compra em aberto para este insumo.");
 
         var code = hasOpenOrders || days > 2m ? AgentDecisionCode.CanAct : AgentDecisionCode.InsufficientData;
-        var message = code == AgentDecisionCode.CanAct ? "Risco de estoque calculado." : "Risco calculado, mas faltam dados de pedidos de reposição.";
+        var message = hasOpenOrders
+            ? "Risco de estoque calculado: há pedido de compra aberto para este insumo."
+            : code == AgentDecisionCode.CanAct ? "Risco de estoque calculado." : "Risco calculado: atenção à autonomia crítica.";
         return Result(Descriptor, code, output, message, context, [new("StockMovement", product.Id.ToString(), context.RestaurantId, DateTime.UtcNow, since, "Consumo negativo escopado ao tenant nos últimos 30 dias.")]);
     }
 }

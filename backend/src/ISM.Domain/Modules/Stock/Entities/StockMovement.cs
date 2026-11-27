@@ -26,6 +26,9 @@ public sealed class StockMovement : BaseEntity
     [Column(TypeName = "decimal(10,2)")]
     public decimal? UnitCostSnapshot { get; set; }
 
+    [MaxLength(200)]
+    public string? Reason { get; set; }
+
     public Guid? TriggeredByImportId { get; set; }
     public int? TriggeredByUserId { get; set; }
 }

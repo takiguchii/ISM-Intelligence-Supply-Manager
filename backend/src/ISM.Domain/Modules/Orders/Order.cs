@@ -11,6 +11,7 @@ public sealed class Order : BaseEntity
     public Guid RequestId { get; set; }
     public string TableReference { get; set; } = string.Empty;
     public OrderStatus Status { get; set; } = OrderStatus.Submitted;
+    public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.Unspecified;
     public DateTime? PaidAtUtc { get; set; }
     public int Version { get; set; }
     public ICollection<OrderItem> Items { get; set; } = new List<OrderItem>();
