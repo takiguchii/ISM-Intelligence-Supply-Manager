@@ -24,12 +24,14 @@ public sealed class TelegramTransport(IOptions<TelegramOptions> options) : ITele
     public async Task ConfigureAsync(CancellationToken ct)
     {
         using var me = await CallAsync("getMe", new { }, ct);
-        if (!string.Equals(me.RootElement.GetProperty("result").GetProperty("username").GetString(), options.Value.BotUsername, StringComparison.OrdinalIgnoreCase))
+        var bot = me.RootElement.GetProperty("result");
+        if (!string.Equals(bot.GetProperty("username").GetString(), options.Value.BotUsername, StringComparison.OrdinalIgnoreCase)
+            || (options.Value.ResolvedBotId.HasValue && bot.GetProperty("id").GetInt64() != options.Value.ResolvedBotId.Value))
             throw new InvalidOperationException("Token e nome do bot não correspondem.");
         using var webhook = await CallAsync("getWebhookInfo", new { }, ct);
         if (!string.IsNullOrEmpty(webhook.RootElement.GetProperty("result").GetProperty("url").GetString()))
             throw new InvalidOperationException("Este bot já possui webhook. O polling não foi iniciado.");
-        var commands = new[] { ("ajuda", "Comandos e ajuda"), ("id", "Meus IDs do Telegram"), ("agentes", "Central de agentes ISM"), ("pedidos", "Últimos pedidos"), ("pedido", "Consultar pedido pelo número"), ("cardapio", "Pratos disponíveis"), ("alertas", "Alertas do restaurante"), ("conta", "Conexão com a ISM"), ("notificar", "Ativar alertas"), ("parar", "Pausar alertas"), ("nova", "Nova conversa com o assistente"), ("desvincular", "Desconectar conta ISM") };
+        var commands = new[] { ("ajuda", "Comandos disponíveis"), ("estoque", "Consultar estoque"), ("financeiro", "Resumo financeiro"), ("pedidos", "Últimos pedidos"), ("pedido", "Detalhes de um pedido"), ("cardapio", "Pratos disponíveis"), ("alertas", "Alertas ativos"), ("notificar", "Ativar alertas"), ("parar", "Pausar alertas"), ("nova", "Reiniciar conversa"), ("desvincular", "Remover acesso") };
         using var configured = await CallAsync("setMyCommands", new { commands = commands.Select(c => new { command = c.Item1, description = c.Item2 }) }, ct);
         using var description = await CallAsync("setMyDescription", new { description = "Assistente da ISM para restaurantes. Converse, consulte pedidos e cardápio e acompanhe alertas. Conecte sua conta em Integrações → Telegram no ISM." }, ct);
     }
@@ -53,7 +55,7 @@ public sealed class TelegramTransport(IOptions<TelegramOptions> options) : ITele
             var count = Math.Min(3800, text.Length);
             if (char.IsHighSurrogate(text[count - 1])) count--;
             using var sent = await CallAsync("sendMessage", new { chat_id = chatId, text = FormatText(text[..count]), parse_mode = "HTML", protect_content = true,
-                reply_markup = new { keyboard = new[] { new[] { new { text = "Pedidos" }, new { text = "Cardápio" } }, new[] { new { text = "Alertas" }, new { text = "Agentes" } }, new[] { new { text = "Minha conta" }, new { text = "Ajuda" } } }, resize_keyboard = true, input_field_placeholder = "Pergunte à ISM ou escolha uma opção" }, link_preview_options = new { is_disabled = true } }, ct);
+                reply_markup = new { keyboard = new[] { new[] { new { text = "/estoque" }, new { text = "/financeiro" } }, new[] { new { text = "/pedidos" }, new { text = "/cardapio" } }, new[] { new { text = "/alertas" }, new { text = "/ajuda" } } }, resize_keyboard = true, input_field_placeholder = "Pergunte à ISM ou escolha um atalho" }, link_preview_options = new { is_disabled = true } }, ct);
             text = text[count..];
         }
     }

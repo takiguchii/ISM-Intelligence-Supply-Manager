@@ -512,6 +512,7 @@ public sealed class IsmDbContext : DbContext
             builder.ToTable("telegram_connections");
             builder.HasKey(x => x.UserId);
             builder.HasIndex(x => x.ChatId).IsUnique();
+            builder.HasIndex(x => x.ExpectedUserId).IsUnique();
             builder.HasIndex(x => x.CodeHash).IsUnique();
             builder.Property(x => x.CodeHash).HasMaxLength(64);
             builder.Property(x => x.Version).IsConcurrencyToken();

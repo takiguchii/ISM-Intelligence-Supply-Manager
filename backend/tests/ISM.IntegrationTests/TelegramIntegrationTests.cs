@@ -72,7 +72,8 @@ public sealed class TelegramIntegrationTests
         {
             var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> {
                 ["Database:Provider"] = "InMemory", ["Telegram:Enabled"] = "true",
-                ["Telegram:BotToken"] = "12345:test-only", ["Telegram:BotUsername"] = "test_ism_bot"
+                ["Telegram:BotToken"] = "12345:test-only", ["Telegram:BotUsername"] = "test_ism_bot",
+                ["Telegram:IsmUrl"] = "http://localhost:3000"
             }).Build();
             var services = new ServiceCollection();
             services.AddLogging(); services.AddSingleton<IConfiguration>(config); services.AddApiServices(config);
@@ -98,7 +99,7 @@ public sealed class TelegramIntegrationTests
         {
             using var scope = Services.CreateScope();
             scope.ServiceProvider.GetRequiredService<TelegramUserContext>().Set(100, 10, "Manager");
-            var link = await scope.ServiceProvider.GetRequiredService<ITelegramService>().CreateLinkAsync(default);
+            var link = await scope.ServiceProvider.GetRequiredService<ITelegramService>().CreateLinkAsync(default, telegramUserId: 123);
             return link.Url.Split("start=")[1];
         }
         public async Task<string?> MessageAsync(string text, long update = 1, long chat = 123, string type = "private", long? sender = null)
@@ -172,7 +173,7 @@ public sealed class TelegramIntegrationTests
             (await db.Users.IgnoreQueryFilters().SingleAsync(u => u.Id == 100)).IsActive = false; await db.SaveChangesAsync();
         }
         (await f.MessageAsync("/cardapio", 2)).Should().Contain("acesso ao restaurante mudou");
-        (await f.MessageAsync("/cardapio", 3)).Should().Contain("Para consultar seu restaurante");
+        (await f.MessageAsync("/cardapio", 3)).Should().Contain("Somente o administrador");
     }
     [Fact] public async Task Conversation_PersistsThreadAndResponses_AndCanStartAgain()
     {
@@ -186,7 +187,7 @@ public sealed class TelegramIntegrationTests
             (await db.AssistantMessages.IgnoreQueryFilters().CountAsync(m => m.Role == "user")).Should().Be(1);
             (await db.AssistantMessages.IgnoreQueryFilters().CountAsync(m => m.Content == "Resposta de teste do assistente")).Should().Be(1);
         }
-        (await f.MessageAsync("/nova", 3)).Should().Contain("Nova conversa");
+        (await f.MessageAsync("/nova", 3)).Should().Contain("Conversa reiniciada");
     }
     [Fact] public async Task Alerts_UseOptIn_AndDisconnectCancelsQueuedDeliveries()
     {
@@ -248,11 +249,13 @@ public sealed class TelegramIntegrationTests
         (await f.MessageAsync("/start " + code, 2, 123)).Should().Contain("Conta ISM conectada");
         (await f.MessageAsync("Cardápio", 3, 123)).Should().Contain("Prato A");
     }
-    [Fact] public async Task IdAndAgentPanel_DoNotExposeRestaurantDataWithoutLink()
+    [Fact] public async Task UnlinkedTelegramUsersOnlyReceiveAdminEnrollmentInstructions()
     {
         using var f = new Fixture();
-        (await f.MessageAsync("/id")).Should().Contain("123").And.Contain("12345");
-        (await f.MessageAsync("Agentes", 2)).Should().Contain("orquestrador").And.NotContain("Gerente A");
+        var response = await f.MessageAsync("/id");
+        response.Should().Contain("autorize seu ID").And.Contain("http://localhost:3000/integracoes")
+            .And.NotContain("12345").And.NotContain("Dados do restaurante");
+        (await f.MessageAsync("Agentes", 2)).Should().Contain("Somente o administrador").And.NotContain("orquestrador");
     }
     [Fact] public async Task Conversation_RoutesFinancialQuestionThroughOrchestrator()
     {

@@ -55,6 +55,8 @@ services:
       Telegram__Enabled: ${TELEGRAM_ENABLED:-false}
       Telegram__BotToken: ${TELEGRAM_BOT_TOKEN:-}
       Telegram__BotUsername: ${TELEGRAM_BOT_USERNAME:-}
+      Telegram__BotId: ${TELEGRAM_BOT_ID:-9092439014}
+      Telegram__IsmUrl: ${TELEGRAM_ISM_URL:-http://localhost:3000}
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
       SEED_PASSWORD: ${SEED_PASSWORD:-}
       AssistantAi__Enabled: ${ASSISTANT_AI_ENABLED:-false}

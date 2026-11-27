@@ -441,6 +441,9 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.HasIndex("CodeHash")
                         .IsUnique();
 
+                    b.HasIndex("ExpectedUserId")
+                        .IsUnique();
+
                     b.ToTable("telegram_connections", (string)null);
                 });
 

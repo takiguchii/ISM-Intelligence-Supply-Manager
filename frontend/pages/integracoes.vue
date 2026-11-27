@@ -158,11 +158,12 @@ onMounted(async () => {
       <p class="max-w-2xl text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">Conecte seus canais, importe dados e acompanhe os envios em um só lugar.</p>
     </header>
     <section v-if="isSuperAdmin" class="rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/20" aria-label="Restaurante da importação">
-      <label for="integration-restaurant" class="block text-sm font-semibold">Restaurante para importar dados</label>
+      <label for="integration-restaurant" class="block text-sm font-semibold">Restaurante de destino</label>
       <select id="integration-restaurant" v-model="targetRestaurantId" class="mt-2 w-full rounded-lg border border-zinc-300 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-900">
         <option :value="null">Selecione um restaurante</option>
         <option v-for="restaurant in restaurants" :key="restaurant.id" :value="restaurant.id">{{ restaurant.name }}</option>
       </select>
+      <p class="mt-2 text-xs text-zinc-600 dark:text-zinc-400">Escolha o restaurante para importar arquivos ou configurar o acesso do Telegram.</p>
       <p v-if="restaurantsError" role="alert" class="mt-2 text-sm text-red-600 dark:text-red-400">{{ restaurantsError }}</p>
     </section>
     <nav role="tablist" aria-label="Áreas de integrações" class="flex flex-wrap gap-1 border-b border-zinc-200 dark:border-zinc-800">
@@ -179,8 +180,8 @@ onMounted(async () => {
           </summary>
           <div class="border-t border-zinc-100 bg-zinc-50/50 px-4 py-5 dark:border-zinc-800 dark:bg-zinc-950/30 sm:px-6">
             <template v-if="integration.id === 'telegram'">
-              <TelegramSettings v-if="!isSuperAdmin" embedded @connection="telegramConnected = $event" />
-              <p v-else class="text-sm text-zinc-600 dark:text-zinc-400">Entre com uma conta gerencial do restaurante para conectar seu Telegram.</p>
+              <TelegramSettings v-if="!isSuperAdmin || targetRestaurantId" embedded :restaurant-id="targetRestaurantId" :super-admin="isSuperAdmin" @connection="telegramConnected = $event" />
+              <p v-else class="text-sm text-zinc-600 dark:text-zinc-400">Selecione um restaurante acima para informar seu ID do Telegram e gerar o vínculo de acesso.</p>
             </template>
             <ImportUploadPanel v-else-if="integration.id === 'planilhas'" :analyzing="analyzing" :disabled="!targetRestaurantId" :file-name="lastFileName" :error="uploadError" @file="handleFile" />
             <div v-else class="space-y-2 text-sm"><p class="font-medium">{{ integration.name }} ainda não está disponível.</p><p class="text-zinc-600 dark:text-zinc-400">Não há um conector ativo para este serviço. Quando estiver disponível, as opções de conexão aparecerão aqui.</p></div>

@@ -6,6 +6,7 @@ public interface ITelegramRepository
 {
     Task<TelegramConnection?> ForUserAsync(int userId, CancellationToken ct);
     Task<TelegramConnection?> ForChatAsync(long chatId, CancellationToken ct);
+    Task<TelegramConnection?> ForTelegramUserIdAsync(long telegramUserId, CancellationToken ct);
     Task<TelegramConnection?> ForCodeAsync(string hash, CancellationToken ct);
     Task SaveAsync(TelegramConnection connection, CancellationToken ct);
     Task<long> GetOffsetAsync(string bot, CancellationToken ct);

@@ -9,6 +9,7 @@ public sealed class TelegramRepository(IsmDbContext db) : ITelegramRepository
 {
     public Task<TelegramConnection?> ForUserAsync(int userId, CancellationToken ct) => db.Set<TelegramConnection>().FirstOrDefaultAsync(x => x.UserId == userId, ct);
     public Task<TelegramConnection?> ForChatAsync(long chatId, CancellationToken ct) => db.Set<TelegramConnection>().FirstOrDefaultAsync(x => x.ChatId == chatId, ct);
+    public Task<TelegramConnection?> ForTelegramUserIdAsync(long telegramUserId, CancellationToken ct) => db.Set<TelegramConnection>().FirstOrDefaultAsync(x => x.ExpectedUserId == telegramUserId, ct);
     public Task<TelegramConnection?> ForCodeAsync(string hash, CancellationToken ct) => db.Set<TelegramConnection>().FirstOrDefaultAsync(x => x.CodeHash == hash, ct);
     public async Task SaveAsync(TelegramConnection connection, CancellationToken ct)
     {
