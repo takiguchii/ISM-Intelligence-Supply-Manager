@@ -5,7 +5,8 @@ const emit = defineEmits<{ connection: [connected: boolean] }>();
 const status = ref<TelegramStatus | null>(null);
 const link = ref<TelegramLink | null>(null);
 const busy = ref(false);
-const telegramUserId = ref('');
+// ID informado pelo proprietário; o backend persiste a autorização no vínculo.
+const telegramUserId = ref('1079867777');
 const error = ref('');
 const success = ref('');
 let timer: ReturnType<typeof setInterval> | undefined;
@@ -58,7 +59,13 @@ async function toggleAlerts() {
   await telegramService.alerts(!status.value?.alertsEnabled, props.restaurantId, props.superAdmin); await refresh();
   success.value = status.value?.alertsEnabled ? 'Alertas ativados.' : 'Alertas pausados.';
 }
-onMounted(() => run(refresh));
+async function initialize() {
+  await refresh();
+  if (!disposed && status.value?.configured && !status.value.connected && status.value.botId && telegramUserId.value) {
+    await connect();
+  }
+}
+onMounted(() => run(initialize));
 watch(() => [props.restaurantId, props.superAdmin], () => { link.value = null; stopPolling(); run(refresh); });
 onBeforeUnmount(() => { disposed = true; stopPolling(); });
 </script>
