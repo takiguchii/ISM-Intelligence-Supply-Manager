@@ -33,6 +33,17 @@ const canSubmit = computed(() => Boolean(draft.value.trim() || attachment.value)
 const dialogRef = ref<HTMLElement | null>(null);
 let returnFocusTo: HTMLElement | null = null;
 
+const parseFormattedSegments = (content: string) => {
+  if (!content) return [];
+  const parts = content.split(/(\*\*.*?\*\*)/gs);
+  return parts.map((part) => {
+    if (part.startsWith("**") && part.endsWith("**") && part.length >= 4) {
+      return { bold: true, text: part.slice(2, -2) };
+    }
+    return { bold: false, text: part };
+  });
+};
+
 const imageTypeFor = (file: File) => {
   if (file.type) return file.type;
   if (/\.png$/i.test(file.name)) return "image/png";
@@ -144,7 +155,7 @@ onBeforeUnmount(() => { window.removeEventListener("keydown", handleKeydown); re
           <div class="min-h-0 flex-1 space-y-5 overflow-y-auto bg-gradient-to-b from-zinc-50/70 to-white px-5 py-6 dark:from-zinc-900/40 dark:to-zinc-950" aria-live="polite">
             <p v-if="chat.loadingHistory.value" class="py-10 text-center text-sm text-zinc-500">Carregando conversa…</p>
             <div v-else-if="!chat.messages.value.length" class="mx-auto flex max-w-xs flex-col items-center py-16 text-center"><span class="rounded-full border border-indigo-200 bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[.16em] text-indigo-600 shadow-sm dark:border-indigo-400/20 dark:bg-zinc-900 dark:text-indigo-300">Pronto para ajudar</span><p class="mt-4 text-base font-semibold tracking-tight text-zinc-800 dark:text-zinc-100">Por onde começamos?</p><p class="mt-2 text-xs leading-5 text-zinc-500">Pergunte sobre os dados e alertas disponíveis no seu ISM.</p></div>
-            <div v-else class="space-y-5"><article v-for="message in chat.messages.value" :key="message.id" class="flex flex-col" :class="message.role === 'user' ? 'items-end' : 'items-start'"><p class="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{{ message.role === 'user' ? 'Você' : 'ISM Assist' }}</p><div class="max-w-[90%] rounded-2xl px-4 py-3 text-[14px] leading-6 shadow-sm" :class="message.role === 'user' ? 'rounded-br-md bg-indigo-600 text-white shadow-indigo-900/10' : 'rounded-bl-md border border-zinc-200/80 bg-white text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200'"><p class="whitespace-pre-wrap break-words">{{ message.content }}</p><p v-if="message.role === 'assistant' && message.mode" class="mt-2 border-t border-zinc-200/70 pt-1.5 text-[10px] opacity-55 dark:border-zinc-700">{{ message.source || (message.mode === 'llm' ? 'Assistente de IA' : 'Dados do ISM') }}</p></div></article><p v-if="chat.pending.value" class="animate-pulse px-1 text-xs text-zinc-500">Consultando informações autorizadas…</p></div>
+            <div v-else class="space-y-5"><article v-for="message in chat.messages.value" :key="message.id" class="flex flex-col" :class="message.role === 'user' ? 'items-end' : 'items-start'"><p class="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{{ message.role === 'user' ? 'Você' : 'ISM Assist' }}</p><div class="max-w-[90%] rounded-2xl px-4 py-3 text-[14px] leading-6 shadow-sm" :class="message.role === 'user' ? 'rounded-br-md bg-indigo-600 text-white shadow-indigo-900/10' : 'rounded-bl-md border border-zinc-200/80 bg-white text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200'"><p class="whitespace-pre-wrap break-words"><template v-for="(seg, idx) in parseFormattedSegments(message.content)" :key="idx"><strong v-if="seg.bold" class="font-semibold">{{ seg.text }}</strong><template v-else>{{ seg.text }}</template></template></p><p v-if="message.role === 'assistant' && message.mode" class="mt-2 border-t border-zinc-200/70 pt-1.5 text-[10px] opacity-55 dark:border-zinc-700">{{ message.source || (message.mode === 'llm' ? 'Assistente de IA' : 'Dados do ISM') }}</p></div></article><p v-if="chat.pending.value" class="animate-pulse px-1 text-xs text-zinc-500">Consultando informações autorizadas…</p></div>
           </div>
           <div v-if="chat.error.value" class="mx-5 mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-700 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-300" role="alert">{{ chat.error.value }} <button type="button" class="ml-1 font-semibold underline underline-offset-2" @click="retry">Tentar novamente</button></div>
           <form class="assistant-composer-shell border-t border-zinc-200/80 bg-white/90 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] dark:border-zinc-800 dark:bg-zinc-950/90" @submit.prevent="submit">
