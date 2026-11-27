@@ -257,6 +257,14 @@ public sealed class TelegramIntegrationTests
             .And.NotContain("12345").And.NotContain("Dados do restaurante");
         (await f.MessageAsync("Agentes", 2)).Should().Contain("Somente o administrador").And.NotContain("orquestrador");
     }
+    [Fact] public async Task AuthorizedTelegramIdentity_AutoLinksAndProcessesFirstMessage()
+    {
+        using var f = new Fixture(); await f.IssueAsync();
+        (await f.MessageAsync("Olá, como você pode me ajudar?", 1, 123)).Should().Contain("Resposta de teste do assistente");
+        using var scope = f.Services.CreateScope();
+        var link = await scope.ServiceProvider.GetRequiredService<ITelegramRepository>().ForUserAsync(100, default);
+        link!.ChatId.Should().Be(123); link.ExpectedUserId.Should().BeNull(); link.CodeHash.Should().BeNull();
+    }
     [Fact] public async Task Conversation_RoutesFinancialQuestionThroughOrchestrator()
     {
         using var f = new Fixture(); await f.ConnectAsync();

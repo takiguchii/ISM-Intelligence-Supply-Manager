@@ -115,6 +115,22 @@ public sealed class TelegramService(ITelegramRepository repository, IUserReposit
         }
         if (link == null)
         {
+            var pending = await repository.ForTelegramUserIdAsync(message.SenderId, ct);
+            var pendingOwner = pending == null ? null : await users.GetByIdAsync(pending.UserId, ct);
+            if (pending is not null && pending.ExpectedUserId == message.SenderId
+                && pending.ChatId is null && Allowed(pendingOwner, pending.RestaurantId))
+            {
+                pending.ChatId = message.ChatId;
+                pending.ExpectedUserId = null;
+                pending.CodeHash = null;
+                pending.CodeExpiresAtUtc = null;
+                pending.ThreadId = null;
+                await repository.SaveAsync(pending, ct);
+                link = pending;
+            }
+        }
+        if (link == null)
+        {
             var integrationsUrl = Uri.TryCreate(options.Value.IsmUrl, UriKind.Absolute, out var ismUri)
                 && (ismUri.Scheme == Uri.UriSchemeHttp || ismUri.Scheme == Uri.UriSchemeHttps)
                     ? new Uri(ismUri, "/integracoes").ToString()
