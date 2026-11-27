@@ -140,7 +140,22 @@ public sealed class SupplierComparisonTool(ISupplierProductPriceHistoryRepositor
     }
 }
 
-public sealed record FinancePeriodToolOutput(DateTime StartUtc, DateTime EndUtc, decimal PaidSalesRevenue, decimal SettledOtherIncome, decimal SettledExpenses, decimal NetCashFlow, int PaidOrders, int FinanceEntries);
+public sealed record FinanceDayBreakdown(string Date, string DayOfWeek, decimal SalesRevenue, decimal Expenses, int OrderCount);
+public sealed record FinanceDayHighlight(string Date, string DayOfWeek, decimal SalesRevenue, int OrderCount);
+
+public sealed record FinancePeriodToolOutput(
+    DateTime StartUtc,
+    DateTime EndUtc,
+    decimal PaidSalesRevenue,
+    decimal SettledOtherIncome,
+    decimal SettledExpenses,
+    decimal NetCashFlow,
+    int PaidOrders,
+    int FinanceEntries,
+    decimal AverageDailySales,
+    FinanceDayHighlight? BestSalesDay,
+    FinanceDayHighlight? LowestSalesDay,
+    IReadOnlyList<FinanceDayBreakdown> DailyBreakdown);
 
 public sealed class FinancePeriodTool(IFinanceEntryRepository entries, IOrderRepository orders) : ReadOnlyAgentTool, IAgentTool
 {
@@ -163,7 +178,57 @@ public sealed class FinancePeriodTool(IFinanceEntryRepository entries, IOrderRep
         if (periodEntries.Length == 0 && paidOrders.Length == 0)
             return Result(Descriptor, AgentDecisionCode.InsufficientData, null, "Não há pedidos pagos ou lançamentos liquidados no período informado.", context);
 
-        var output = new FinancePeriodToolOutput(start, end, sales, income, expenses, sales + income - expenses, paidOrders.Length, periodEntries.Length);
+        var dailySalesGroup = paidOrders
+            .GroupBy(o => o.PaidAtUtc!.Value.Date)
+            .ToDictionary(
+                g => g.Key,
+                g => new
+                {
+                    Count = g.Count(),
+                    Revenue = g.SelectMany(o => o.Items).Sum(i => i.Quantity * i.UnitPrice)
+                });
+
+        var dailyExpenseGroup = periodEntries
+            .Where(e => e.Type == FinanceEntryType.Expense && e.SettledAtUtc.HasValue)
+            .GroupBy(e => e.SettledAtUtc!.Value.Date)
+            .ToDictionary(g => g.Key, g => g.Sum(e => e.Amount));
+
+        var ptBr = new global::System.Globalization.CultureInfo("pt-BR");
+        var daysSpan = Math.Max(1, (int)(end.Date - start.Date).TotalDays + 1);
+        var dailyList = new List<FinanceDayBreakdown>();
+        for (var offset = 0; offset < daysSpan; offset++)
+        {
+            var d = start.Date.AddDays(offset);
+            if (d > end.Date) break;
+            var dayRevenue = dailySalesGroup.TryGetValue(d, out var s) ? s.Revenue : 0m;
+            var dayOrders = s?.Count ?? 0;
+            var dayExpenses = dailyExpenseGroup.TryGetValue(d, out var exp) ? exp : 0m;
+            if (dayRevenue > 0m || dayExpenses > 0m || dayOrders > 0)
+            {
+                var dayName = ptBr.DateTimeFormat.GetDayName(d.DayOfWeek);
+                dayName = char.ToUpper(dayName[0]) + dayName[1..];
+                dailyList.Add(new FinanceDayBreakdown(d.ToString("yyyy-MM-dd"), dayName, decimal.Round(dayRevenue, 2), decimal.Round(dayExpenses, 2), dayOrders));
+            }
+        }
+
+        FinanceDayHighlight? bestDay = null;
+        FinanceDayHighlight? lowestDay = null;
+        if (dailyList.Count > 0)
+        {
+            var withSales = dailyList.Where(d => d.SalesRevenue > 0).ToList();
+            if (withSales.Count > 0)
+            {
+                var best = withSales.OrderByDescending(d => d.SalesRevenue).First();
+                bestDay = new FinanceDayHighlight(best.Date, best.DayOfWeek, best.SalesRevenue, best.OrderCount);
+                var lowest = withSales.OrderBy(d => d.SalesRevenue).First();
+                lowestDay = new FinanceDayHighlight(lowest.Date, lowest.DayOfWeek, lowest.SalesRevenue, lowest.OrderCount);
+            }
+        }
+
+        var totalDays = Math.Max(1, dailyList.Count > 0 ? dailyList.Count : (int)(end - start).TotalDays);
+        var avgDaily = decimal.Round(sales / totalDays, 2);
+
+        var output = new FinancePeriodToolOutput(start, end, decimal.Round(sales, 2), decimal.Round(income, 2), decimal.Round(expenses, 2), decimal.Round(sales + income - expenses, 2), paidOrders.Length, periodEntries.Length, avgDaily, bestDay, lowestDay, dailyList);
         return Result(Descriptor, AgentDecisionCode.CanAct, output, "Resumo financeiro calculado por período e fonte efetiva.", context, [new("FinancePeriod", $"{start:O}/{end:O}", context.RestaurantId, DateTime.UtcNow, end, "Pedidos pagos e lançamentos liquidados do período.")]);
     }
 

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using ISM.Application.DTOs.Assistant;
@@ -682,7 +683,7 @@ public sealed class AssistantService(
         var domainInstructions = toolName == "suppliers.compareOffers"
             ? " Liste cada fornecedor com seu preço e unidade exatamente como aparecem nos fatos. Esses valores vêm de compras anteriores: chame-os somente de histórico de preços. Não fale sobre cotações ou ofertas atuais, nem afirme que existem ou não existem; não mencione negociação ou contato com fornecedores."
             : toolName == "finance.getPeriodSummary"
-                ? " Para o período, diga apenas 'no período consultado'; não reescreva datas nem horários. Copie literalmente os valores monetários dos fatos, sem arredondar ou alterar a formatação."
+                ? " Responda de forma analítica, humana e executiva ao que o usuário perguntou sobre o período financeiro. Se ele perguntou sobre o melhor dia de faturamento ou desempenho da semana, informe claramente o dia da semana, a data e o valor exato verificado nos fatos. Copie literalmente os valores monetários dos fatos, sem arredondar ou alterar a formatação. Destaque os números principais (vendas, despesas, fluxo líquido, médias e melhor dia) de forma fluida. Não mencione números, percentuais ou datas extras que não estejam presentes nos fatos."
             : string.Empty;
         var systemPrompt = generalInstructions + domainInstructions;
         var prompt = $"Resultado da consulta: {toolResult}\nFatos verificados e referência de formatação: {factualAnswer}\n\nEscreva a resposta final para o cliente.";
@@ -714,6 +715,8 @@ public sealed class AssistantService(
                 answerNumbers = Regex.Replace(answerNumbers, $@"(?<![\p{{L}}\d]){number}\s+dias?\b", string.Empty, RegexOptions.IgnoreCase);
             }
         }
+        answerNumbers = Regex.Replace(answerNumbers, @"\b(?:em|nos|dos|de|as|durante)?\s*(?:[1-9]|1[0-4]|30)\s+dias?\b", string.Empty, RegexOptions.IgnoreCase);
+        answerNumbers = Regex.Replace(answerNumbers, @"(?m)^\s*\d+[\.\)]\s+", string.Empty);
         return ExtractNumbers(answerNumbers).All(supported.Contains);
     }
 
@@ -782,7 +785,8 @@ public sealed class AssistantService(
         {
             "finance.getRevenueSummary" when asksRevenue => HasAmount(data, "SalesRevenue", answer, "faturamento|receita|vendas?"),
             "finance.getRevenueSummary" when asksExpenses => HasAmount(data, "Expenses", answer, "despesas?|gastos?"),
-            "finance.getPeriodSummary" when asksRevenue => HasAmount(data, "PaidSalesRevenue", answer, "faturamento|receita|vendas?"),
+            "finance.getPeriodSummary" when asksRevenue => HasAmount(data, "PaidSalesRevenue", answer, "faturamento|receita|vendas?")
+                || (data.TryGetProperty("BestSalesDay", out var b) && b.ValueKind == JsonValueKind.Object && HasAmount(b, "SalesRevenue", answer, "faturamento|receita|vendas?|sexta|s[aá]bado|domingo|segunda|ter[cç]a|quarta|quinta|dia")),
             "finance.getPeriodSummary" when asksExpenses => HasAmount(data, "SettledExpenses", answer, "despesas?|gastos?"),
             "pricing.getDishCost" when asksPrice => HasAmount(data, "Price", answer, @"pre[cç]os?(?:\s+de\s+venda)?|venda"),
             "pricing.getDishCost" when asksCost => HasAmount(data, "Cost", answer, "custos?|cmv"),
@@ -852,7 +856,7 @@ public sealed class AssistantService(
             "stock.analyzeReplenishment" => $"{Text("ProductName")}\n• Saldo atual: {Quantity("CurrentQuantity")}\n• Consumo médio: {Quantity("DailyConsumption")}/dia\n• Estoque estimado para: {Quantity("DaysRemaining")} dias\n• Reposição sugerida: {Quantity("SuggestedQuantity")}\n{Text("Recommendation")} {result.Message}",
             "pricing.simulateDishPrice" => $"{Text("DishName")}\n• CMV atual: {Text("CurrentCmvPercent")}%\n• Custo verificado: R$ {Money("VerifiedCost")}\n• Preço atual: R$ {Money("CurrentPrice")}\n• Preço simulado: R$ {Money("SuggestedPrice")}\n{result.Message}",
             "suppliers.compareOffers" => FormatSupplierResult(root, result.Message),
-            "finance.getPeriodSummary" => $"Período: {Text("StartUtc")} a {Text("EndUtc")}\n• Vendas de pedidos pagos: R$ {Money("PaidSalesRevenue")}\n• Outras receitas liquidadas: R$ {Money("SettledOtherIncome")}\n• Despesas liquidadas: R$ {Money("SettledExpenses")}\n• Fluxo líquido: R$ {Money("NetCashFlow")}\n{result.Message}",
+            "finance.getPeriodSummary" => FormatFinancePeriodResult(root, result.Message),
             "finance.getRevenueSummary" => $"Resumo financeiro do mês\n• Vendas de pedidos pagos: R$ {Money("SalesRevenue")}\n• Outras receitas liquidadas: R$ {Money("OtherIncome")}\n• Despesas liquidadas: R$ {Money("Expenses")}\n• Contas a receber: R$ {Money("AccountsReceivable")}\n• Contas a pagar: R$ {Money("AccountsPayable")}",
             "sales.getDishInsights" => FormatSalesInsights(root, result.Message),
             "finance.forecastRevenue" => $"Estimativa de faturamento para os próximos 7 dias: R$ {Money("Next7DaysEstimate")}\n• Últimos 7 dias: R$ {Money("Last7Days")}\n• 7 dias anteriores: R$ {Money("Previous7Days")}\n• Variação observada: {Text("WeeklyChangePercent")}%\n{Text("Method")}\n{result.Message}",
@@ -919,6 +923,48 @@ public sealed class AssistantService(
         var total = root.GetProperty("Total").GetDecimal().ToString("N2", CultureInfo.GetCultureInfo("pt-BR"));
         var items = string.Join(", ", root.GetProperty("Items").EnumerateArray().Select(item => item.GetString()));
         return $"Pedido mais recente: #{orderId}\n• Status: {status}\n• Total: R$ {total}{(string.IsNullOrWhiteSpace(items) ? string.Empty : $"\n• Itens: {items}")}\n{message}";
+    }
+
+    private static string FormatFinancePeriodResult(JsonElement root, string message)
+    {
+        string Money(string name) => root.TryGetProperty(name, out var value) && value.TryGetDecimal(out var amount)
+            ? amount.ToString("N2", CultureInfo.GetCultureInfo("pt-BR"))
+            : "0,00";
+        string Text(string name) => root.TryGetProperty(name, out var value) ? value.ToString() : string.Empty;
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"Período consultado: {Text("StartUtc")} a {Text("EndUtc")}");
+        sb.AppendLine($"• Vendas de pedidos pagos: R$ {Money("PaidSalesRevenue")}");
+        sb.AppendLine($"• Outras receitas liquidadas: R$ {Money("SettledOtherIncome")}");
+        sb.AppendLine($"• Despesas liquidadas: R$ {Money("SettledExpenses")}");
+        sb.AppendLine($"• Fluxo líquido: R$ {Money("NetCashFlow")}");
+        if (root.TryGetProperty("AverageDailySales", out var avg) && avg.TryGetDecimal(out var avgSales))
+            sb.AppendLine($"• Média diária de vendas: R$ {avgSales.ToString("N2", CultureInfo.GetCultureInfo("pt-BR"))}");
+
+        if (root.TryGetProperty("BestSalesDay", out var best) && best.ValueKind == JsonValueKind.Object
+            && best.TryGetProperty("SalesRevenue", out var bestRev) && bestRev.TryGetDecimal(out var bestRevVal))
+        {
+            var bestDayName = best.GetProperty("DayOfWeek").GetString();
+            var bestDate = best.GetProperty("Date").GetString();
+            var bestCount = best.GetProperty("OrderCount").GetInt32();
+            sb.AppendLine($"• Melhor dia de vendas: {bestDayName} ({bestDate}) com R$ {bestRevVal.ToString("N2", CultureInfo.GetCultureInfo("pt-BR"))} ({bestCount} pedidos)");
+        }
+
+        if (root.TryGetProperty("DailyBreakdown", out var daily) && daily.ValueKind == JsonValueKind.Array && daily.GetArrayLength() > 0)
+        {
+            sb.AppendLine("• Detalhamento diário:");
+            foreach (var item in daily.EnumerateArray())
+            {
+                var dName = item.GetProperty("DayOfWeek").GetString();
+                var dDate = item.GetProperty("Date").GetString();
+                var dSales = item.GetProperty("SalesRevenue").GetDecimal().ToString("N2", CultureInfo.GetCultureInfo("pt-BR"));
+                var dOrders = item.GetProperty("OrderCount").GetInt32();
+                sb.AppendLine($"  - {dName} ({dDate}): R$ {dSales} ({dOrders} pedidos)");
+            }
+        }
+
+        sb.Append(message);
+        return sb.ToString();
     }
 
     private static string FormatSupplierResult(JsonElement root, string message)
