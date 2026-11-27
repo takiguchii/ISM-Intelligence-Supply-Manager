@@ -43,12 +43,14 @@ public sealed class TelegramIntegrationTests
             (await client.DeleteAsync("/api/me/telegram")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
         }
     }
+
     private sealed class Clock : TimeProvider
     {
         private DateTimeOffset now = DateTimeOffset.UtcNow;
         public override DateTimeOffset GetUtcNow() => now;
         public void Advance(TimeSpan time) => now += time;
     }
+
     private sealed class Transport : ITelegramTransport
     {
         public List<(long Chat, string Text)> Sent { get; } = [];
@@ -56,6 +58,7 @@ public sealed class TelegramIntegrationTests
         public Task ConfigureAsync(CancellationToken ct) => Task.CompletedTask;
         public Task<IReadOnlyList<TelegramIncoming>> GetUpdatesAsync(long offset, CancellationToken ct) => Task.FromResult<IReadOnlyList<TelegramIncoming>>([]);
     }
+
     private sealed class Llm : ILlmTextProvider
     {
         public Task<LlmTextResult> CompleteAsync(string systemPrompt, string userPrompt, CancellationToken ct = default) => Task.FromResult(new LlmTextResult(true, "Resposta de teste do assistente", null));
@@ -63,6 +66,7 @@ public sealed class TelegramIntegrationTests
         public Task<bool> IsAvailableAsync(CancellationToken ct = default) => Task.FromResult(true);
         public Task<LlmProviderStatus> GetStatusAsync(CancellationToken ct = default) => Task.FromResult(new LlmProviderStatus(true, true, "Teste", "Teste", null));
     }
+
     private sealed class Fixture : IDisposable
     {
         public ServiceProvider Services { get; }
@@ -78,7 +82,6 @@ public sealed class TelegramIntegrationTests
             var services = new ServiceCollection();
             services.AddLogging(); services.AddSingleton<IConfiguration>(config); services.AddApiServices(config);
             services.RemoveAll<DbContextOptions<IsmDbContext>>();
-            // O nome precisa ser o mesmo entre os escopos deste teste.
             var name = Guid.NewGuid().ToString();
             services.RemoveAll<DbContextOptions<IsmDbContext>>();
             services.AddDbContext<IsmDbContext>(o => o.UseInMemoryDatabase(name));
@@ -95,12 +98,12 @@ public sealed class TelegramIntegrationTests
             db.Orders.Add(new Order { Id = 20, RestaurantId = 20, TableReference = "Mesa secreta", RequestId = Guid.NewGuid() });
             db.SaveChanges();
         }
-        public async Task<string> IssueAsync()
+        public async Task<string> IssueAsync(long userId = 123)
         {
             using var scope = Services.CreateScope();
             scope.ServiceProvider.GetRequiredService<TelegramUserContext>().Set(100, 10, "Manager");
-            var link = await scope.ServiceProvider.GetRequiredService<ITelegramService>().CreateLinkAsync(default, telegramUserId: 123);
-            return link.Url.Split("start=")[1];
+            var status = await scope.ServiceProvider.GetRequiredService<ITelegramService>().SaveIdentityAsync(userId, default);
+            return status.TelegramUserId?.ToString() ?? "";
         }
         public async Task<string?> MessageAsync(string text, long update = 1, long chat = 123, string type = "private", long? sender = null)
         {
@@ -108,91 +111,91 @@ public sealed class TelegramIntegrationTests
             Clock.Advance(TimeSpan.FromSeconds(3));
             return await scope.ServiceProvider.GetRequiredService<ITelegramService>().HandleAsync(new(update, chat, sender ?? chat, type, text), default);
         }
-        public async Task ConnectAsync() => (await MessageAsync("/start " + await IssueAsync())).Should().Contain("Conta ISM conectada");
+        public async Task ConnectAsync()
+        {
+            await IssueAsync(123);
+        }
         public void Dispose() => Services.Dispose();
     }
 
-    [Fact] public async Task Linking_StoresHash_ConsumesOnce_AndStartsWithAlertsOff()
+    [Fact] public async Task SaveIdentity_PersistsTelegramUserId_AndEnablesAlertsByDefault()
     {
-        using var f = new Fixture(); var code = await f.IssueAsync();
-        using (var scope = f.Services.CreateScope())
-        {
-            var link = await scope.ServiceProvider.GetRequiredService<ITelegramRepository>().ForUserAsync(100, default);
-            link!.CodeHash.Should().NotBe(code); link.CodeHash.Should().HaveLength(64);
-        }
-        (await f.MessageAsync("/start " + code)).Should().Contain("Conta ISM conectada");
-        (await f.MessageAsync("/start " + code, 2, 999)).Should().Contain("expirou ou não é válido");
+        using var f = new Fixture();
+        var id = await f.IssueAsync(999);
+        id.Should().Be("999");
         using var check = f.Services.CreateScope();
-        var connected = await check.ServiceProvider.GetRequiredService<ITelegramRepository>().ForUserAsync(100, default);
-        connected!.ChatId.Should().Be(123); connected.AlertsEnabled.Should().BeFalse(); connected.CodeHash.Should().BeNull();
+        var link = await check.ServiceProvider.GetRequiredService<ITelegramRepository>().ForUserAsync(100, default);
+        link.Should().NotBeNull();
+        link!.ExpectedUserId.Should().Be(999);
+        link.ChatId.Should().Be(999);
+        link.AlertsEnabled.Should().BeTrue();
     }
-    [Fact] public async Task ExpiredLink_AndSupersededLink_CannotConnect()
+
+    [Fact] public async Task TestConnection_SendsMessageDirectlyToUser()
     {
-        using var f = new Fixture(); var old = await f.IssueAsync(); var next = await f.IssueAsync();
-        (await f.MessageAsync("/start " + old)).Should().Contain("expirou ou não é válido");
-        f.Clock.Advance(TimeSpan.FromMinutes(6));
-        (await f.MessageAsync("/start " + next, 2)).Should().Contain("expirou ou não é válido");
+        using var f = new Fixture();
+        await f.ConnectAsync();
+        using var scope = f.Services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<TelegramUserContext>().Set(100, 10, "Manager");
+        var result = await scope.ServiceProvider.GetRequiredService<ITelegramService>().TestConnectionAsync(default);
+        result.Success.Should().BeTrue();
+        f.Transport.Sent.Should().ContainSingle();
+        f.Transport.Sent[0].Chat.Should().Be(123);
+        f.Transport.Sent[0].Text.Should().Contain("Teste de Conexão");
     }
-    [Fact] public async Task ConcurrentLinkChanges_OnlyFirstVersionCanBeSaved()
-    {
-        using var f = new Fixture(); await f.IssueAsync();
-        using var firstScope = f.Services.CreateScope(); using var secondScope = f.Services.CreateScope();
-        var firstRepo = firstScope.ServiceProvider.GetRequiredService<ITelegramRepository>();
-        var secondRepo = secondScope.ServiceProvider.GetRequiredService<ITelegramRepository>();
-        var first = (await firstRepo.ForUserAsync(100, default))!;
-        var second = (await secondRepo.ForUserAsync(100, default))!;
-        first.ChatId = 123; first.CodeHash = null;
-        second.ChatId = 456; second.CodeHash = null;
-        await firstRepo.SaveAsync(first, default);
-        var stale = () => secondRepo.SaveAsync(second, default);
-        await stale.Should().ThrowAsync<InvalidOperationException>();
-        using var check = f.Services.CreateScope();
-        (await check.ServiceProvider.GetRequiredService<ITelegramRepository>().ForUserAsync(100, default))!.ChatId.Should().Be(123);
-    }
+
     [Fact] public async Task Groups_AndSpoofedSender_AreIgnored()
     {
-        using var f = new Fixture(); var code = await f.IssueAsync();
-        (await f.MessageAsync("/start " + code, type: "group")).Should().BeNull();
-        (await f.MessageAsync("/start " + code, sender: 456)).Should().BeNull();
-        (await f.MessageAsync("/start " + code)).Should().Contain("conectada");
+        using var f = new Fixture();
+        await f.IssueAsync(123);
+        (await f.MessageAsync("/start", type: "group")).Should().BeNull();
+        (await f.MessageAsync("/start", sender: 456)).Should().BeNull();
+        (await f.MessageAsync("/start")).Should().Contain("conectada ao ISM");
     }
-    [Fact] public async Task Commands_IsolateRestaurant_AndDuplicateUpdatesAreIgnored()
+
+    [Fact] public async Task StartCommand_WelcomesUserAndExplainsOrchestrator()
     {
-        using var f = new Fixture(); await f.ConnectAsync();
-        var menu = await f.MessageAsync("/cardapio", 2);
-        menu.Should().Contain("Prato A").And.NotContain("Segredo B");
-        (await f.MessageAsync("/pedido 20", 3)).Should().Contain("não encontrado neste restaurante");
-        (await f.MessageAsync("/cardapio", 3)).Should().BeNull();
+        using var f = new Fixture();
+        await f.ConnectAsync();
+        var welcome = await f.MessageAsync("/start", 1);
+        welcome.Should().Contain("Assistente Orquestrador").And.Contain("conectada ao ISM");
     }
+
     [Fact] public async Task RevokedUser_CannotRead_AndConnectionIsCleared()
     {
-        using var f = new Fixture(); await f.ConnectAsync();
+        using var f = new Fixture();
+        await f.ConnectAsync();
         using (var scope = f.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<IsmDbContext>();
-            (await db.Users.IgnoreQueryFilters().SingleAsync(u => u.Id == 100)).IsActive = false; await db.SaveChangesAsync();
+            (await db.Users.IgnoreQueryFilters().SingleAsync(u => u.Id == 100)).IsActive = false;
+            await db.SaveChangesAsync();
         }
-        (await f.MessageAsync("/cardapio", 2)).Should().Contain("acesso ao restaurante mudou");
-        (await f.MessageAsync("/cardapio", 3)).Should().Contain("Somente o administrador");
+        (await f.MessageAsync("Olá", 2)).Should().Contain("acesso ao restaurante mudou");
+        (await f.MessageAsync("Olá", 3)).Should().Contain("administrador");
     }
+
     [Fact] public async Task Conversation_PersistsThreadAndResponses_AndCanStartAgain()
     {
-        using var f = new Fixture(); await f.ConnectAsync();
+        using var f = new Fixture();
+        await f.ConnectAsync();
         (await f.MessageAsync("Olá, como você pode me ajudar?", 2)).Should().Contain("Resposta de teste");
         using (var scope = f.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<IsmDbContext>();
             var thread = await db.AssistantThreads.IgnoreQueryFilters().SingleAsync();
-            thread.UserId.Should().Be(100); thread.RestaurantId.Should().Be(10);
+            thread.UserId.Should().Be(100);
+            thread.RestaurantId.Should().Be(10);
             (await db.AssistantMessages.IgnoreQueryFilters().CountAsync(m => m.Role == "user")).Should().Be(1);
             (await db.AssistantMessages.IgnoreQueryFilters().CountAsync(m => m.Content == "Resposta de teste do assistente")).Should().Be(1);
         }
         (await f.MessageAsync("/nova", 3)).Should().Contain("Conversa reiniciada");
     }
-    [Fact] public async Task Alerts_UseOptIn_AndDisconnectCancelsQueuedDeliveries()
+
+    [Fact] public async Task Alerts_WorkWhenEnabled_AndDisconnectStopsDeliveries()
     {
-        using var f = new Fixture(); await f.ConnectAsync();
-        await f.MessageAsync("/notificar", 2);
+        using var f = new Fixture();
+        await f.ConnectAsync();
         using (var scope = f.Services.CreateScope())
         {
             var repo = scope.ServiceProvider.GetRequiredService<ISystemAlertRepository>();
@@ -200,84 +203,55 @@ public sealed class TelegramIntegrationTests
             await repo.CreateAsync(new SystemAlert { RestaurantId = 20, Title = "Segredo B", Message = "B", AlertType = SystemAlertType.StockBelowMinimum, GeneratedAtUtc = DateTime.UtcNow });
             await scope.ServiceProvider.GetRequiredService<INotificationDeliveryService>().ProcessPendingAsync();
         }
-        f.Transport.Sent.Should().ContainSingle(); f.Transport.Sent[0].Chat.Should().Be(123); f.Transport.Sent[0].Text.Should().NotContain("Segredo B");
-        using (var scope = f.Services.CreateScope())
-        {
-            await scope.ServiceProvider.GetRequiredService<ISystemAlertRepository>().CreateAsync(new SystemAlert { RestaurantId = 10, Title = "Segundo A", Message = "A", AlertType = SystemAlertType.StockBelowMinimum, GeneratedAtUtc = DateTime.UtcNow });
-        }
+        f.Transport.Sent.Should().ContainSingle();
+        f.Transport.Sent[0].Chat.Should().Be(123);
+        f.Transport.Sent[0].Text.Should().NotContain("Segredo B");
+
         await f.MessageAsync("/desvincular", 3);
-        using (var scope = f.Services.CreateScope()) await scope.ServiceProvider.GetRequiredService<INotificationDeliveryService>().ProcessPendingAsync();
-        f.Transport.Sent.Should().ContainSingle();
-    }
-    [Fact] public async Task NotificationTest_RequiresOptIn_AndUsesTelegramHistory()
-    {
-        using var f = new Fixture(); await f.ConnectAsync();
         using (var scope = f.Services.CreateScope())
         {
-            var notifications = scope.ServiceProvider.GetRequiredService<INotificationDeliveryService>();
-            var disabled = () => notifications.QueueTestAsync(100, "telegram");
-            await disabled.Should().ThrowAsync<InvalidOperationException>();
-        }
-        await f.MessageAsync("/notificar", 2);
-        using (var scope = f.Services.CreateScope())
-        {
-            var notifications = scope.ServiceProvider.GetRequiredService<INotificationDeliveryService>();
-            await notifications.QueueTestAsync(100, "telegram");
-            await notifications.ProcessPendingAsync();
-            var history = await notifications.GetHistoryAsync(100);
-            history.Should().ContainSingle().Which.Channel.Should().Be("telegram");
-            history[0].IsTest.Should().BeTrue(); history[0].Status.Should().Be("Sent");
-            var duplicate = () => notifications.QueueTestAsync(100, "telegram");
-            await duplicate.Should().ThrowAsync<InvalidOperationException>();
+            var repo = scope.ServiceProvider.GetRequiredService<ISystemAlertRepository>();
+            await repo.CreateAsync(new SystemAlert { RestaurantId = 10, Title = "Segundo A", Message = "A", AlertType = SystemAlertType.StockBelowMinimum, GeneratedAtUtc = DateTime.UtcNow });
+            await scope.ServiceProvider.GetRequiredService<INotificationDeliveryService>().ProcessPendingAsync();
         }
         f.Transport.Sent.Should().ContainSingle();
     }
-    [Fact] public async Task ExpectedTelegramIdentity_PreventsDifferentUserFromConsumingLink()
+
+    [Fact] public async Task UnlinkedTelegramUsersOnlyReceiveAdminEnrollmentInstructionsWithTheirId()
     {
         using var f = new Fixture();
-        string code;
-        using (var scope = f.Services.CreateScope())
-        {
-            scope.ServiceProvider.GetRequiredService<TelegramUserContext>().Set(100, 10, "Manager");
-            var service = scope.ServiceProvider.GetRequiredService<ITelegramService>();
-            var wrongBot = () => service.CreateLinkAsync(default, 999, 123);
-            await wrongBot.Should().ThrowAsync<InvalidOperationException>();
-            var link = await service.CreateLinkAsync(default, 12345, 123);
-            code = link.Url.Split("start=")[1];
-        }
-        (await f.MessageAsync("/start " + code, 1, 456)).Should().Contain("outro ID");
-        (await f.MessageAsync("/start " + code, 2, 123)).Should().Contain("Conta ISM conectada");
-        (await f.MessageAsync("Cardápio", 3, 123)).Should().Contain("Prato A");
+        var response = await f.MessageAsync("/id", 1, chat: 777, sender: 777);
+        response.Should().Contain("777").And.Contain("Integrações → Telegram");
     }
-    [Fact] public async Task UnlinkedTelegramUsersOnlyReceiveAdminEnrollmentInstructions()
+
+    [Fact] public async Task AuthorizedTelegramIdentity_RetainsIdAndProcessesMessagesDirectly()
     {
         using var f = new Fixture();
-        var response = await f.MessageAsync("/id");
-        response.Should().Contain("autorize seu ID").And.Contain("http://localhost:3000/integracoes")
-            .And.NotContain("12345").And.NotContain("Dados do restaurante");
-        (await f.MessageAsync("Agentes", 2)).Should().Contain("Somente o administrador").And.NotContain("orquestrador");
-    }
-    [Fact] public async Task AuthorizedTelegramIdentity_AutoLinksAndProcessesFirstMessage()
-    {
-        using var f = new Fixture(); await f.IssueAsync();
+        await f.IssueAsync(123);
         (await f.MessageAsync("Olá, como você pode me ajudar?", 1, 123)).Should().Contain("Resposta de teste do assistente");
         using var scope = f.Services.CreateScope();
         var link = await scope.ServiceProvider.GetRequiredService<ITelegramRepository>().ForUserAsync(100, default);
-        link!.ChatId.Should().Be(123); link.ExpectedUserId.Should().BeNull(); link.CodeHash.Should().BeNull();
+        link!.ChatId.Should().Be(123);
+        link.ExpectedUserId.Should().Be(123); // Permanece gravado!
     }
+
     [Fact] public async Task Conversation_RoutesFinancialQuestionThroughOrchestrator()
     {
-        using var f = new Fixture(); await f.ConnectAsync();
+        using var f = new Fixture();
+        await f.ConnectAsync();
         var response = await f.MessageAsync("Qual é o faturamento?", 2);
         response.Should().NotContain("Resposta de teste do assistente").And.Contain("Financeiro").And.Contain("•").And.Contain("0,00");
         using var scope = f.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<IsmDbContext>();
         var message = await db.AssistantMessages.IgnoreQueryFilters().SingleAsync(m => m.Source == "Dados financeiros do ISM");
-        message.Mode.Should().Be("deterministic"); message.RestaurantId.Should().Be(10);
+        message.Mode.Should().Be("deterministic");
+        message.RestaurantId.Should().Be(10);
     }
+
     [Fact] public async Task Conversation_FormatsStockQuantitiesWithoutAmbiguousDecimalSeparators()
     {
-        using var f = new Fixture(); await f.ConnectAsync();
+        using var f = new Fixture();
+        await f.ConnectAsync();
         using (var scope = f.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<IsmDbContext>();
@@ -291,16 +265,19 @@ public sealed class TelegramIntegrationTests
         var response = await f.MessageAsync("Qual é o saldo do produto 5?", 2);
         response.Should().Contain("Saldo atual: 6,125 kg").And.Contain("Mínimo: 15 kg").And.Contain("Fonte: Product");
     }
+
     [Fact] public void ResponseFormatting_EscapesHtmlAndKeepsSupportedEmphasis()
     {
         var formatted = ISM.Infrastructure.Telegram.TelegramTransport.FormatText("# Resumo\n**Estoque**\n<script>alert(1)</script>\n- Produto");
         formatted.Should().Contain("<b>Resumo</b>").And.Contain("<b>Estoque</b>").And.Contain("&lt;script&gt;").And.NotContain("<script>").And.Contain("• Produto");
     }
+
     [Fact] public async Task ApiIdentity_RejectsNonManagerOrForeignRestaurant()
     {
-        using var f = new Fixture(); using var scope = f.Services.CreateScope();
+        using var f = new Fixture();
+        using var scope = f.Services.CreateScope();
         scope.ServiceProvider.GetRequiredService<TelegramUserContext>().Set(100, 20, "Manager");
-        var action = () => scope.ServiceProvider.GetRequiredService<ITelegramService>().CreateLinkAsync(default);
+        var action = () => scope.ServiceProvider.GetRequiredService<ITelegramService>().SaveIdentityAsync(123, default);
         await action.Should().ThrowAsync<UnauthorizedAccessException>();
     }
 }

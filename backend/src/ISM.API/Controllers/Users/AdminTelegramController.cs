@@ -12,6 +12,14 @@ public sealed class AdminTelegramController(ITelegramService telegram) : Control
     public Task<TelegramStatus> Status(int restaurantId, CancellationToken ct)
         => telegram.StatusAsync(ct, restaurantId);
 
+    [HttpPost("save")]
+    public async Task<TelegramStatus> Save(int restaurantId, TelegramController.SaveIdentityRequest request, CancellationToken ct)
+        => await telegram.SaveIdentityAsync(request.TelegramUserId, ct, restaurantId);
+
+    [HttpPost("test")]
+    public async Task<TestTelegramResult> Test(int restaurantId, CancellationToken ct)
+        => await telegram.TestConnectionAsync(ct, restaurantId);
+
     [HttpPost("link"), Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("auth")]
     public async Task<TelegramLink> Link(int restaurantId, TelegramController.IdentityRequest request, CancellationToken ct)
     {

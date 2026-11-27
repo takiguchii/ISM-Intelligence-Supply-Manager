@@ -1,113 +1,312 @@
 <script setup lang="ts">
-import { telegramService, type TelegramStatus, type TelegramLink } from '~/services/modules/telegram/telegramService';
-const props = withDefaults(defineProps<{ embedded?: boolean; restaurantId?: number | null; superAdmin?: boolean }>(), { embedded: false, restaurantId: null, superAdmin: false });
-const emit = defineEmits<{ connection: [connected: boolean] }>();
+import { telegramService, type TelegramStatus } from '~/services/modules/telegram/telegramService';
+
+const props = withDefaults(
+  defineProps<{
+    embedded?: boolean;
+    restaurantId?: number | null;
+    superAdmin?: boolean;
+  }>(),
+  {
+    embedded: false,
+    restaurantId: null,
+    superAdmin: false
+  }
+);
+
+const emit = defineEmits<{
+  connection: [connected: boolean];
+}>();
+
 const status = ref<TelegramStatus | null>(null);
-const link = ref<TelegramLink | null>(null);
+const telegramUserId = ref('');
 const busy = ref(false);
-// ID informado pelo proprietário; o backend persiste a autorização no vínculo.
-const telegramUserId = ref('1079867777');
+const testing = ref(false);
 const error = ref('');
 const success = ref('');
-let timer: ReturnType<typeof setInterval> | undefined;
 let disposed = false;
-let polling = false;
-function stopPolling() { if (timer) clearInterval(timer); timer = undefined; }
+
 async function refresh() {
   if (props.superAdmin && (!props.restaurantId || props.restaurantId <= 0)) {
-    status.value = null; link.value = null; stopPolling(); emit('connection', false); return;
+    status.value = null;
+    telegramUserId.value = '';
+    emit('connection', false);
+    return;
   }
-  const result = await telegramService.status(props.restaurantId, props.superAdmin);
-  if (disposed) return;
-  status.value = result;
-  emit('connection', result.connected);
-  if (result.telegramUserId) telegramUserId.value = String(result.telegramUserId);
-  if (result.connected) { link.value = null; stopPolling(); }
-}
-async function run(action: () => Promise<void>) {
-  if (busy.value) return;
-  busy.value = true; error.value = ''; success.value = '';
-  try { await action(); }
-  catch (cause: any) { if (!disposed) error.value = cause?.data?.detail ?? cause?.data?.message ?? 'Não foi possível atualizar o Telegram. Tente novamente.'; }
-  finally { if (!disposed) busy.value = false; }
-}
-async function connect() {
-  if (!status.value?.botId || !/^\d+$/.test(telegramUserId.value) || !Number.isSafeInteger(Number(telegramUserId.value)) || Number(telegramUserId.value) <= 0) {
-    error.value = 'Informe o ID numérico do usuário do Telegram.'; return;
-  }
-  const result = await telegramService.connect(status.value.botId, Number(telegramUserId.value), props.restaurantId, props.superAdmin);
-  if (disposed) return;
-  link.value = result;
-  stopPolling();
-  timer = setInterval(async () => {
-    if (polling || disposed || busy.value) return;
-    if (Date.now() >= Date.parse(result.expiresAtUtc)) {
-      stopPolling(); link.value = null; error.value = 'O link expirou. Gere outro para conectar.'; return;
+
+  try {
+    const result = await telegramService.status(props.restaurantId, props.superAdmin);
+    if (disposed) return;
+    status.value = result;
+    emit('connection', result.connected);
+    if (result.telegramUserId) {
+      telegramUserId.value = String(result.telegramUserId);
     }
-    polling = true;
-    try { await refresh(); }
-    catch { if (!disposed) error.value = 'Não foi possível verificar a conexão. Use Atualizar.'; }
-    finally { polling = false; }
-  }, 5000);
-}
-async function disconnect() {
-  await telegramService.disconnect(props.restaurantId, props.superAdmin);
-  link.value = null; stopPolling(); await refresh(); success.value = 'Telegram desconectado. Novos alertas não serão enviados.';
-}
-async function sendTest() { await telegramService.test(); success.value = 'Mensagem de teste adicionada à fila. Confira o Telegram em alguns segundos.'; }
-async function toggleAlerts() {
-  await telegramService.alerts(!status.value?.alertsEnabled, props.restaurantId, props.superAdmin); await refresh();
-  success.value = status.value?.alertsEnabled ? 'Alertas ativados.' : 'Alertas pausados.';
-}
-async function initialize() {
-  await refresh();
-  if (!disposed && status.value?.configured && !status.value.connected && status.value.botId && telegramUserId.value) {
-    await connect();
+  } catch (cause: any) {
+    if (!disposed) {
+      error.value = cause?.data?.detail ?? cause?.data?.message ?? 'Não foi possível carregar as informações do Telegram.';
+    }
   }
 }
-onMounted(() => run(initialize));
-watch(() => [props.restaurantId, props.superAdmin], () => { link.value = null; stopPolling(); run(refresh); });
-onBeforeUnmount(() => { disposed = true; stopPolling(); });
+
+async function handleSave() {
+  const cleanId = telegramUserId.value.trim();
+  if (!cleanId || !/^\d+$/.test(cleanId) || Number(cleanId) <= 0) {
+    error.value = 'Informe um ID numérico de usuário válido do Telegram.';
+    return;
+  }
+
+  busy.value = true;
+  error.value = '';
+  success.value = '';
+
+  try {
+    const updated = await telegramService.save(Number(cleanId), props.restaurantId, props.superAdmin);
+    if (disposed) return;
+    status.value = updated;
+    emit('connection', updated.connected);
+    if (updated.telegramUserId) {
+      telegramUserId.value = String(updated.telegramUserId);
+    }
+    success.value = 'ID do Telegram salvo com sucesso! Agora suas mensagens serão reconhecidas pelo Assistente Orquestrador.';
+  } catch (cause: any) {
+    if (!disposed) {
+      error.value = cause?.data?.detail ?? cause?.data?.message ?? 'Não foi possível salvar o ID do Telegram. Tente novamente.';
+    }
+  } finally {
+    if (!disposed) busy.value = false;
+  }
+}
+
+async function handleDelete() {
+  busy.value = true;
+  error.value = '';
+  success.value = '';
+
+  try {
+    await telegramService.disconnect(props.restaurantId, props.superAdmin);
+    if (disposed) return;
+    telegramUserId.value = '';
+    await refresh();
+    success.value = 'ID do Telegram excluído e integração desconectada com sucesso.';
+  } catch (cause: any) {
+    if (!disposed) {
+      error.value = cause?.data?.detail ?? cause?.data?.message ?? 'Não foi possível excluir o ID do Telegram.';
+    }
+  } finally {
+    if (!disposed) busy.value = false;
+  }
+}
+
+async function handleTest() {
+  const cleanId = telegramUserId.value.trim();
+  if (!cleanId) {
+    error.value = 'Informe e salve seu ID de usuário do Telegram antes de realizar o teste.';
+    return;
+  }
+
+  testing.value = true;
+  error.value = '';
+  success.value = '';
+
+  try {
+    const res = await telegramService.testConnection(props.restaurantId, props.superAdmin);
+    if (disposed) return;
+    if (res.success) {
+      success.value = res.message;
+    } else {
+      error.value = res.message;
+    }
+  } catch (cause: any) {
+    if (!disposed) {
+      error.value = cause?.data?.detail ?? cause?.data?.message ?? 'Falha ao testar conexão. Verifique se você já abriu a conversa no Telegram e clicou em Começar (/start).';
+    }
+  } finally {
+    if (!disposed) testing.value = false;
+  }
+}
+
+onMounted(() => {
+  refresh();
+});
+
+watch(
+  () => [props.restaurantId, props.superAdmin],
+  () => {
+    error.value = '';
+    success.value = '';
+    refresh();
+  }
+);
+
+onBeforeUnmount(() => {
+  disposed = true;
+});
 </script>
 
 <template>
-  <section :class="props.embedded ? 'space-y-4' : 'rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900/40 sm:p-6'" :aria-label="props.embedded ? 'Configuração do Telegram' : undefined" :aria-labelledby="props.embedded ? undefined : 'telegram-title'">
-    <div v-if="!props.embedded" class="flex flex-wrap items-center justify-between gap-3">
+  <section
+    :class="props.embedded ? 'space-y-5' : 'rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900/40 sm:p-6 space-y-5'"
+    :aria-label="props.embedded ? 'Configuração do Telegram' : undefined"
+  >
+    <!-- Header -->
+    <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h2 id="telegram-title" class="text-lg font-semibold">Telegram</h2>
-        <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Converse com o assistente, consulte pedidos e cardápio e receba alertas do seu restaurante.</p>
+        <h2 class="text-base font-semibold sm:text-lg text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+          <span>Integração Telegram</span>
+          <span
+            v-if="status"
+            role="status"
+            class="rounded-full px-2.5 py-0.5 text-xs font-medium"
+            :class="status.connected ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300 ring-1 ring-emerald-500/20' : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'"
+          >
+            {{ status.connected ? 'Conectado' : 'Não conectado' }}
+          </span>
+        </h2>
+        <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400 sm:text-sm">
+          Converse com o Assistente Orquestrador do ISM diretamente pelo Telegram, com as mesmas respostas inteligentes e ferramentas do painel.
+        </p>
       </div>
-      <span v-if="status" role="status" class="rounded-full px-3 py-1 text-xs font-medium" :class="status.connected ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'">{{ status.connected ? 'Conectado' : 'Não conectado' }}</span>
     </div>
-    <el-alert v-if="error" class="mt-4" type="error" :title="error" :closable="false" show-icon />
-    <el-alert v-if="success" class="mt-4" type="success" :title="success" :closable="false" show-icon />
-    <p v-if="props.superAdmin && !props.restaurantId" class="mt-4 text-sm text-zinc-600 dark:text-zinc-400">Selecione o restaurante acima para autorizar seu Telegram.</p>
-    <div v-if="status" class="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950/50">
-      <p class="text-sm font-semibold">ID do bot (fixo)</p>
-      <p class="mt-1 font-mono text-sm text-zinc-700 dark:text-zinc-300">{{ status.botId ?? 'Não configurado no servidor' }}</p>
-      <p v-if="!status.configured" class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">O bot ainda não está habilitado no servidor.</p>
-    </div>
-    <template v-if="status">
-      <p class="mt-4 text-sm">Bot: <strong>{{ status.botUsername ? `@${status.botUsername}` : 'aguardando configuração do servidor' }}</strong>. O vínculo fica limitado ao restaurante selecionado.</p>
-      <form id="telegram-identity" class="mt-5 grid gap-4 sm:grid-cols-2" @submit.prevent="run(connect)">
-        <div><label for="telegram-user-id" class="mb-2 block text-sm font-semibold">ID da pessoa no Telegram</label><input type="text" required pattern="[0-9]+" maxlength="16" class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-base text-zinc-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 sm:text-sm" id="telegram-user-id" v-model="telegramUserId" inputmode="numeric" placeholder="Ex.: 1079867777" :disabled="busy || status.connected || !!link" aria-describedby="telegram-user-help" /><p id="telegram-user-help" class="mt-2 text-xs text-zinc-500 dark:text-zinc-400">O administrador informa o ID autorizado. O vínculo fica restrito a este restaurante e à conta Telegram indicada.</p></div>
+
+    <!-- Feedback Alerts -->
+    <el-alert v-if="error" type="error" :title="error" :closable="true" @close="error = ''" show-icon />
+    <el-alert v-if="success" type="success" :title="success" :closable="true" @close="success = ''" show-icon />
+
+    <p v-if="props.superAdmin && !props.restaurantId" class="text-sm text-zinc-600 dark:text-zinc-400">
+      Selecione um restaurante acima para configurar o Telegram.
+    </p>
+
+    <div v-else-if="status" class="space-y-5">
+      <!-- Card Informativo do Bot (Fixo) -->
+      <div class="rounded-xl border border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-900/60">
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <span class="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">ID do Bot (Fixo)</span>
+            <div class="mt-1 flex items-center gap-2">
+              <span class="font-mono text-sm font-bold text-zinc-800 dark:text-zinc-200 bg-zinc-200/60 dark:bg-zinc-800 px-2 py-0.5 rounded">
+                {{ status.botId ?? 'Não configurado' }}
+              </span>
+              <span v-if="status.configured" class="inline-flex items-center text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                ● Ativo
+              </span>
+            </div>
+            <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              Identificador único e fixo da aplicação bot no servidor.
+            </p>
+          </div>
+
+          <div>
+            <span class="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Canal do Bot</span>
+            <div class="mt-1 flex items-center gap-2">
+              <span class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                {{ status.botUsername ? `@${status.botUsername}` : 'Aguardando configuração' }}
+              </span>
+              <a
+                v-if="status.botUsername"
+                :href="status.botUrl || `https://t.me/${status.botUsername}`"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:text-indigo-300 dark:hover:bg-indigo-900/60 transition"
+              >
+                <span>Abrir conversa</span>
+                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+              </a>
+            </div>
+            <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              Clique no link para iniciar sua conversa com o bot no Telegram.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Formulário de Configuração do Usuário -->
+      <form class="space-y-4" @submit.prevent="handleSave">
+        <div>
+          <label for="telegram-user-id" class="block text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+            ID do seu usuário no Telegram
+          </label>
+          <div class="mt-1.5 max-w-md">
+            <input
+              id="telegram-user-id"
+              v-model="telegramUserId"
+              type="text"
+              required
+              pattern="[0-9]+"
+              maxlength="20"
+              inputmode="numeric"
+              placeholder="Ex.: 1079867777"
+              :disabled="busy || testing"
+              class="w-full rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+            />
+          </div>
+          <p class="mt-2 text-xs text-zinc-500 dark:text-zinc-400 flex flex-wrap items-center gap-1.5">
+            <span>Informe o seu ID numérico. Apenas mensagens deste ID serão atendidas pelo orquestrador.</span>
+            <span class="rounded bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 font-mono text-[11px] text-zinc-600 dark:text-zinc-400">
+              Como descobrir meu ID? Envie uma mensagem para <strong>@userinfobot</strong> no Telegram.
+            </span>
+          </p>
+        </div>
+
+        <!-- Botões de Ação -->
+        <div class="pt-2 flex flex-wrap items-center gap-3">
+          <button
+            type="submit"
+            :disabled="busy || testing || !status.configured"
+            class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
+          >
+            <svg v-if="busy" class="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+            Salvar ID
+          </button>
+
+          <button
+            type="button"
+            :disabled="busy || testing || !telegramUserId"
+            @click="handleTest"
+            class="inline-flex items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50/70 px-4 py-2 text-sm font-medium text-indigo-700 shadow-sm transition hover:bg-indigo-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-900/40"
+          >
+            <svg v-if="testing" class="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+            Testar Conexão
+          </button>
+
+          <button
+            v-if="status.connected || telegramUserId"
+            type="button"
+            :disabled="busy || testing"
+            @click="handleDelete"
+            class="inline-flex items-center justify-center rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 shadow-sm transition hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:opacity-50 dark:border-red-900/60 dark:bg-zinc-900 dark:text-red-400 dark:hover:bg-red-950/30"
+          >
+            Excluir ID
+          </button>
+        </div>
       </form>
-      <div class="mt-4 flex flex-wrap gap-3">
-        <button v-if="!status.connected" type="submit" form="telegram-identity" :disabled="busy || !status.configured || !status.botId" :aria-busy="busy" class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:opacity-60">{{ link ? 'Gerar outro link' : 'Gerar vínculo Telegram' }}</button>
-        <template v-else>
-          <button type="button" class="rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800" :aria-busy="busy" :disabled="busy || (!status.configured && !status.alertsEnabled)" @click="run(toggleAlerts)">{{ status.alertsEnabled ? 'Pausar alertas do Telegram' : 'Ativar alertas do Telegram' }}</button>
-          <button v-if="!props.superAdmin" type="button" class="rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800" :disabled="busy || !status.alertsEnabled || !status.configured" @click="run(sendTest)">Enviar teste pelo Telegram</button>
-          <button type="button" class="rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800" :disabled="busy" @click="run(disconnect)">Desconectar Telegram</button>
-        </template>
-        <button type="button" class="rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800" v-if="link" :disabled="busy" @click="run(disconnect)">Cancelar vínculo</button>
-        <button type="button" class="rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800" :disabled="busy" @click="run(refresh)">Atualizar conexão</button>
-      </div>
-      <div v-if="link" class="mt-4 rounded-xl bg-indigo-50 p-4 dark:bg-indigo-950/40">
-        <p class="text-sm">Abra o Telegram e pressione <strong>Iniciar</strong> para autorizar o vínculo. Este link é pessoal, vale por cinco minutos e só pode ser usado uma vez.</p>
-        <a :href="link.url" target="_blank" rel="noopener noreferrer" class="mt-3 inline-block font-semibold text-indigo-600 underline dark:text-indigo-300">Abrir bot e conectar minha conta</a>
-      </div>
-      <details class="mt-5 rounded-xl bg-zinc-50 p-4 dark:bg-zinc-950/50"><summary class="cursor-pointer text-sm font-semibold">O que posso fazer pelo Telegram?</summary><ul class="mt-3 space-y-2 text-sm text-zinc-600 dark:text-zinc-400"><li>Consultar pedidos, cardápio e alertas pelo painel do bot.</li><li>Conversar com o assistente e os especialistas através do orquestrador ISM.</li><li>Receber alertas de estoque, fornecedores e cardápio.</li></ul></details>
-      <p class="mt-4 text-sm text-zinc-500 dark:text-zinc-400">Os alertas começam pausados. Ao ativá-los, valem suas preferências de estoque, fornecedores e cardápio. Use /ajuda para ver os atalhos. Revise alterações operacionais no ISM.</p>
-    </template>
+
+      <!-- Instruções / Accordion Informativo -->
+      <details class="rounded-xl border border-zinc-200 bg-zinc-50/60 p-4 dark:border-zinc-800 dark:bg-zinc-950/40 transition">
+        <summary class="cursor-pointer text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
+          Como funciona a integração com o Assistente Orquestrador?
+        </summary>
+        <div class="mt-3 space-y-2 text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+          <p>
+            • <strong>Plug and play:</strong> Basta cadastrar o seu ID numérico do Telegram acima e salvar. Não é necessário gerar links temporários.
+          </p>
+          <p>
+            • <strong>Redirecionamento direto:</strong> Qualquer pergunta enviada para o bot no Telegram é direcionada ao Assistente Orquestrador do ISM, que analisa dados de vendas, faturamento, pedidos, estoque e cardápio em tempo real.
+          </p>
+          <p>
+            • <strong>Segurança multi-tenant:</strong> Apenas o ID autorizado neste restaurante consegue interagir com o bot. Mensagens de IDs não autorizados são bloqueadas imediatamente.
+          </p>
+          <p>
+            • <strong>Comandos úteis:</strong> Envie <code class="bg-zinc-200 dark:bg-zinc-800 px-1 py-0.5 rounded">/nova</code> a qualquer momento no Telegram para reiniciar a conversa.
+          </p>
+        </div>
+      </details>
+    </div>
   </section>
 </template>

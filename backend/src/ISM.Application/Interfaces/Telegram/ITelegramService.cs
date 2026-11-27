@@ -14,8 +14,9 @@ public sealed class TelegramOptions
 }
 
 public sealed record TelegramIncoming(long UpdateId, long ChatId, long SenderId, string ChatType, string Text);
-public sealed record TelegramStatus(bool Configured, bool Connected, bool AlertsEnabled, string? BotUsername, long? BotId = null, long? TelegramUserId = null);
+public sealed record TelegramStatus(bool Configured, bool Connected, bool AlertsEnabled, string? BotUsername, long? BotId = null, long? TelegramUserId = null, string? BotUrl = null);
 public sealed record TelegramLink(string Url, DateTime ExpiresAtUtc);
+public sealed record TestTelegramResult(bool Success, string Message);
 
 public interface ITelegramTransport
 {
@@ -27,6 +28,8 @@ public interface ITelegramTransport
 public interface ITelegramService
 {
     Task<TelegramStatus> StatusAsync(CancellationToken ct, int? targetRestaurantId = null);
+    Task<TelegramStatus> SaveIdentityAsync(long telegramUserId, CancellationToken ct, int? targetRestaurantId = null);
+    Task<TestTelegramResult> TestConnectionAsync(CancellationToken ct, int? targetRestaurantId = null);
     Task<TelegramLink> CreateLinkAsync(CancellationToken ct, long? botId = null, long? telegramUserId = null, int? targetRestaurantId = null);
     Task DisconnectAsync(CancellationToken ct, int? targetRestaurantId = null);
     Task SetAlertsAsync(bool enabled, CancellationToken ct, int? targetRestaurantId = null);
