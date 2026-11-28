@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useConfirmation } from "~/composables/useConfirmation";
 import { computed, ref, watch, onUnmounted } from 'vue'
-import { useWaiter, isActiveOrder, waiterError, type WaiterStatus } from '~/composables/useWaiter'
+import { useWaiter, isActiveOrder, waiterError, filterWaiterDishes, filterWaiterOrders, type WaiterStatus } from '~/composables/useWaiter'
 
 const confirmation = useConfirmation();
 
@@ -78,28 +78,7 @@ const statusClasses: Record<WaiterStatus, string> = {
     'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
 }
 
-function normalize(value: string) {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
-}
-
-const filteredDishes = computed(() => {
-  const term = normalize(search.value)
-
-  return dishes.value.filter(dish => {
-    const matchesCategory =
-      category.value === 'Todos' || dish.category === category.value
-
-    const matchesSearch = normalize(
-      `${dish.name} ${dish.description} ${dish.category}`
-    ).includes(term)
-
-    return matchesCategory && matchesSearch
-  })
-})
+const filteredDishes = computed(() => filterWaiterDishes(dishes.value, search.value, category.value))
 
 const categoryCounts = computed(() => {
   const counts = new Map<string, number>()
@@ -156,32 +135,7 @@ function addDishToCart(dish: (typeof dishes.value)[number]) {
 }
 
 const filteredOrders = computed(() => {
-  const term = normalize(search.value)
-
-  return orders.value
-    .filter(order => {
-    const matchesStatus =
-      status.value === 'Todos' || order.status === status.value
-    const matchesActive = !showActiveOnly.value || isActiveOrder(order.status)
-
-    const content = [
-      order.id,
-      order.tableReference,
-      ...order.items.flatMap(item => [item.name, item.observation])
-    ].join(' ')
-
-      return matchesStatus && matchesActive && normalize(content).includes(term)
-    })
-    .sort((first, second) => {
-      const priority: Record<WaiterStatus, number> = {
-        Pronto: 0,
-        'Em preparo': 1,
-        Enviado: 2,
-        Entregue: 3, Pago: 4, Cancelado: 5
-      }
-
-      return priority[first.status] - priority[second.status]
-    })
+  return filterWaiterOrders(orders.value, search.value, status.value, showActiveOnly.value)
 })
 
 const activeOrderCount = computed(() => activeOrders.value.length)

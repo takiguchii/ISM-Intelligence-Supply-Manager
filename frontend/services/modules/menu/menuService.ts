@@ -25,6 +25,7 @@ export interface UpdateCategoryRequest {
 export interface DishIngredientDto {
   productId: number;
   quantity: number;
+  name?: string;
 }
 
 export interface DishDto {

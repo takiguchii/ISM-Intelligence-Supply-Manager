@@ -1406,6 +1406,9 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.Property<DateTime?>("PaidAtUtc")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<int?>("PaidTabId")
+                        .HasColumnType("int");
+
                     b.Property<int>("PaymentMethod")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
@@ -1435,10 +1438,14 @@ namespace ISM.Infrastructure.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("PaidTabId");
+
                     b.HasIndex("RestaurantId", "CreatedAtUtc");
 
                     b.HasIndex("RestaurantId", "RequestId")
                         .IsUnique();
+
+                    b.HasIndex("RestaurantId", "TableReference", "Status");
 
                     b.ToTable("orders", (string)null);
                 });
@@ -1492,6 +1499,57 @@ namespace ISM.Infrastructure.Data.Migrations
                     b.HasIndex("OrderId");
 
                     b.ToTable("order_items", (string)null);
+                });
+
+            modelBuilder.Entity("ISM.Domain.Modules.Orders.Tab", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid?>("IdempotencyKey")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("OpenTableReference")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .UseCollation("utf8mb4_bin");
+
+                    b.Property<DateTime?>("PaidAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("PaymentMethod")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RestaurantId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TableReference")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RestaurantId", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("RestaurantId", "OpenTableReference")
+                        .IsUnique();
+
+                    b.ToTable("order_tabs", (string)null);
                 });
 
             modelBuilder.Entity("ISM.Domain.Modules.Purchases.Entities.PurchaseOrder", b =>
@@ -2075,6 +2133,11 @@ namespace ISM.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("ISM.Domain.Modules.Orders.Order", b =>
                 {
+                    b.HasOne("ISM.Domain.Modules.Orders.Tab", null)
+                        .WithMany()
+                        .HasForeignKey("PaidTabId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("ISM.Domain.Entities.Restaurant", null)
                         .WithMany()
                         .HasForeignKey("RestaurantId")
@@ -2097,6 +2160,15 @@ namespace ISM.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("ISM.Domain.Modules.Orders.Tab", b =>
+                {
+                    b.HasOne("ISM.Domain.Entities.Restaurant", null)
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ISM.Domain.Modules.Purchases.Entities.PurchaseOrder", b =>

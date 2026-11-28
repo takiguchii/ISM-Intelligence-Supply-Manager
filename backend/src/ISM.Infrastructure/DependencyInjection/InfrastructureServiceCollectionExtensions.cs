@@ -56,7 +56,9 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IAutomationRepository, AutomationRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IDishRepository, DishRepository>();
-        services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<OrderRepository>();
+        services.AddScoped<IOrderRepository>(provider => provider.GetRequiredService<OrderRepository>());
+        services.AddScoped<ISM.Application.Interfaces.Orders.ITabStore>(provider => provider.GetRequiredService<OrderRepository>());
         services.AddScoped<IFinanceEntryRepository, FinanceEntryRepository>();
         services.AddScoped<IRestaurantRepository, RestaurantRepository>();
         services.AddScoped<ISM.Application.Interfaces.Restaurant.IDemoSubscriptionService, ISM.Infrastructure.Services.DemoSubscriptionService>();

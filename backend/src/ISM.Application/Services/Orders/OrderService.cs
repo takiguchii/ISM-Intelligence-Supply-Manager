@@ -70,6 +70,7 @@ public sealed class OrderService(IOrderRepository orders, IDishRepository dishes
         var order = await orders.GetByIdAsync(restaurantId, id, cancellationToken);
         if (order is null) return null;
         if (order.Version != request.Version) throw new InvalidOperationException("O pedido foi alterado. Atualize a tela e tente novamente.");
+        if (order.PaidTabId.HasValue) throw new InvalidOperationException("Pedidos pagos em uma comanda não podem ser editados.");
         if (order.Status == OrderStatus.Cancelled) throw new InvalidOperationException("Pedidos cancelados não podem ser editados.");
         var replacementItems = new List<OrderItem>();
         foreach (var item in request.Items)
@@ -95,6 +96,7 @@ public sealed class OrderService(IOrderRepository orders, IDishRepository dishes
         EnsureManager();
         var order = await orders.GetByIdAsync(RestaurantId, id, cancellationToken);
         if (order is null) return false;
+        if (order.PaidTabId.HasValue) throw new InvalidOperationException("Pedidos pagos em uma comanda não podem ser excluídos.");
         await orders.DeleteAsync(order, cancellationToken);
         return true;
     }

@@ -10,6 +10,20 @@ export interface WaiterDish {
   price: number
   available: boolean
   urlImage?: string
+  ingredients?: string[]
+}
+export function normalizeSearch(value: string) {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+}
+export function filterWaiterDishes<T extends Pick<WaiterDish, 'name' | 'description' | 'category'> & { ingredients?: string[] }>(
+  dishes: T[], term: string, category = 'Todos'
+) {
+  const normalizedTerm = normalizeSearch(term)
+  return dishes.filter(dish => {
+    const matchesCategory = category === 'Todos' || dish.category === category
+    const searchable = [dish.name, dish.description, dish.category, ...(dish.ingredients || [])].join(' ')
+    return matchesCategory && normalizeSearch(searchable).includes(normalizedTerm)
+  })
 }
 export interface WaiterItem {
   dishId: number
@@ -25,6 +39,20 @@ const labels: Record<OrderStatus, WaiterStatus> = {
   [OrderStatus.Paid]: 'Pago', [OrderStatus.Cancelled]: 'Cancelado'
 }
 export const isActiveOrder = (status: WaiterStatus) => ['Enviado', 'Em preparo', 'Pronto'].includes(status)
+export function filterWaiterOrders<T extends { id: number; tableReference: string; status: WaiterStatus; items: { name: string; observation: string }[] }>(
+  orders: T[], term: string, status: WaiterStatus | 'Todos' = 'Todos', activeOnly = false
+) {
+  const normalizedTerm = normalizeSearch(term)
+  const priority: Record<WaiterStatus, number> = { Pronto: 0, 'Em preparo': 1, Enviado: 2, Entregue: 3, Pago: 4, Cancelado: 5 }
+  return orders
+    .filter(order => {
+      const matchesStatus = status === 'Todos' || order.status === status
+      const matchesActive = !activeOnly || isActiveOrder(order.status)
+      const content = [order.id, order.tableReference, ...order.items.flatMap(item => [item.name, item.observation])].join(' ')
+      return matchesStatus && matchesActive && normalizeSearch(content).includes(normalizedTerm)
+    })
+    .sort((first, second) => priority[first.status] - priority[second.status])
+}
 export function waiterError(error: unknown): string {
   const detail = (error as { data?: { detail?: string } })?.data?.detail
   return detail || 'Não foi possível conectar ao servidor. Tente novamente.'
@@ -69,7 +97,8 @@ export function useWaiter() {
       if (disposed) return
       const names = new Map(groups.map(group => [group.id, group.name]))
       dishes.value = list.map(dish => ({ id: dish.id, name: dish.name, description: dish.description || '', price: dish.price,
-        category: names.get(dish.categoryId ?? 0) || 'Sem categoria', available: dish.isActive, urlImage: dish.urlImage }))
+        category: names.get(dish.categoryId ?? 0) || 'Sem categoria', available: dish.isActive, urlImage: dish.urlImage,
+        ingredients: dish.ingredients?.map(ingredient => ingredient.name).filter((name): name is string => Boolean(name)) }))
     } catch (error) { if (!disposed) menuError.value = waiterError(error) }
     finally { menuLoading.value = false }
   }
