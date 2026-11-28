@@ -2,6 +2,7 @@
 import CashShiftDetails from '~/components/cash/CashShiftDetails.vue'
 import { cashDate, cashMoney, cashCents, cashOrderTotal, createCashService, CashOrderUnavailableError, CashMovementKind, PaymentMethod, paymentLabels, type LegacyPayment, type Payment, type Receipt, type Shift, type ShiftSummary } from '~/services/modules/cash/cashService'
 import { OrderStatus, orderService, type Order } from '~/services/modules/orders/orderService'
+import { BackendPaymentMethod, tabService, type OpenTab } from '~/services/modules/orders/tabService'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -17,7 +18,7 @@ const page = ref(1)
 const legacy = ref<LegacyPayment[]>([])
 const legacyPage = ref(1)
 const orders = ref<Order[]>([])
-const receivedOrderIds = ref<number[]>([])
+const openTabs = ref<OpenTab[]>([])
 const search = ref('')
 const tab = ref('queue')
 const error = ref('')
@@ -30,6 +31,7 @@ const movementAmount = ref<number>()
 const movementKind = ref(CashMovementKind.Deposit)
 const reason = ref('')
 const selected = ref<Order | null>(null)
+const selectedTab = ref<OpenTab | null>(null)
 const selectedShift = ref<number | null>(null)
 const payments = ref<Payment[]>([])
 const retry = ref<{ id: string; payload: string } | null>(null)
@@ -39,11 +41,20 @@ const dialog = ref<'payment' | 'movement' | 'close' | null>(null)
 const dialogOpen = computed({ get: () => dialog.value !== null, set: value => { if (!value) dialog.value = null } })
 
 const methods = [PaymentMethod.Cash, PaymentMethod.Pix, PaymentMethod.Debit, PaymentMethod.Credit]
+const backendPaymentMethod = (method: PaymentMethod) => ({
+  [PaymentMethod.Cash]: BackendPaymentMethod.Cash,
+  [PaymentMethod.Pix]: BackendPaymentMethod.Pix,
+  [PaymentMethod.Debit]: BackendPaymentMethod.DebitCard,
+  [PaymentMethod.Credit]: BackendPaymentMethod.CreditCard
+}[method])
 const orderTotal = cashOrderTotal
 const allocated = computed(() => payments.value.reduce((total, payment) => total + cashCents(payment.amount), 0))
-const queue = computed(() => orders.value.filter(order =>
-  order.status === OrderStatus.Completed && !receivedOrderIds.value.includes(order.id) && `${order.id} ${order.tableReference}`.toLowerCase().includes(search.value.trim().replace(/^#/, '').toLowerCase())))
-const pendingAmount = computed(() => queue.value.reduce((total, order) => total + orderTotal(order), 0) / 100)
+const queue = computed(() => openTabs.value.filter(tab => {
+  const term = search.value.trim().replace(/^#/, '').toLowerCase()
+  if (!term) return true
+  return `${tab.tableReference} ${tab.orderIds.join(' ')}`.toLowerCase().includes(term)
+}))
+const pendingAmount = computed(() => queue.value.reduce((total, tab) => total + cashCents(tab.total), 0) / 100)
 const dialogTitle = computed(() => ({
   payment: 'Receber pedido', movement: 'Registrar movimentação', close: 'Fechar turno'
 })[dialog.value ?? 'payment'])
@@ -64,10 +75,10 @@ async function run(action: () => Promise<void>, inDialog = false) {
 }
 
 async function load() {
-  const [current, list] = await Promise.all([cashService().current(), orderService.list()])
+  const [current, list, tabs] = await Promise.all([cashService().current(), orderService.list(), tabService.listOpen()])
   active.value = current.shift
   orders.value = list
-  receivedOrderIds.value = current.receivedOrderIds
+  openTabs.value = tabs
   loaded.value = true
 }
 
@@ -90,19 +101,20 @@ async function loadLegacy(nextPage = 1) {
   }
 }
 
-function startPayment(order: Order) {
+function startPayment(tab: OpenTab) {
   if (!active.value) return
-  selected.value = order
+  selectedTab.value = tab
+  selected.value = orders.value.find(order => order.id === tab.orderIds[0]) ?? null
   selectedShift.value = active.value.shift.id
-  payments.value = [{ method: PaymentMethod.Pix, amount: orderTotal(order) / 100, tendered: null }]
+  payments.value = [{ method: PaymentMethod.Pix, amount: tab.total, tendered: null }]
   dialogError.value = ''
   dialog.value = 'payment'
 }
 
 function addPayment() {
   const method = methods.find(candidate => !payments.value.some(payment => payment.method === candidate))
-  if (method === undefined || !selected.value) return
-  payments.value.push({ method, amount: Math.max(0, orderTotal(selected.value) - allocated.value) / 100, tendered: null })
+  if (method === undefined || !selectedTab.value) return
+  payments.value.push({ method, amount: Math.max(0, cashCents(selectedTab.value.total) - allocated.value) / 100, tendered: null })
 }
 
 function showReceipt(value: Receipt) {
@@ -112,26 +124,37 @@ function showReceipt(value: Receipt) {
 
 async function confirmPayment() {
   const order = selected.value
+  const tab = selectedTab.value
   const shift = selectedShift.value
-  if (!order || shift === null) return
+  if (!order || !tab || shift === null) return
   const parts = payments.value.map(payment => ({
     method: payment.method, amount: payment.amount,
     tendered: payment.method === PaymentMethod.Cash ? payment.tendered ?? null : null
   }))
-  if (allocated.value !== orderTotal(order) || parts.some(part => !Number.isFinite(part.amount) || part.amount < 0 || (part.amount === 0 && parts.length > 1) ||
+  if (parts.length !== 1 || allocated.value !== cashCents(tab.total) || parts.some(part => !Number.isFinite(part.amount) || part.amount < 0 || (part.amount === 0 && parts.length > 1) ||
     (part.method === PaymentMethod.Cash && (part.tendered === null || part.tendered < part.amount)))) {
     dialogError.value = 'Confira o total, os valores das parcelas e o dinheiro entregue.'
     return
   }
-  const payload = JSON.stringify({ shift, order: order.id, parts })
+  if (!tab.canPay) {
+    dialogError.value = 'A comanda possui pedidos ainda em preparo. Aguarde a cozinha concluir.'
+    return
+  }
+  const payload = JSON.stringify({ shift, tab: tab.id, parts })
   if (retry.value?.payload !== payload) retry.value = { payload, id: crypto.randomUUID() }
   let saved: Receipt
   try {
-    saved = await cashService().receive(shift, order, retry.value.id, parts)
+    const paid = await tabService.pay(tab.id, retry.value.id, backendPaymentMethod(parts[0].method), tab.total)
+    saved = {
+      id: paid.tabId, orderId: order.id, shiftId: shift, operatorId: auth.currentUser?.id ?? 0,
+      createdAtUtc: paid.paidAtUtc,
+      payments: [{ ...parts[0], amount: paid.total, change: parts[0].method === PaymentMethod.Cash ? Math.max(0, (parts[0].tendered ?? 0) - paid.total) : 0 }]
+    }
   } catch (cause) {
     if (!(cause instanceof CashOrderUnavailableError)) throw cause
     dialog.value = null
     selected.value = null
+    selectedTab.value = null
     selectedShift.value = null
     retry.value = null
     error.value = cause.message
@@ -139,9 +162,9 @@ async function confirmPayment() {
     catch { error.value += ' Não foi possível atualizar a fila. Use Atualizar para tentar novamente.' }
     return
   }
-  receivedOrderIds.value = [...receivedOrderIds.value, order.id]
   retry.value = null
   dialog.value = null
+  selectedTab.value = null
   showReceipt(saved)
   try { await load() }
   catch (cause) { error.value = errorMessage(cause) }
@@ -192,7 +215,7 @@ async function openShift() {
 }
 
 function openFromQuery() {
-  const order = queue.value.find(item => item.id === Number(route.query.pedido))
+  const order = queue.value.find(item => item.orderIds.includes(Number(route.query.pedido)))
   if (order && active.value && !dialog.value) startPayment(order)
 }
 
@@ -226,7 +249,7 @@ watch(tab, value => {
     </header>
 
     <p class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
-      Caixa local. Turnos e recebimentos ficam neste navegador. O status dos pedidos e o financeiro do ISM continuam sendo gerenciados pelo sistema.
+      Turnos são mantidos neste navegador; recebimentos, status dos pedidos e indicadores financeiros são persistidos no servidor.
     </p>
     <el-alert v-if="error" :title="error" type="error" show-icon :closable="false" />
     <form v-if="loaded && !active" class="flex flex-wrap items-end gap-3 rounded-2xl border border-zinc-200 p-4 dark:border-zinc-700" @submit.prevent="run(openShift)">
@@ -242,18 +265,19 @@ watch(tab, value => {
         <section class="space-y-4">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <el-input v-model="search" clearable class="!max-w-xs" placeholder="Buscar mesa, comanda ou pedido" aria-label="Buscar mesa, comanda ou pedido" />
-            <p v-if="loaded" class="text-sm text-zinc-500">{{ queue.length }} pedidos · {{ cashMoney(pendingAmount) }}</p>
+            <p v-if="loaded" class="text-sm text-zinc-500">{{ queue.length }} comandas · {{ cashMoney(pendingAmount) }}</p>
           </div>
           <p v-if="!loaded && busy" class="text-sm text-zinc-500">Carregando pedidos…</p>
           <p v-else-if="loaded && !queue.length" class="rounded-xl border border-zinc-200 p-4 text-sm text-zinc-500 dark:border-zinc-700">Nenhum pedido entregue aguardando pagamento.</p>
           <div v-else class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            <article v-for="order in queue" :key="order.id" class="space-y-3 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
+            <article v-for="tab in queue" :key="tab.id" class="space-y-3 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
               <div>
-                <h2 class="font-semibold">Comanda {{ order.tableReference }}</h2>
-                <p class="text-sm text-zinc-500">Pedido #{{ order.id }} · {{ cashDate(order.createdAtUtc) }}</p>
+                <h2 class="font-semibold">Comanda {{ tab.tableReference }}</h2>
+                <p class="text-sm text-zinc-500">Pedidos #{{ tab.orderIds.join(', #') }}</p>
               </div>
-              <p class="text-lg font-semibold">{{ cashMoney(orderTotal(order) / 100) }}</p>
-              <el-button type="primary" :disabled="!active || busy" @click="startPayment(order)">Receber</el-button>
+              <p class="text-lg font-semibold">{{ cashMoney(tab.total) }}</p>
+              <p v-if="!tab.canPay" class="text-sm text-amber-700">Há pedido em preparo.</p>
+              <el-button type="primary" :disabled="!active || busy || !tab.canPay" @click="startPayment(tab)">Receber</el-button>
             </article>
           </div>
         </section>
@@ -311,16 +335,18 @@ watch(tab, value => {
       <form class="cash-dialog-form" @submit.prevent="run(dialog === 'payment' ? confirmPayment : confirmShiftAction, true)">
         <div class="cash-dialog-body space-y-4">
           <el-alert v-if="dialogError" :title="dialogError" type="error" show-icon :closable="false" />
-          <template v-if="dialog === 'payment' && selected">
+          <template v-if="dialog === 'payment' && selected && selectedTab">
             <div class="cash-panel cash-panel-accent">
-              <h2 class="text-sm font-semibold">Pedido #{{ selected.id }} · Comanda {{ selected.tableReference }}</h2>
+              <h2 class="text-sm font-semibold">Comanda {{ selectedTab.tableReference }} · Pedidos #{{ selectedTab.orderIds.join(', #') }}</h2>
               <ul class="my-3 max-h-32 space-y-2 overflow-auto text-sm">
-                <li v-for="(item, index) in selected.items" :key="index" class="flex justify-between gap-3">
-                  <span>{{ item.quantity }}× {{ item.dishName }}</span>
-                  <span class="shrink-0 tabular-nums">{{ cashMoney(item.unitPrice * item.quantity) }}</span>
-                </li>
+                <template v-for="order in orders.filter(item => selectedTab?.orderIds.includes(item.id))" :key="order.id">
+                  <li v-for="(item, index) in order.items" :key="`${order.id}-${index}`" class="flex justify-between gap-3">
+                    <span>{{ item.quantity }}× {{ item.dishName }}</span>
+                    <span class="shrink-0 tabular-nums">{{ cashMoney(item.unitPrice * item.quantity) }}</span>
+                  </li>
+                </template>
               </ul>
-              <div class="cash-total"><span>Total do pedido</span><strong>{{ cashMoney(orderTotal(selected) / 100) }}</strong></div>
+              <div class="cash-total"><span>Total da comanda</span><strong>{{ cashMoney(selectedTab.total) }}</strong></div>
             </div>
             <section v-for="(payment, index) in payments" :key="index" class="cash-panel space-y-3"
               :aria-label="`Pagamento ${index + 1}`">
@@ -354,8 +380,8 @@ watch(tab, value => {
             <div class="flex flex-wrap items-center justify-between gap-3">
               <el-button :disabled="busy || payments.length === methods.length" @click="addPayment">Dividir pagamento</el-button>
               <p class="cash-result" aria-live="polite">
-                <span>{{ allocated > orderTotal(selected) ? 'Valor excedente' : 'Restante' }}</span>
-                <strong>{{ cashMoney(Math.abs(orderTotal(selected) - (allocated || 0)) / 100) }}</strong>
+                <span>{{ allocated > cashCents(selectedTab.total) ? 'Valor excedente' : 'Restante' }}</span>
+                <strong>{{ cashMoney(Math.abs(cashCents(selectedTab.total) - (allocated || 0)) / 100) }}</strong>
               </p>
             </div>
           </template>

@@ -27,6 +27,7 @@ public sealed class IsmDbContext : DbContext
     }
 
     public DbSet<FinanceEntry> FinanceEntries => Set<FinanceEntry>();
+    public DbSet<Tab> Tabs => Set<Tab>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
@@ -128,6 +129,18 @@ public sealed class IsmDbContext : DbContext
             builder.ApplyTenantQueryFilter(this);
         });
 
+        modelBuilder.Entity<Tab>(builder =>
+        {
+            builder.ToTable("order_tabs");
+            builder.Property(tab => tab.TableReference).HasMaxLength(100).IsRequired();
+            builder.Property(tab => tab.OpenTableReference).HasMaxLength(100).UseCollation("utf8mb4_bin");
+            builder.Property(tab => tab.Total).HasPrecision(18, 2);
+            builder.HasIndex(tab => new { tab.RestaurantId, tab.OpenTableReference }).IsUnique();
+            builder.HasIndex(tab => new { tab.RestaurantId, tab.IdempotencyKey }).IsUnique();
+            builder.HasOne<Restaurant>().WithMany().HasForeignKey(tab => tab.RestaurantId).OnDelete(DeleteBehavior.Restrict);
+            builder.ApplyTenantQueryFilter(this);
+        });
+
         modelBuilder.Entity<Order>(builder =>
         {
             builder.ToTable("orders");
@@ -137,6 +150,8 @@ public sealed class IsmDbContext : DbContext
             builder.Property(order => order.PaymentMethod).HasConversion<int>().HasDefaultValue(PaymentMethod.Unspecified);
             builder.Property(order => order.RequestId).HasMaxLength(36).IsRequired();
             builder.Property(order => order.Version).IsConcurrencyToken();
+            builder.HasOne<Tab>().WithMany().HasForeignKey(order => order.PaidTabId).OnDelete(DeleteBehavior.Restrict);
+            builder.HasIndex(order => new { order.RestaurantId, order.TableReference, order.Status });
             builder.HasIndex(order => new { order.RestaurantId, order.RequestId }).IsUnique();
             builder.HasIndex(order => new { order.RestaurantId, order.CreatedAtUtc });
             builder.HasOne<Restaurant>().WithMany().HasForeignKey(order => order.RestaurantId).OnDelete(DeleteBehavior.Restrict);
